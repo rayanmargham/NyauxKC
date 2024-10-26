@@ -1,5 +1,13 @@
 {
     "clangd.arguments": [
         "--compile-commands-dir=kernel/"
+    ],
+    "makefile.makefilePath": "GNUmakefile",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/rayan/NyauxKC/kernel/bin-x86_64",
+            "binaryPath": "/home/rayan/NyauxKC/kernel/bin-x86_64/NyauxKC",
+            "binaryArgs": []
+        }
     ]
 }

@@ -1,7 +1,9 @@
 #include "gdt/gdt.h"
+#include "idt/idt.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include <limine.h>
+#include <mem/pmm.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -21,7 +23,7 @@ __attribute__((used,
 __attribute__((
     used,
     section(".requests"))) static volatile struct limine_framebuffer_request
-    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 0};
+    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 2};
 
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
@@ -29,7 +31,11 @@ __attribute__((
 __attribute__((used,
                section(".requests_start_"
                        "marker"))) static volatile LIMINE_REQUESTS_START_MARKER;
-
+__attribute__((used,
+               section(".requests"))) volatile struct limine_memmap_request
+    memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 2};
+__attribute__((used, section(".requests"))) volatile struct limine_hhdm_request
+    hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 2};
 __attribute__((
     used,
     section(
@@ -115,7 +121,15 @@ void kmain(void) {
           "LAST WORDS HERES FUNNY NUMBER TO SHOW WE USING NANOPRINTF %d\n",
           69420);
   init_gdt();
-  kprintf("GDT Inited.");
+  kprintf("GDT Inited.\n");
+
   // We're done, just hang...
-  hcf();
+  init_idt();
+  kprintf("YOOO LETS THIS THIS OUT\n");
+  assert(1 == 1);
+  result r = pmm_init();
+  unwrap_or_panic(r);
+  __asm__("int 0x0");
+
+  panic("Uhhh yeah wssup");
 }

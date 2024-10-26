@@ -1,4 +1,3 @@
 #pragma once
-#include "../term/term.h"
-#include <stdint.h>
+#include <term/term.h>
 void init_gdt();

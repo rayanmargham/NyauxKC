@@ -30,7 +30,7 @@ $(call USER_VARIABLE,KCC,x86_64-elf-gcc)
 $(call USER_VARIABLE,KLD,x86_64-elf-ld)
 
 # User controllable C flags.
-$(call USER_VARIABLE,KCFLAGS,-g -O2 -pipe -Werror)
+$(call USER_VARIABLE,KCFLAGS,-g -O2 -pipe -masm=intel -Wall -Wextra -Wpedantic)
 
 # User controllable C preprocessor flags. We set none by default.
 $(call USER_VARIABLE,KCPPFLAGS,)
