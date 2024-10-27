@@ -68,3 +68,17 @@ static inline uint32_t align_up(uint32_t value, uint32_t alignment) {
 static inline uint32_t align_down(uint32_t value, uint32_t alignment) {
   return value & ~(alignment - 1);
 }
+// stolen :)
+static inline uint64_t next_pow2(uint64_t x) {
+#ifdef __GNUC__
+  return x == 1 ? 1 : 1 << (64 - __builtin_clzl(x - 1));
+#else
+  x |= x >> 1;
+  x |= x >> 2;
+  x |= x >> 4;
+  x |= x >> 8;
+  x |= x >> 16;
+  x |= x >> 32;
+  return x;
+#endif
+}
