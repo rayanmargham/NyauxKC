@@ -142,7 +142,7 @@ void *slab_alloc(cache *mod) {
   spinlock_unlock(&pmmlock);
   return guy;
 }
-void *kmalloc(uint64_t amount) {
+void *slaballocate(uint64_t amount) {
   amount = next_pow2(amount);
   for (int i = 0; i != 7; i++) {
     cache *c = &caches[i];
@@ -151,7 +151,7 @@ void *kmalloc(uint64_t amount) {
   }
   return NULL;
 }
-void free(void *addr) {
+void slabfree(void *addr) {
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
     return;

@@ -22,6 +22,7 @@ SECTIONS
     /* Any address in this region will do, but often 0xffffffff80000000 is chosen as */
     /* that is the beginning of the region. */
     . = 0xffffffff80000000;
+    AMONG_US = .;
 
     /* Define a section to contain the Limine requests and assign it to its own PHDR */
     .requests : {
@@ -65,4 +66,5 @@ SECTIONS
         *(.eh_frame*)
         *(.note .note.*)
     }
+    THE_REAL = . - AMONG_US;
 }

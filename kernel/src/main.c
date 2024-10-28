@@ -1,5 +1,6 @@
 #include "gdt/gdt.h"
 #include "idt/idt.h"
+#include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include <limine.h>
@@ -36,6 +37,9 @@ __attribute__((used,
     memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 2};
 __attribute__((used, section(".requests"))) volatile struct limine_hhdm_request
     hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 2};
+__attribute__((
+    used, section(".requests"))) volatile struct limine_kernel_address_request
+    kernel_address = {.id = LIMINE_KERNEL_ADDRESS_REQUEST, .revision = 2};
 __attribute__((
     used,
     section(
@@ -129,7 +133,7 @@ void kmain(void) {
   assert(1 == 1);
   result r = pmm_init();
   unwrap_or_panic(r);
-  __asm__("int 0x0");
+  vmm_init();
 
   panic("Uhhh yeah wssup");
 }
