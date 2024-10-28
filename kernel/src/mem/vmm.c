@@ -25,7 +25,7 @@ uint64_t *find_pte_and_allocate(uint64_t *pt, uint64_t virt) {
     if (i == 3) {
       return (uint64_t *)((uint64_t)page_table + idx);
     }
-    if (page_table[idx] & ~PRESENT) {
+    if (!(page_table[idx] & PRESENT)) {
       uint64_t *guy =
           (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
       page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED;
@@ -54,7 +54,7 @@ uint64_t *find_pte_and_allocate2mb(uint64_t *pt, uint64_t virt) {
     if (i == 2) {
       return (uint64_t *)((uint64_t)page_table + idx);
     }
-    if (page_table[idx] & ~PRESENT) {
+    if (!(page_table[idx] & PRESENT)) {
       uint64_t *guy =
           (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
       page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED;
@@ -75,7 +75,7 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
     if (i == 2) {
       return (uint64_t *)((uint64_t)page_table + idx);
     }
-    if (page_table[idx] & ~PRESENT) {
+    if (!(page_table[idx] & PRESENT)) {
       return (uint64_t *)((uint64_t)page_table + idx);
     } else {
       pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
@@ -160,6 +160,7 @@ void vmm_init() {
     }
   }
   kprintf("HDDM Pages %d\n", hddm_pages);
-  switch_cr3((uint64_t)ker_map.pml4);
+  // panic("h");
+  switch_cr3((uint64_t)(ker_map.pml4));
   kprintf("Kernel is now in its own pagemap :)\n");
 }
