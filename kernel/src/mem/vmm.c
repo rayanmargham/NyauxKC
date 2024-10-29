@@ -23,7 +23,7 @@ uint64_t *find_pte_and_allocate(uint64_t *pt, uint64_t virt) {
     uint64_t *page_table =
         (uint64_t *)((uint64_t)pt + hhdm_request.response->offset);
     if (i == 3) {
-      return (uint64_t *)((uint64_t)page_table + idx);
+      return page_table + idx;
     }
     if (!(page_table[idx] & PRESENT)) {
       uint64_t *guy =
@@ -52,7 +52,7 @@ uint64_t *find_pte_and_allocate2mb(uint64_t *pt, uint64_t virt) {
     uint64_t *page_table =
         (uint64_t *)((uint64_t)pt + hhdm_request.response->offset);
     if (i == 2) {
-      return (uint64_t *)((uint64_t)page_table + idx);
+      return page_table + idx;
     }
     if (!(page_table[idx] & PRESENT)) {
       uint64_t *guy =
