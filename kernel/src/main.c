@@ -3,7 +3,9 @@
 #include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
+#include <acpi/acpi.h>
 #include <limine.h>
+#include <mem/kmem.h>
 #include <mem/pmm.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -40,6 +42,8 @@ __attribute__((used, section(".requests"))) volatile struct limine_hhdm_request
 __attribute__((
     used, section(".requests"))) volatile struct limine_kernel_address_request
     kernel_address = {.id = LIMINE_KERNEL_ADDRESS_REQUEST, .revision = 2};
+__attribute__((used, section(".requests"))) volatile struct limine_rsdp_request
+    rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 2};
 __attribute__((
     used,
     section(
@@ -134,6 +138,6 @@ void kmain(void) {
   result r = pmm_init();
   unwrap_or_panic(r);
   vmm_init();
-
+  init_acpi();
   panic("Uhhh yeah wssup");
 }

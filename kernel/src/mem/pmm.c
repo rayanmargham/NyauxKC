@@ -133,6 +133,7 @@ void *slab_alloc(cache *mod) {
     }
     void *guy = cur->freelist;
     cur->freelist = ((pnode *)cur->freelist)->next;
+    spinlock_unlock(&pmmlock);
     return guy;
   };
   cur->next = (struct slab *)init_slab(mod->size);
@@ -152,8 +153,10 @@ void *slaballocate(uint64_t amount) {
   return NULL;
 }
 void slabfree(void *addr) {
+  spinlock_lock(&pmmlock);
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
+    spinlock_unlock(&pmmlock);
     return;
   }
   slab *guy = (slab *)(real_addr & ~0xFFF);
@@ -162,4 +165,5 @@ void slabfree(void *addr) {
   pnode *old = (pnode *)guy->freelist;
   node->next = (struct pnode *)old;
   guy->freelist = (struct pnode *)node;
+  spinlock_unlock(&pmmlock);
 }
