@@ -133,6 +133,7 @@ void *slab_alloc(cache *mod) {
     }
     void *guy = cur->freelist;
     cur->freelist = ((pnode *)cur->freelist)->next;
+    memset(guy, 0, mod->size);
     spinlock_unlock(&pmmlock);
     return guy;
   };
@@ -140,6 +141,7 @@ void *slab_alloc(cache *mod) {
   cur = (slab *)cur->next;
   void *guy = cur->freelist;
   cur->freelist = ((pnode *)cur->freelist)->next;
+  memset(guy, 0, mod->size);
   spinlock_unlock(&pmmlock);
   return guy;
 }

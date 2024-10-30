@@ -18,3 +18,4 @@ void kvmm_region_dealloc(void *addr);
 #define PATBIT2MB (1ul << 12)
 #define PAGE2MB (1ul << 7)
 #define WRITETHROUGH (1ul << 3)
+extern void *memset(void *s, int c, size_t n);

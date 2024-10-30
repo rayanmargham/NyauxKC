@@ -143,6 +143,7 @@ void uacpi_kernel_unmap(void *addr, uacpi_size len) {
 void *uacpi_kernel_alloc(uacpi_size size) { return kmalloc(size); }
 void *uacpi_kernel_calloc(uacpi_size count, uacpi_size size) {
   void *man = kmalloc(count * size);
+  memset(man, 0, count * size);
   return man;
 }
 void uacpi_kernel_free(void *mem, uacpi_size size_hint) {

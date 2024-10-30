@@ -213,6 +213,7 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
         void *page = pmm_alloc();
         map(ker_map.pml4, (uint64_t)page, new->base + (i * 4096), flags);
       }
+      memset((void *)new->base, 0, new->length);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -231,6 +232,7 @@ void kvmm_region_dealloc(void *addr) {
   VMMRegion *cur = (VMMRegion *)ker_map.head;
   while (cur != NULL) {
     if (cur->base == (uint64_t)addr) {
+      memset((void *)cur->base, 0, cur->length);
       uint64_t amount_to_allocateinpages = cur->length / 4096;
       for (uint64_t i = 0; i != amount_to_allocateinpages; i++) {
         uint64_t phys = unmap(ker_map.pml4, cur->base + (i * 4096));

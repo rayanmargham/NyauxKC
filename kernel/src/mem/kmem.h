@@ -4,3 +4,4 @@
 #include <stdint.h>
 void kfree(void *addr, uint64_t size);
 void *kmalloc(uint64_t amount);
+extern void *memset(void *s, int c, size_t n);

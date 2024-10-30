@@ -1,4 +1,6 @@
 #include "term.h"
+#include "utils/basic.h"
+#include <stdint.h>
 struct flanterm_context *ft_ctx = NULL;
 
 void init_term(struct limine_framebuffer *buf) {
@@ -15,6 +17,7 @@ void tputc(int ch, void *) {
   }
   char c = ch;
   flanterm_write(ft_ctx, &c, 1);
+  outb(0x3F8, (uint8_t)c);
 }
 void kprintf(const char *format, ...) {
   va_list args;

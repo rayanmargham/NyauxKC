@@ -21,7 +21,8 @@ all-hdd: $(IMAGE_NAME).hdd
 
 .PHONY: run
 run: run-$(KARCH)
-
+.PHONY: run-debug
+run-debug: run-$(KARCH)-debug
 .PHONY: run-hdd
 run-hdd: run-hdd-$(KARCH)
 
@@ -32,7 +33,15 @@ run-x86_64: ovmf/ovmf-code-$(KARCH).fd $(IMAGE_NAME).iso
 		-drive if=pflash,unit=0,format=raw,file=ovmf/ovmf-code-$(KARCH).fd,readonly=on \
 		-cdrom $(IMAGE_NAME).iso \
 		$(QEMUFLAGS)
-
+.PHONY: run-x86_64-debug
+run-x86_64-debug: ovmf/ovmf-code-$(KARCH).fd $(IMAGE_NAME).iso
+	qemu-system-$(KARCH) \
+		-M q35 \
+		-drive if=pflash,unit=0,format=raw,file=ovmf/ovmf-code-$(KARCH).fd,readonly=on \
+		-cdrom $(IMAGE_NAME).iso \
+		-s \
+		-S \
+		$(QEMUFLAGS)
 .PHONY: run-hdd-x86_64
 run-hdd-x86_64: ovmf/ovmf-code-$(KARCH).fd $(IMAGE_NAME).hdd
 	qemu-system-$(KARCH) \
