@@ -86,6 +86,7 @@ void pmm_dealloc(void *he) {
   head.next = (struct pnode *)convert;
 }
 slab *init_slab(uint64_t size) {
+  assert(size > sizeof(pnode));
   void *page = pmm_alloc();
   uint64_t obj_amount = (4096 - sizeof(slab)) / size;
   slab *hdr = (slab *)page;

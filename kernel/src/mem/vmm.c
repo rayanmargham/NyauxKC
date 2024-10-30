@@ -183,6 +183,7 @@ void vmm_init() {
       break;
     }
   }
+  hhdm_pages = (hhdm_pages * 2097152) / 4096;
   kprintf("HDDM Pages %d\n", hhdm_pages);
   // panic("h");
   switch_cr3((uint64_t)(ker_map.pml4));

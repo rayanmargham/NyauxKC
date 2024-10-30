@@ -64,5 +64,6 @@ void init_idt() {
   RegisterHandler(0xe, page_fault_handler);
   idr.offset = (uint64_t)&IDT;
   idr.size = sizeof(IDT) - 1;
+
   idt_flush(&idr);
 }
