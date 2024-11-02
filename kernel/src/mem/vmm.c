@@ -211,7 +211,8 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
       new->next = (struct VMMRegion *)cur;
       uint64_t amount_to_allocateinpages = new->length / 4096;
       for (uint64_t i = 0; i != amount_to_allocateinpages; i++) {
-        void *page = pmm_alloc();
+        void *page =
+            (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
         map(ker_map.pml4, (uint64_t)page, new->base + (i * 4096), flags);
       }
       memset((void *)new->base, 0, new->length);
