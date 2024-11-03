@@ -45,13 +45,14 @@ uint64_t *find_pte_and_allocate2mb(uint64_t *pt, uint64_t virt) {
       return page_table + idx;
     }
     if (!(page_table[idx] & PRESENT)) {
+      if (page_table[idx] & PAGE2MB) {
+        panic("This should not happen.");
+      }
       uint64_t *guy =
           (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
       page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED;
       pt = guy;
 
-    } else if (page_table[idx] & PAGE2MB) {
-      panic("This should not happen.");
     } else {
       pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
@@ -69,9 +70,10 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
       return page_table + idx;
     }
     if (!(page_table[idx] & PRESENT)) {
+      if (page_table[idx] & PAGE2MB) {
+        panic("This shall not happen.");
+      }
       return page_table + idx;
-    } else if (page_table[idx] & PAGE2MB) {
-      panic("This shall not happen.");
     } else {
       pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
@@ -221,6 +223,8 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
         map(ker_map.pml4, (uint64_t)page, new->base + (i * 4096), flags);
       }
       memset((void *)new->base, 0, new->length);
+      kprintf("in alloc");
+      kprintf_vmmregion(cur);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -246,6 +250,8 @@ void kvmm_region_dealloc(void *addr) {
         pmm_dealloc((void *)(phys + hhdm_request.response->offset));
       }
       slabfree(cur);
+      kprintf("in free()");
+      kprintf_vmmregion(cur);
       return;
     } else {
       cur = (VMMRegion *)cur->next;
