@@ -49,6 +49,9 @@ uint64_t *find_pte_and_allocate2mb(uint64_t *pt, uint64_t virt) {
           (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
       page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED;
       pt = guy;
+
+    } else if (page_table[idx] & PAGE2MB) {
+      panic("This should not happen.");
     } else {
       pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
@@ -67,6 +70,8 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
     }
     if (!(page_table[idx] & PRESENT)) {
       return page_table + idx;
+    } else if (page_table[idx] & PAGE2MB) {
+      panic("This shall not happen.");
     } else {
       pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
