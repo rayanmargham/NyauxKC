@@ -105,21 +105,18 @@ void init_cache(cache *mod, uint64_t size) {
   mod->slabs = (struct slab *)init_slab(size);
 }
 result init_kmalloc() {
-  spinlock_lock(&pmmlock);
   result ok = {.type = ERR, .err_msg = "init_kmalloc() failed"};
   init_cache(&caches[0], 16);
-  init_cache(&caches[0], 32);
-  init_cache(&caches[0], 64);
-  init_cache(&caches[0], 128);
-  init_cache(&caches[0], 256);
-  init_cache(&caches[0], 512);
-  init_cache(&caches[0], 1024);
+  init_cache(&caches[1], 32);
+  init_cache(&caches[2], 64);
+  init_cache(&caches[3], 128);
+  init_cache(&caches[4], 256);
+  init_cache(&caches[5], 512);
+  init_cache(&caches[6], 1024);
   ok.type = OKAY;
-  spinlock_unlock(&pmmlock);
   return ok;
 }
 void *slab_alloc(cache *mod) {
-  spinlock_lock(&pmmlock);
   if (mod->slabs == NULL || mod->size == 0) {
     return NULL;
   }
@@ -135,7 +132,6 @@ void *slab_alloc(cache *mod) {
     void *guy = cur->freelist;
     cur->freelist = ((pnode *)cur->freelist)->next;
     memset(guy, 0, mod->size);
-    spinlock_unlock(&pmmlock);
     return guy;
   };
   cur->next = (struct slab *)init_slab(mod->size);
@@ -143,11 +139,12 @@ void *slab_alloc(cache *mod) {
   void *guy = cur->freelist;
   cur->freelist = ((pnode *)cur->freelist)->next;
   memset(guy, 0, mod->size);
-  spinlock_unlock(&pmmlock);
   return guy;
 }
 void *slaballocate(uint64_t amount) {
+  uint64_t olda = amount;
   amount = next_pow2(amount);
+  assert(olda <= amount);
   for (int i = 0; i != 7; i++) {
     cache *c = &caches[i];
     assert(c->size != 0);
@@ -156,10 +153,8 @@ void *slaballocate(uint64_t amount) {
   return NULL;
 }
 void slabfree(void *addr) {
-  spinlock_lock(&pmmlock);
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
-    spinlock_unlock(&pmmlock);
     return;
   }
   slab *guy = (slab *)(real_addr & ~0xFFF);
@@ -168,5 +163,4 @@ void slabfree(void *addr) {
   pnode *old = (pnode *)guy->freelist;
   node->next = (struct pnode *)old;
   guy->freelist = (struct pnode *)node;
-  spinlock_unlock(&pmmlock);
 }

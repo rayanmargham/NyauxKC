@@ -136,6 +136,7 @@ result region_setup(pagemap *map, uint64_t hddm_in_pages) {
   VMMRegion *hhdm =
       create_region(hhdm_request.response->offset, hddm_in_pages * 4096);
   hhdm->next = (struct VMMRegion *)kernel;
+  kernel->next = NULL;
   map->head = (struct VMMRegion *)hhdm;
   kprintf_vmmregion(hhdm);
   kprintf_vmmregion(kernel);
@@ -224,7 +225,7 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
       }
       memset((void *)new->base, 0, new->length);
       kprintf("in alloc");
-      kprintf_vmmregion(cur);
+      kprintf_vmmregion(new);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -241,6 +242,7 @@ void kvmm_region_dealloc(void *addr) {
     return;
   }
   VMMRegion *cur = (VMMRegion *)ker_map.head;
+  VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (cur->base == (uint64_t)addr) {
       memset((void *)cur->base, 0, cur->length);
@@ -249,11 +251,14 @@ void kvmm_region_dealloc(void *addr) {
         uint64_t phys = unmap(ker_map.pml4, cur->base + (i * 4096));
         pmm_dealloc((void *)(phys + hhdm_request.response->offset));
       }
+      if (prev != NULL)
+        prev->next = cur->next;
       slabfree(cur);
       kprintf("in free()");
       kprintf_vmmregion(cur);
       return;
     } else {
+      prev = cur;
       cur = (VMMRegion *)cur->next;
       continue;
     }
