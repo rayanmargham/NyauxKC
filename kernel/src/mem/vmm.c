@@ -67,16 +67,33 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
     uint64_t *page_table =
         (uint64_t *)((uint64_t)pt + hhdm_request.response->offset);
 
-    if (!(page_table[idx] & PRESENT)) {
-      if (page_table[idx] & PAGE2MB) {
-        panic("This shall not happen.");
-      }
+    /* If any entry is not present then there is no mapping
+       break and return NULL; */
+    if (!(page_table[idx] & PRESENT))
+      break;
+
+    /* Is the Page Size bit set? */
+    if (page_table[idx] & PAGE2MB) {
+      /* If the Page Size bit is set on a PML4 entry it's an error
+         break and return NULL. If Page Size bit is set on a PDPT entry
+         break and return NULL since we don't support 1GiB pages yet */
+      if (i <= 1)
+        break;
+
+      /* We have reached a valid entry that is present with Page Size
+         bit set. We are finished, don't descend further */
       return page_table + idx;
     } else {
-      pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
+        /* If we have reached the page table then we have found
+           a page table entry, return it */
+
+        if (i == 3)
+          return page_table + idx;
+
+        pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
   }
-  return 0;
+  return NULL;
 }
 void map(uint64_t *pt, uint64_t phys, uint64_t virt, uint64_t flags) {
   uint64_t *f = find_pte_and_allocate(pt, virt);
