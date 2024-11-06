@@ -159,6 +159,7 @@ void uacpi_kernel_sleep(uacpi_u64 msec) {}
 uacpi_handle uacpi_kernel_create_mutex(void) {
 
   spinlock_t *mutex = kmalloc(sizeof(spinlock_t));
+  memset(mutex, 0, sizeof(spinlock_t));
   return mutex;
 }
 void uacpi_kernel_free_mutex(uacpi_handle f) {
@@ -198,6 +199,7 @@ uacpi_status uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler,
 }
 uacpi_handle uacpi_kernel_create_spinlock(void) {
   spinlock_t *mutex = kmalloc(sizeof(spinlock_t));
+  memset(mutex, 0, sizeof(spinlock_t));
   return mutex;
 }
 uacpi_cpu_flags uacpi_kernel_lock_spinlock(uacpi_handle lock) {

@@ -61,6 +61,7 @@ override KCFLAGS += \
     -nostdinc \
     -ffreestanding \
     -fno-stack-protector \
+    -fsanitize=kernel-address \
     -fno-stack-check \
     -fno-lto \
     -fno-PIC \
