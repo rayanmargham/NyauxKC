@@ -66,9 +66,7 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
     uint64_t idx = (virt >> shift) & 0x1ff;
     uint64_t *page_table =
         (uint64_t *)((uint64_t)pt + hhdm_request.response->offset);
-    if (i == 2) {
-      return page_table + idx;
-    }
+
     if (!(page_table[idx] & PRESENT)) {
       if (page_table[idx] & PAGE2MB) {
         panic("This shall not happen.");
