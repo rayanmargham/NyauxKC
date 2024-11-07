@@ -45,9 +45,6 @@ uint64_t *find_pte_and_allocate2mb(uint64_t *pt, uint64_t virt) {
       return page_table + idx;
     }
     if (!(page_table[idx] & PRESENT)) {
-      if (page_table[idx] & PAGE2MB) {
-        panic("This should not happen.");
-      }
       uint64_t *guy =
           (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
       page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED;
@@ -76,9 +73,11 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
     if (page_table[idx] & PAGE2MB) {
       /* If the Page Size bit is set on a PML4 entry it's an error
          break and return NULL. If Page Size bit is set on a PDPT entry
-         break and return NULL since we don't support 1GiB pages yet */
-      if (i <= 1)
-        break;
+         print warning and return the PDPT entry */
+      if (i == 0)
+        panic("find_pte error: LargePageSize bit set in PML4 entry");
+      else if (i == 1)
+        kprintf("find_pte warning: Found 1GiB page PDPT entry");
 
       /* We have reached a valid entry that is present with Page Size
          bit set. We are finished, don't descend further */
