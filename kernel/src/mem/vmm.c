@@ -67,16 +67,33 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
     uint64_t *page_table =
         (uint64_t *)((uint64_t)pt + hhdm_request.response->offset);
 
-    if (!(page_table[idx] & PRESENT)) {
-      if (page_table[idx] & PAGE2MB) {
-        panic("This shall not happen.");
-      }
+    /* If any entry is not present then there is no mapping
+       break and return NULL; */
+    if (!(page_table[idx] & PRESENT))
+      break;
+
+    /* Is the Page Size bit set? */
+    if (page_table[idx] & PAGE2MB) {
+      /* If the Page Size bit is set on a PML4 entry it's an error
+         break and return NULL. If Page Size bit is set on a PDPT entry
+         break and return NULL since we don't support 1GiB pages yet */
+      if (i <= 1)
+        break;
+
+      /* We have reached a valid entry that is present with Page Size
+         bit set. We are finished, don't descend further */
       return page_table + idx;
     } else {
-      pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
+        /* If we have reached the page table then we have found
+           a page table entry, return it */
+
+        if (i == 3)
+          return page_table + idx;
+
+        pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
   }
-  return 0;
+  return NULL;
 }
 void map(uint64_t *pt, uint64_t phys, uint64_t virt, uint64_t flags) {
   uint64_t *f = find_pte_and_allocate(pt, virt);
@@ -163,30 +180,32 @@ void vmm_init() {
   for (uint64_t i = 0; i != memmap_request.response->entry_count; i += 1) {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
     switch (entry->type) {
-    case LIMINE_MEMMAP_FRAMEBUFFER:
-      uint64_t disalign = entry->base % 2097152;
-      entry->base = align_down(entry->base, 2097152);
-      uint64_t page_amount =
-          align_up(entry->length - disalign, 2097152) / 2097152;
-      for (uint64_t j = 0; j != page_amount; j++) {
-        map2mb(ker_map.pml4, entry->base + (j * 2097152),
-               hhdm_request.response->offset + entry->base + (j * 2097152),
-               PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
+    case LIMINE_MEMMAP_FRAMEBUFFER: {
+        uint64_t disalign = entry->base % 2097152;
+        entry->base = align_down(entry->base, 2097152);
+        uint64_t page_amount =
+            align_up(entry->length - disalign, 2097152) / 2097152;
+        for (uint64_t j = 0; j != page_amount; j++) {
+          map2mb(ker_map.pml4, entry->base + (j * 2097152),
+                 hhdm_request.response->offset + entry->base + (j * 2097152),
+                 PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
+        }
+        hhdm_pages += page_amount;
+        break;
+    }
+    default: {
+        uint64_t disalign = entry->base % 2097152;
+        entry->base = align_down(entry->base, 2097152);
+        uint64_t page_amount =
+            align_up(entry->length - disalign, 2097152) / 2097152;
+        for (uint64_t j = 0; j != page_amount; j++) {
+          map2mb(ker_map.pml4, entry->base + (j * 2097152),
+                 hhdm_request.response->offset + entry->base + (j * 2097152),
+                 PRESENT | RWALLOWED);
+        }
+        hhdm_pages += page_amount;
+        break;
       }
-      hhdm_pages += page_amount;
-      break;
-    default:
-      uint64_t disalignz = entry->base % 2097152;
-      entry->base = align_down(entry->base, 2097152);
-      uint64_t page_amountz =
-          align_up(entry->length - disalignz, 2097152) / 2097152;
-      for (uint64_t j = 0; j != page_amountz; j++) {
-        map2mb(ker_map.pml4, entry->base + (j * 2097152),
-               hhdm_request.response->offset + entry->base + (j * 2097152),
-               PRESENT | RWALLOWED);
-      }
-      hhdm_pages += page_amount;
-      break;
     }
   }
   hhdm_pages = (hhdm_pages * 2097152) / 4096;

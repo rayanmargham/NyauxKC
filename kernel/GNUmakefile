@@ -61,13 +61,13 @@ override KCFLAGS += \
     -nostdinc \
     -ffreestanding \
     -fno-stack-protector \
-    -fsanitize=kernel-address \
     -fno-stack-check \
     -fno-lto \
     -fno-PIC \
     -ffunction-sections \
     -fdata-sections \
     -fno-omit-frame-pointer \
+#    -fsanitize=kernel-address \
 
 # Internal C preprocessor flags that should not be changed by the user.
 override KCPPFLAGS := \
