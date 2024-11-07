@@ -180,30 +180,32 @@ void vmm_init() {
   for (uint64_t i = 0; i != memmap_request.response->entry_count; i += 1) {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
     switch (entry->type) {
-    case LIMINE_MEMMAP_FRAMEBUFFER:
-      uint64_t disalign = entry->base % 2097152;
-      entry->base = align_down(entry->base, 2097152);
-      uint64_t page_amount =
-          align_up(entry->length - disalign, 2097152) / 2097152;
-      for (uint64_t j = 0; j != page_amount; j++) {
-        map2mb(ker_map.pml4, entry->base + (j * 2097152),
-               hhdm_request.response->offset + entry->base + (j * 2097152),
-               PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
+    case LIMINE_MEMMAP_FRAMEBUFFER: {
+        uint64_t disalign = entry->base % 2097152;
+        entry->base = align_down(entry->base, 2097152);
+        uint64_t page_amount =
+            align_up(entry->length - disalign, 2097152) / 2097152;
+        for (uint64_t j = 0; j != page_amount; j++) {
+          map2mb(ker_map.pml4, entry->base + (j * 2097152),
+                 hhdm_request.response->offset + entry->base + (j * 2097152),
+                 PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
+        }
+        hhdm_pages += page_amount;
+        break;
+    }
+    default: {
+        uint64_t disalign = entry->base % 2097152;
+        entry->base = align_down(entry->base, 2097152);
+        uint64_t page_amount =
+            align_up(entry->length - disalign, 2097152) / 2097152;
+        for (uint64_t j = 0; j != page_amount; j++) {
+          map2mb(ker_map.pml4, entry->base + (j * 2097152),
+                 hhdm_request.response->offset + entry->base + (j * 2097152),
+                 PRESENT | RWALLOWED);
+        }
+        hhdm_pages += page_amount;
+        break;
       }
-      hhdm_pages += page_amount;
-      break;
-    default:
-      uint64_t disalignz = entry->base % 2097152;
-      entry->base = align_down(entry->base, 2097152);
-      uint64_t page_amountz =
-          align_up(entry->length - disalignz, 2097152) / 2097152;
-      for (uint64_t j = 0; j != page_amountz; j++) {
-        map2mb(ker_map.pml4, entry->base + (j * 2097152),
-               hhdm_request.response->offset + entry->base + (j * 2097152),
-               PRESENT | RWALLOWED);
-      }
-      hhdm_pages += page_amount;
-      break;
     }
   }
   hhdm_pages = (hhdm_pages * 2097152) / 4096;
