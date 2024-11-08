@@ -13,81 +13,78 @@ idt_flush:
 %macro isr_stub 1-2
 global isr_stub_%1
 isr_stub_%1:
-
-        ; Push a dummy error code if a 2nd parameter has been passed to the macro
+    ; Push a dummy error code if a 2nd parameter has been passed to the macro
 %if %0 == 2
-        push %2                  ; Push dummy error code
+    push %2                  ; Push dummy error code
 %endif
-        test byte [rsp + 16], 0x3; Are lower 2 bits(priv lvl) of CS selector 0?
-        jz .skipswapgs1          ; If they are 0 (kernel mode) then skip swap
-        swapgs                   ; Otherwise swapgs in user mode
-    .skipswapgs1:
+    test byte [rsp + 16], 0x3; Are lower 2 bits(priv lvl) of CS selector 0?
+    jz .skipswapgs1          ; If they are 0 (kernel mode) then skip swap
+    swapgs                   ; Otherwise swapgs in user mode
+.skipswapgs1:
+    push rbp
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
 
-        push rbp
-        push rax
-        push rbx
-        push rcx
-        push rdx
-        push rsi
-        push rdi
-        push r8
-        push r9
-        push r10
-        push r11
-        push r12
-        push r13
-        push r14
-        push r15
+    push gs                  ; Save previous state of segment registers
+    push fs
+    mov eax, es
+    push rax
+    mov eax, ds
+    push rax
 
-        push gs                  ; Save previous state of segment registers
-        push fs
-        mov eax, es
-        push rax
-        mov eax, ds
-        push rax
+    mov eax, 0x30            ; Load data selectors with kernel data selector
+    mov ds, eax
+    mov es, eax
+    mov fs, eax
 
-        mov eax, 0x30            ; Load data selectors with kernel data selector
-        mov ds, eax
-        mov es, eax
-        mov fs, eax
+    push %1
+    mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
+    mov rax, [idt_handlers + rax * 8]
+    cld                      ; Required by the 64-bit System V ABI
+    call rax
+    add rsp, 8               ; skip int number
 
-        push %1
-        mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
-        mov rax, [idt_handlers + rax * 8]
-        cld                      ; Required by the 64-bit System V ABI
-        call rax
-        add rsp, 8               ; skip int number
+    pop rax                  ; Restore previous state of segment registers
+    mov ds, eax
+    pop rax
+    mov es, eax
+    pop fs
+    pop gs
 
-        pop rax                  ; Restore previous state of segment registers
-        mov ds, eax
-        pop rax
-        mov es, eax
-        pop fs
-        pop gs
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    pop rbp
 
-        pop r15
-        pop r14
-        pop r13
-        pop r12
-        pop r11
-        pop r10
-        pop r9
-        pop r8
-        pop rdi
-        pop rsi
-        pop rdx
-        pop rcx
-        pop rbx
-        pop rax
-        pop rbp
-
-        test byte [rsp + 16], 0x3; Are lower 2 bits(priv lvl) of CS selector 0?
-        jz .skipswapgs2          ; If they are 0 (kernel mode) then skip swap
-        swapgs                   ; Otherwise swapgs in user mode
-    .skipswapgs2:
-
-        add rsp, 8               ; Skip error code
-        iretq
+    test byte [rsp + 16], 0x3; Are lower 2 bits(priv lvl) of CS selector 0?
+    jz .skipswapgs2          ; If they are 0 (kernel mode) then skip swap
+    swapgs                   ; Otherwise swapgs in user mode
+.skipswapgs2:
+    add rsp, 8               ; Skip error code
+    iretq
 %endmacro
 
 ; Define stubs for exceptions (interrupts 0-31)
