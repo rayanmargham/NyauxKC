@@ -1,8 +1,6 @@
 #include "ksan.h"
 #include <stddef.h>
 #include <stdint.h>
-#undef NYAUX_NO_KSAN
-#define NYAUX_NO_KSAN __attribute__((no_sanitize("address")))
 
 // copied from OBOS
 const uint8_t nyaux_posion[] = {

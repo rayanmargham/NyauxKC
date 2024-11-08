@@ -83,13 +83,13 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
          bit set. We are finished, don't descend further */
       return page_table + idx;
     } else {
-        /* If we have reached the page table then we have found
-           a page table entry, return it */
+      /* If we have reached the page table then we have found
+         a page table entry, return it */
 
-        if (i == 3)
-          return page_table + idx;
+      if (i == 3)
+        return page_table + idx;
 
-        pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
+      pt = (uint64_t *)(page_table[idx] & 0x000ffffffffff000);
     }
   }
   return NULL;
@@ -180,31 +180,31 @@ void vmm_init() {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
     switch (entry->type) {
     case LIMINE_MEMMAP_FRAMEBUFFER: {
-        uint64_t disalign = entry->base % 2097152;
-        entry->base = align_down(entry->base, 2097152);
-        uint64_t page_amount =
-            align_up(entry->length - disalign, 2097152) / 2097152;
-        for (uint64_t j = 0; j != page_amount; j++) {
-          map2mb(ker_map.pml4, entry->base + (j * 2097152),
-                 hhdm_request.response->offset + entry->base + (j * 2097152),
-                 PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
-        }
-        hhdm_pages += page_amount;
-        break;
+      uint64_t disalign = entry->base % 2097152;
+      entry->base = align_down(entry->base, 2097152);
+      uint64_t page_amount =
+          align_up(entry->length - disalign, 2097152) / 2097152;
+      for (uint64_t j = 0; j != page_amount; j++) {
+        map2mb(ker_map.pml4, entry->base + (j * 2097152),
+               hhdm_request.response->offset + entry->base + (j * 2097152),
+               PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
+      }
+      hhdm_pages += page_amount;
+      break;
     }
     default: {
-        uint64_t disalign = entry->base % 2097152;
-        entry->base = align_down(entry->base, 2097152);
-        uint64_t page_amount =
-            align_up(entry->length - disalign, 2097152) / 2097152;
-        for (uint64_t j = 0; j != page_amount; j++) {
-          map2mb(ker_map.pml4, entry->base + (j * 2097152),
-                 hhdm_request.response->offset + entry->base + (j * 2097152),
-                 PRESENT | RWALLOWED);
-        }
-        hhdm_pages += page_amount;
-        break;
+      uint64_t disalign = entry->base % 2097152;
+      entry->base = align_down(entry->base, 2097152);
+      uint64_t page_amount =
+          align_up(entry->length - disalign, 2097152) / 2097152;
+      for (uint64_t j = 0; j != page_amount; j++) {
+        map2mb(ker_map.pml4, entry->base + (j * 2097152),
+               hhdm_request.response->offset + entry->base + (j * 2097152),
+               PRESENT | RWALLOWED);
       }
+      hhdm_pages += page_amount;
+      break;
+    }
     }
   }
   hhdm_pages = (hhdm_pages * 2097152) / 4096;
@@ -215,6 +215,28 @@ void vmm_init() {
   unwrap_or_panic(res);
   kprintf("Kernel is now in its own pagemap :)\n");
   kprintf("Region is setup!\n");
+}
+uint64_t kvmm_region_bytesused() {
+  VMMRegion *cur = (VMMRegion *)ker_map.head;
+  uint64_t bytes = 0;
+  while (true) {
+    if (cur->base == 0xffffffff80000000 || cur->base == 0xffff800000000000) {
+      if (cur->next == NULL) {
+        break;
+      } else {
+        cur = (VMMRegion *)cur->next;
+        continue;
+      }
+    }
+    bytes += cur->length;
+    if (cur->next == NULL) {
+      break;
+    } else {
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+  }
+  return bytes;
 }
 void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
   assert(ker_map.head != NULL);
@@ -240,8 +262,6 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
         map(ker_map.pml4, (uint64_t)page, new->base + (i * 4096), flags);
       }
       memset((void *)new->base, 0, new->length);
-      kprintf("in alloc");
-      kprintf_vmmregion(new);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -270,8 +290,7 @@ void kvmm_region_dealloc(void *addr) {
       if (prev != NULL)
         prev->next = cur->next;
       slabfree(cur);
-      kprintf("in free()");
-      kprintf_vmmregion(cur);
+
       return;
     } else {
       prev = cur;

@@ -9,3 +9,5 @@ void *slaballocate(uint64_t amount);
 void slabfree(void *addr);
 void *pmm_alloc();
 void pmm_dealloc(void *he);
+uint64_t total_memory();
+void free_unused_slabcaches();

@@ -9,6 +9,7 @@ extern volatile struct limine_kernel_address_request kernel_address;
 void vmm_init();
 void *kvmm_region_alloc(uint64_t amount, uint64_t flags);
 void kvmm_region_dealloc(void *addr);
+uint64_t kvmm_region_bytesused();
 #define EXECUTEDISABLE (1ul << 63)
 #define PRESENT (1ul)
 #define RWALLOWED (1ul << 1)

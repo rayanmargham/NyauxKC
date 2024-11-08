@@ -1,4 +1,5 @@
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
 static void hcf(void) {
@@ -38,7 +39,23 @@ static inline void spinlock_lock(spinlock_t *lock) {
 #endif
   }
 }
+static inline size_t str_hash(const char *s) {
+  size_t h = 0;
 
+  while (*s) {
+    h = h * 31 + *s;
+    s++;
+  }
+  return h;
+}
+static inline size_t uint64_hash(uint64_t key) {
+  key ^= key >> 33;
+  key *= 0xff51afd7ed558ccd;
+  key ^= key >> 33;
+  key *= 0xc4ceb9fe1a85ec53;
+  key ^= key >> 33;
+  return key;
+}
 static inline void spinlock_unlock(spinlock_t *lock) {
   __sync_bool_compare_and_swap(lock, 1, 0);
 }
