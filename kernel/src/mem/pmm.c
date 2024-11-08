@@ -1,5 +1,6 @@
 #include "pmm.h"
 #include "limine.h"
+#include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
 
@@ -16,6 +17,7 @@ extern void *memset(void *s, int c, size_t n);
 typedef struct {
   struct slab *next;
   struct pnode *freelist;
+  uint64_t obj_ammount
 } __attribute__((packed)) slab;
 typedef struct {
   uint64_t size;
@@ -90,6 +92,7 @@ slab *init_slab(uint64_t size) {
   void *page = pmm_alloc();
   uint64_t obj_amount = (4096 - sizeof(slab)) / size;
   slab *hdr = (slab *)page;
+  hdr->obj_ammount = obj_amount;
   pnode *first = (pnode *)((uint64_t)page + sizeof(slab));
   pnode *cur = first;
   hdr->freelist = (struct pnode *)first;
@@ -151,6 +154,100 @@ void *slaballocate(uint64_t amount) {
     return slab_alloc(c);
   }
   return NULL;
+}
+uint64_t cache_getmemoryused(cache *mod) {
+  if (mod->slabs == NULL || mod->size == 0) {
+    return 0;
+  }
+  uint64_t bytes = 0;
+  slab *cur = (slab *)mod->slabs;
+  while (true) {
+    if (cur->freelist == NULL) {
+      bytes += sizeof(slab) + (cur->obj_ammount * mod->size);
+      if (cur->next != NULL) {
+        cur = (slab *)cur->next;
+        continue;
+      }
+      break;
+    }
+    bytes += sizeof(slab);
+    pnode *n = (pnode *)cur->freelist;
+    uint64_t free_nodes = 0;
+    while (true) {
+      if (n->next == NULL) {
+        free_nodes += 1;
+        break;
+      }
+      free_nodes += 1;
+      n = (pnode *)n->next;
+    }
+    bytes += ((cur->obj_ammount - free_nodes) * mod->size) +
+             (free_nodes * sizeof(pnode));
+    if (cur->next != NULL) {
+      cur = (slab *)cur->next;
+      continue;
+    }
+    break;
+  };
+  return bytes;
+}
+void free_unused_slabs(cache *mod) {
+  if (mod->slabs == NULL || mod->size == 0) {
+    return;
+  }
+  slab *cur = (slab *)mod->slabs;
+  slab *prev = NULL;
+  while (true) {
+    if (cur->freelist == NULL) {
+      if (cur->next != NULL) {
+        prev = cur;
+        cur = (slab *)cur->next;
+        continue;
+      }
+      break;
+    }
+    pnode *n = (pnode *)cur->freelist;
+    uint64_t free_nodes = 0;
+    while (true) {
+      if (n->next == NULL) {
+        free_nodes += 1;
+        break;
+      }
+      free_nodes += 1;
+      n = (pnode *)n->next;
+    }
+    kprintf("free nodes in this slab %u, obj ammount %u\n", free_nodes,
+            cur->obj_ammount);
+    if (free_nodes == cur->obj_ammount) {
+      if (prev != NULL) {
+        prev->next = cur->next;
+      }
+      memset(cur, 0, 4096);
+      pmm_dealloc((void *)cur);
+    }
+    if (cur->next != NULL) {
+      prev = cur;
+      cur = (slab *)cur->next;
+      continue;
+    } else {
+    }
+    break;
+  };
+}
+void free_unused_slabcaches() {
+  for (int i = 0; i != 7; i++) {
+    cache *c = &caches[i];
+    free_unused_slabs(c);
+  }
+}
+uint64_t total_memory() {
+  uint64_t total_bytes = 0;
+  for (int i = 0; i != 7; i++) {
+    cache *c = &caches[i];
+    total_bytes += cache_getmemoryused(c);
+  }
+  total_bytes += kvmm_region_bytesused();
+  return total_bytes;
 }
 void slabfree(void *addr) {
   uint64_t real_addr = (uint64_t)addr;
