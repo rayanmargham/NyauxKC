@@ -50,14 +50,24 @@ uint64_t read_cr2() {
   __asm__ volatile("mov %0, %%cr2" : "=r"(cr2));
   return cr2;
 }
+
 void page_fault_handler(struct StackFrame *frame) {
   kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
   kprintf("RIP is 0x%lx\n", frame->rip);
   panic("Page Fault:c");
 }
 
+void default_handler(struct StackFrame *frame) {
+  kprintf("Unhandled interrupt/exception number 0x%x\n", frame->intnum);
+  kprintf("CS:RIP is 0x%02x:0x%lx\n", frame->cs, frame->rip);
+  panic("CPU halted");
+}
+
 void init_idt() {
   for (int i = 0; i < 256; i++) {
+    // Register a default handler
+    RegisterHandler(i, default_handler);
+    // Setup an IDT entry for all the interrupt stubs
     kernel_interrupt_gate(i, stubs[i]);
   };
   RegisterHandler(0, division_by_zero);

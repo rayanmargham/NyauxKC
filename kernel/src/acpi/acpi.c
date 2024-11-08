@@ -12,9 +12,11 @@ void init_acpi() {
   if (st == UACPI_STATUS_OK) {
     st = uacpi_namespace_load();
     st = uacpi_namespace_initialize();
-    kprintf("uacpi finsihed\n");
+
+    kprintf("uacpi finished\n");
+
 
   } else {
-    panic("Failed");
+    panic("Failed\n");
   }
 }
