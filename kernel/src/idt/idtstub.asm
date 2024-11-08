@@ -46,7 +46,7 @@ isr_stub_%1:
         mov eax, ds
         push rax
 
-        mov eax, 0x10            ; Load data selectors with kernel data selector
+        mov eax, 0x30            ; Load data selectors with kernel data selector
         mov ds, eax
         mov es, eax
         mov fs, eax
