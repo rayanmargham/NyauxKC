@@ -49,7 +49,9 @@ isr_stub_%1:
     mov es, eax
     mov fs, eax
 
-    push %1
+    mov eax, %1              ; Push the error number and put a copy in RAX
+    push rax
+
     mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
     mov rax, [idt_handlers + rax * 8]
     cld                      ; Required by the 64-bit System V ABI
