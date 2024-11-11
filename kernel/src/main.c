@@ -147,7 +147,6 @@ void kmain(void) {
   free_unused_slabcaches();
   kprintf("Total Memory in Use: %u Bytes or %u MB\n", total_memory(),
           total_memory() / 1048576);
-  __asm__("int 0x0");
 
   get_symbols();
   panic("Uhhh yeah wssup");
