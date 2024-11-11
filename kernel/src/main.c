@@ -1,9 +1,11 @@
+#include "elf/symbols/symbols.h"
 #include "gdt/gdt.h"
 #include "idt/idt.h"
 #include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include <acpi/acpi.h>
+#include <elf/symbols/symbols.h>
 #include <limine.h>
 #include <mem/kmem.h>
 #include <mem/pmm.h>
@@ -44,6 +46,9 @@ __attribute__((
     kernel_address = {.id = LIMINE_KERNEL_ADDRESS_REQUEST, .revision = 2};
 __attribute__((used, section(".requests"))) volatile struct limine_rsdp_request
     rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 2};
+__attribute__((used,
+               section(".requests"))) volatile struct limine_kernel_file_request
+    kernelfile = {.id = LIMINE_KERNEL_FILE_REQUEST, .revision = 2};
 __attribute__((
     used,
     section(".requests_end_marker"))) static volatile LIMINE_REQUESTS_END_MARKER
@@ -142,6 +147,8 @@ void kmain(void) {
   free_unused_slabcaches();
   kprintf("Total Memory in Use: %u Bytes or %u MB\n", total_memory(),
           total_memory() / 1048576);
-  kprintf("\"Nyaux\" -> %u\n", str_hash("Nyaux") % 5);
+  __asm__("int 0x0");
+
+  get_symbols();
   panic("Uhhh yeah wssup");
 }

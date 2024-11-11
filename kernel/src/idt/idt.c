@@ -66,12 +66,22 @@ void default_handler(struct StackFrame *frame) {
 void init_idt() {
   for (int i = 0; i < 256; i++) {
     // Register a default handler
-    RegisterHandler(i, default_handler);
+    switch (i) {
+    case 0xe:
+      RegisterHandler(0xe, page_fault_handler);
+      break;
+    case 0x0:
+      RegisterHandler(0, division_by_zero);
+      break;
+    default:
+      RegisterHandler(i, default_handler);
+      break;
+    }
+
     // Setup an IDT entry for all the interrupt stubs
     kernel_interrupt_gate(i, stubs[i]);
   };
-  RegisterHandler(0, division_by_zero);
-  RegisterHandler(0xe, page_fault_handler);
+
   idr.offset = (uint64_t)&IDT;
   idr.size = sizeof(IDT) - 1;
 

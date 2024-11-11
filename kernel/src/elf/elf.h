@@ -24,16 +24,16 @@ typedef struct {
   Elf64_Half e_shstrndx;
 } Elf64_Ehdr;
 typedef struct {
-  Elf64_Word sh_name;
-  Elf64_Word sh_type;
-  Elf64_Xword sh_flags;
-  Elf64_Addr sh_addr;
-  Elf64_Off sh_offset;
-  Elf64_Xword sh_size;
-  Elf64_Word sh_link;
-  Elf64_Word sh_info;
-  Elf64_Xword sh_addralign;
-  Elf64_Xword sh_entsize;
+  Elf64_Word sh_name;       /* Section name */
+  Elf64_Word sh_type;       /* Section type */
+  Elf64_Xword sh_flags;     /* Section attributes */
+  Elf64_Addr sh_addr;       /* Virtual address in memory */
+  Elf64_Off sh_offset;      /* Offset in file */
+  Elf64_Xword sh_size;      /* Size of section */
+  Elf64_Word sh_link;       /* Link to other section */
+  Elf64_Word sh_info;       /* Miscellaneous information */
+  Elf64_Xword sh_addralign; /* Address alignment boundary */
+  Elf64_Xword sh_entsize;   /* Size of entries, if section has table */
 } Elf64_Shdr;
 typedef struct {
   Elf64_Word st_name;
@@ -60,3 +60,5 @@ typedef struct {
     Elf64_Addr d_ptr;
   } d_un;
 } Elf64_Dyn;
+extern volatile struct limine_kernel_file_request kernelfile;
+Elf64_Ehdr *get_kernel_elfheader();

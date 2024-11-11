@@ -56,6 +56,35 @@ static inline size_t uint64_hash(uint64_t key) {
   key ^= key >> 33;
   return key;
 }
+/*
+ * strcmp - Compare two null-terminated strings character by character.
+ *
+ * Parameters:
+ *   s1 - Pointer to the first null-terminated string.
+ *   s2 - Pointer to the second null-terminated string.
+ *
+ * Returns:
+ *   0  if s1 and s2 are identical.
+ *   A negative value if s1 is lexicographically less than s2.
+ *   A positive value if s1 is lexicographically greater than s2.
+ *
+ * Description:
+ *   The function iterates through each character of s1 and s2 simultaneously.
+ *   - If the characters in s1 and s2 are equal, it moves to the next character.
+ *   - If it reaches the end of both strings (null terminators) with no
+ * differences, the function returns 0, indicating that the strings are
+ * identical.
+ *   - If it finds a mismatching character, the function returns the difference
+ *     between the first mismatching characters in s1 and s2, cast as unsigned
+ * chars. This result will be positive or negative based on the ASCII values,
+ * following the standard strcmp behavior.
+ */
+static inline int strcmp(const char *s1, const char *s2) {
+  while (*s1 == *s2++)
+    if (*s1++ == 0)
+      return (0);
+  return (*(unsigned char *)s1 - *(unsigned char *)--s2);
+}
 static inline void spinlock_unlock(spinlock_t *lock) {
   __sync_bool_compare_and_swap(lock, 1, 0);
 }
@@ -105,3 +134,11 @@ extern void outd(uint16_t port, uint32_t data);
 extern uint8_t inb(uint16_t port);
 extern uint16_t inw(uint16_t port);
 extern uint32_t ind(uint16_t port);
+
+static inline size_t strlen(const char *str) {
+  const char *s;
+
+  for (s = str; *s; ++s)
+    ;
+  return (s - str);
+}
