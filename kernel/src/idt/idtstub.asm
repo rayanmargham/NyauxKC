@@ -49,11 +49,11 @@ isr_stub_%1:
     mov es, eax
     mov fs, eax
 
-    mov eax, %1              ; Push the error number and put a copy in RAX
-    push rax
+    push %1                  ; Push the interrupt number
 
     mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
-    mov rax, [idt_handlers + rax * 8]
+    mov rax, [idt_handlers + %1 * 8]
+                             ; Get the registered handler to call
     cld                      ; Required by the 64-bit System V ABI
     call rax
     add rsp, 8               ; skip int number
