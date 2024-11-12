@@ -64,14 +64,13 @@ void kprintf_symbol(nyauxsymbol h) {
 }
 
 void division_by_zero(struct StackFrame *frame) {
-  kprintf("Amazing\n");
-  kprintf("Look at this cool int num %lx\n", frame->intnum);
+  kprintf("Division Error\n");
   if (symbolarray != NULL) {
     STACKTRACE
   } else {
     kprintf("null im afraid\n");
   }
-  panic("yooo lets goooo");
+  panic("Error of ze division :c");
 }
 uint64_t read_cr2() {
   uint64_t cr2 = 1;

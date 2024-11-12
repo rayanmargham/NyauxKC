@@ -78,7 +78,7 @@ void get_symbols() {
 
     kprintf("get_symbols(): Nyaux Symbol Resource Created and Stored on "
             "Heap\n");
-    // __asm__("int 0x0");
+    __asm__("int 0x0");
 
   } else {
     panic("Could not cum");
