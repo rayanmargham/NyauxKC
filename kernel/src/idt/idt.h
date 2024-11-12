@@ -1,4 +1,5 @@
 #pragma once
+#include <elf/symbols/symbols.h>
 #include <stdint.h>
 #include <utils/basic.h>
 struct StackFrame {

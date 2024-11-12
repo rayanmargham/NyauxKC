@@ -149,5 +149,6 @@ void kmain(void) {
           total_memory() / 1048576);
 
   get_symbols();
+
   panic("Uhhh yeah wssup");
 }

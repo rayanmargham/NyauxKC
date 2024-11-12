@@ -62,3 +62,4 @@ typedef struct {
 } Elf64_Dyn;
 extern volatile struct limine_kernel_file_request kernelfile;
 Elf64_Ehdr *get_kernel_elfheader();
+uint64_t get_kerneL_address();
