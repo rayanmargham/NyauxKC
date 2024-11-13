@@ -1,6 +1,8 @@
 #include "kernelapi.h"
+#include "idt/idt.h"
 #include "mem/pmm.h"
 #include "uacpi/status.h"
+#include "uacpi/types.h"
 #include "utils/basic.h"
 #include <stdint.h>
 uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rdsp_address) {
@@ -185,13 +187,31 @@ uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle, uacpi_u16) { return true; }
 void uacpi_kernel_signal_event(uacpi_handle) {}
 void uacpi_kernel_reset_event(uacpi_handle) {}
 uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request *) {
-  return UACPI_STATUS_UNIMPLEMENTED;
+  return UACPI_STATUS_OK;
 }
-uacpi_status
-uacpi_kernel_install_interrupt_handler(uacpi_u32 irq, uacpi_interrupt_handler,
-                                       uacpi_handle ctx,
-                                       uacpi_handle *out_irq_handle) {
-  return UACPI_STATUS_UNIMPLEMENTED;
+void uacpi_wrap_irq_fn(struct StackFrame *frame) {
+  if (isr_ctxt[frame->intnum] == NULL) {
+    panic("Could not handle uacpi interrupt :c");
+  }
+  uacpi_irq_wrap_info *info = isr_ctxt[frame->intnum];
+  info->fn(info->ctx);
+}
+uacpi_status uacpi_kernel_install_interrupt_handler(
+    uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
+    uacpi_handle *out_irq_handle) {
+  // CHANGE WHEN WE DO SMP
+  int vec = AllocateIrq();
+  if (vec == -1) {
+    return UACPI_STATUS_NO_HANDLER;
+  }
+  uacpi_irq_wrap_info *info = kmalloc(sizeof(uacpi_irq_wrap_info));
+  info->fn = handler;
+  info->ctx = ctx;
+  *out_irq_handle = (uacpi_handle)(uint64_t)vec;
+  isr_ctxt[vec] = info;
+  RegisterHandler(vec, uacpi_wrap_irq_fn);
+  // when u get ioapic install the irq pls
+  return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler,
                                                       uacpi_handle irq_handle) {

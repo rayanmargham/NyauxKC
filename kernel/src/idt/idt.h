@@ -9,4 +9,7 @@ struct StackFrame {
   uint64_t rbp, error_code, rip, cs, rflags, rsp, ss;
 } __attribute__((packed));
 #include <term/term.h>
+int AllocateIrq();
 void init_idt();
+extern void *isr_ctxt[256];
+void RegisterHandler(int interrupt, void (*handler)(struct StackFrame *frame));

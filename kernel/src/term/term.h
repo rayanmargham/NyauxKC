@@ -12,4 +12,4 @@
 #define NANOPRINTF_VISIBILITY_STATIC
 #include "nanoprintf.h"
 void init_term(struct limine_framebuffer *buf);
-void kprintf(const char *format, ...);
+__attribute__((format(printf, 1, 2))) void kprintf(const char *format, ...);

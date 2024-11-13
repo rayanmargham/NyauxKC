@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <timers/hpet.h>
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -149,6 +150,7 @@ void kmain(void) {
           total_memory() / 1048576);
 
   get_symbols();
+  init_hpet();
 
   panic("Uhhh yeah wssup");
 }

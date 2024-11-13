@@ -43,6 +43,8 @@ typedef struct {
 IDTR idr;
 InterruptDescriptor IDT[256];
 void (*idt_handlers[256])(struct StackFrame *frame);
+// CHANGE THIS WHEN SMP OR FUCKING DIE TODO TODO
+void *isr_ctxt[256]; // anyone can store whatever here
 void set_gate(int idx, uint16_t segment_selector, uint8_t gate_type,
               uint8_t dpl, uint64_t entry) {
   IDT[idx].segment_selector = segment_selector;
@@ -91,7 +93,15 @@ void default_handler(struct StackFrame *frame) {
   STACKTRACE
   panic("CPU halted");
 }
-
+int AllocateIrq() {
+  for (int i = 32; i < 256; i++) {
+    if (idt_handlers[i] == default_handler) {
+      kprintf("Found irq vector %d\n", i);
+      return i;
+    }
+  }
+  return -1;
+}
 void init_idt() {
   for (int i = 0; i < 256; i++) {
     // Register a default handler
