@@ -6,8 +6,19 @@
 #include "uacpi/status.h"
 #include "uacpi/tables.h"
 #include <stdint.h>
+
 uint64_t ctr_clock_period = 0; // in nano seconds
+uint64_t *hpetvirtaddr = NULL;
+void stall_with_hpetclk(uint64_t ms) {
+  uint64_t pol_start = *(uint64_t *)((uint64_t)hpetvirtaddr + 0xf0);
+  uint64_t *pol_cur = (uint64_t *)((uint64_t)hpetvirtaddr + 0xf0);
+  while ((*pol_cur - pol_start) * ctr_clock_period < ms * 1000000) {
+  }
+}
 void init_hpet() {
+  if (hpetvirtaddr != NULL) {
+    return;
+  }
   uacpi_table hpet_table;
   uacpi_status st = uacpi_table_find_by_signature("HPET", &hpet_table);
   if (st != UACPI_STATUS_OK) {
@@ -34,4 +45,6 @@ void init_hpet() {
   *capr |= 1; // enable counter
 
   kprintf("init_hpet(): Main Counter Enabled!\n");
+  hpetvirtaddr =
+      (uint64_t *)(hpet->address.address + hhdm_request.response->offset);
 }
