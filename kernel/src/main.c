@@ -5,6 +5,7 @@
 #include "term/term.h"
 #include "utils/basic.h"
 #include <acpi/acpi.h>
+#include <cpu/smp.h>
 #include <elf/symbols/symbols.h>
 #include <limine.h>
 #include <mem/kmem.h>
@@ -42,6 +43,8 @@ __attribute__((used,
         memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 2};
 __attribute__((used, section(".requests"))) volatile struct limine_hhdm_request
     hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 2};
+__attribute__((used, section(".requests"))) volatile struct limine_smp_request
+    smp_request = {.id = LIMINE_SMP_REQUEST, .revision = 2};
 __attribute__((
     used, section(".requests"))) volatile struct limine_kernel_address_request
     kernel_address = {.id = LIMINE_KERNEL_ADDRESS_REQUEST, .revision = 2};
@@ -146,11 +149,11 @@ void kmain(void) {
   vmm_init();
   init_acpi();
   free_unused_slabcaches();
-  kprintf("Total Memory in Use: %u Bytes or %u MB\n", total_memory(),
+  kprintf("Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
           total_memory() / 1048576);
 
   get_symbols();
   init_hpet();
-
+  init_smp();
   panic("Uhhh yeah wssup");
 }
