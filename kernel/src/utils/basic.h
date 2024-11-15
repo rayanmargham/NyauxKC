@@ -134,7 +134,18 @@ extern void outd(uint16_t port, uint32_t data);
 extern uint8_t inb(uint16_t port);
 extern uint16_t inw(uint16_t port);
 extern uint32_t ind(uint16_t port);
-
+static inline uint64_t rdmsr(uint32_t msr) {
+  uint32_t low = 0;
+  uint32_t hi = 0;
+  __asm__ volatile("rdmsr" : "=a"(low), "=d"(hi) : "c"(msr));
+  uint64_t combined = ((uint64_t)low << 32) | hi;
+  return combined;
+}
+static inline uint64_t wrmsr(uint32_t msr, uint64_t value) {
+  uint32_t low = (uint32_t)value;
+  uint32_t hi = (uint32_t)(value >> 32);
+  __asm__ volatile("wrmsr" : : "a"(low), "d"(hi), "c"(msr));
+}
 static inline size_t strlen(const char *str) {
   const char *s;
 

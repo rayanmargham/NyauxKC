@@ -14,7 +14,7 @@ switch_to_pagemap:
     ret
 outb:
 	mov dx, di
-	mov al, sil
+	mov al, sil ; DUMB ASSS NAMEEE
 	out dx, al
 	ret
 outw:
@@ -28,12 +28,10 @@ outd:
 	out dx, eax
 	ret
 inb:
-	mov eax, 0
 	mov dx, di
 	in al, dx
 	ret
 inw:
-	mov eax, 0
 	mov dx, di
 	in ax, dx
 	ret
