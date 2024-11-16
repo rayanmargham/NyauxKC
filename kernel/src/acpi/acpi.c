@@ -5,16 +5,16 @@
 void init_acpi() {
   uint64_t rsdp =
       (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
-  kprintf("initing uacpi\n");
+  kprintf("init_acpi(): initing uacpi\n");
   uacpi_status st = uacpi_initialize(0);
-  kprintf("now loading namespace\n");
+  kprintf("init_acpi(): now loading namespace\n");
   if (st == UACPI_STATUS_OK) {
     st = uacpi_namespace_load();
     st = uacpi_namespace_initialize();
 
-    kprintf("uacpi finished\n");
+    kprintf("init_acpi(): uacpi finished\n");
 
   } else {
-    panic("Failed\n");
+    panic("init_acpi(): Failed\n");
   }
 }

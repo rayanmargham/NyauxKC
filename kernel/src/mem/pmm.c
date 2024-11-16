@@ -45,8 +45,8 @@ result pmm_init() {
       break;
     }
   }
-  kprintf("FreeList Created\n");
-  kprintf("Free Pages %ju\n", get_free_pages());
+  kprintf("pmm_init(): FreeList Created\n");
+  kprintf("pmm_init(): Free Pages %ju\n", get_free_pages());
   spinlock_unlock(&pmmlock);
   result ress = init_kmalloc();
   unwrap_or_panic(ress);
@@ -216,8 +216,9 @@ void free_unused_slabs(cache *mod) {
       free_nodes += 1;
       n = (pnode *)n->next;
     }
-    kprintf("free nodes in this slab %u, obj ammount %u\n", free_nodes,
-            cur->obj_ammount);
+    kprintf(
+        "free_unused_slabs(): free nodes in this slab %lu, obj ammount %lu\n",
+        free_nodes, cur->obj_ammount);
     if (free_nodes == cur->obj_ammount) {
       if (prev != NULL) {
         prev->next = cur->next;

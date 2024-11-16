@@ -2,7 +2,7 @@
 #include "utils/basic.h"
 #include <stdint.h>
 struct flanterm_context *ft_ctx = NULL;
-
+spinlock_t lock;
 void init_term(struct limine_framebuffer *buf) {
   ft_ctx = flanterm_fb_init(
       NULL, NULL, buf->address, buf->width, buf->height, buf->pitch,
@@ -15,9 +15,11 @@ void tputc(int ch, void *) {
   if (ft_ctx == NULL) {
     return;
   }
+  spinlock_lock(&lock);
   char c = ch;
   flanterm_write(ft_ctx, &c, 1);
   outb(0x3F8, (uint8_t)c);
+  spinlock_unlock(&lock);
 }
 void kprintf(const char *format, ...) {
   va_list args;

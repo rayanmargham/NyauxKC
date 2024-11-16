@@ -4,7 +4,7 @@
 #include "term/term.h"
 #include <stdint.h>
 void kprintf_elfsect(Elf64_Shdr *hdr) {
-  kprintf("Elf Section Header: type %lu\n", hdr->sh_type);
+  kprintf("kprintf_elfsect(): Elf Section Header: type %u\n", hdr->sh_type);
 }
 nyauxsymbol find_from_rip(uint64_t rip) {
   for (uint64_t i = 0; i != symbolarray->size - 1; i++) {
@@ -80,6 +80,6 @@ void get_symbols() {
             "Heap\n");
 
   } else {
-    panic("Could not cum");
+    panic("get_symbols(): Couldn't Read Symbols");
   }
 }

@@ -75,9 +75,9 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
          break and return NULL. If Page Size bit is set on a PDPT entry
          print warning and return the PDPT entry */
       if (i == 0)
-        panic("find_pte error: LargePageSize bit set in PML4 entry");
+        panic("find_pte() error: LargePageSize bit set in PML4 entry");
       else if (i == 1)
-        kprintf("find_pte warning: Found 1GiB page PDPT entry");
+        kprintf("find_pte() warning: Found 1GiB page PDPT entry");
 
       /* We have reached a valid entry that is present with Page Size
          bit set. We are finished, don't descend further */
@@ -132,8 +132,8 @@ pagemap ker_map;
 void kprintf_vmmregion(VMMRegion *region) {
   kprintf("\e[0;95mVMM Region {\n");
   kprintf(" base: 0x%lx\n", region->base);
-  kprintf(" length: %u\n", region->length);
-  kprintf(" next: %p\n", region->next);
+  kprintf(" length: %lu\n", region->length);
+  kprintf(" next: %p\n", (void *)region->next);
   kprintf("}\e[0;37m\n");
 }
 VMMRegion *create_region(uint64_t base, uint64_t length) {
@@ -167,7 +167,7 @@ void vmm_init() {
     map(ker_map.pml4, kernel_address.response->physical_base + i,
         kernel_address.response->virtual_base + i, PRESENT | RWALLOWED);
   }
-  kprintf("Kernel Mapped!\n");
+  kprintf("vmm(): Kernel Mapped!\n");
   uint64_t hhdm_pages = 0;
   for (uint64_t i = 0; i < 0x100000000; i += 2097152) {
     assert(i % 2097152 == 0);
@@ -175,7 +175,7 @@ void vmm_init() {
            PRESENT | RWALLOWED);
     hhdm_pages += 1;
   }
-  kprintf("Above 4Gib Mapped! Mapping Memory Map!\n");
+  kprintf("vmm(): Above 4Gib Mapped! Mapping Memory Map!\n");
   for (uint64_t i = 0; i != memmap_request.response->entry_count; i += 1) {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
     switch (entry->type) {
@@ -208,13 +208,13 @@ void vmm_init() {
     }
   }
   hhdm_pages = (hhdm_pages * 2097152) / 4096;
-  kprintf("HDDM Pages %d\n", hhdm_pages);
+  kprintf("vmm(): HDDM Pages %lu\n", hhdm_pages);
   // panic("h");
   switch_cr3((uint64_t)(ker_map.pml4));
   result res = region_setup(&ker_map, hhdm_pages);
   unwrap_or_panic(res);
-  kprintf("Kernel is now in its own pagemap :)\n");
-  kprintf("Region is setup!\n");
+  kprintf("vmm(): Kernel is now in its own pagemap :)\n");
+  kprintf("vmm(): Region is setup!\n");
 }
 uint64_t kvmm_region_bytesused() {
   VMMRegion *cur = (VMMRegion *)ker_map.head;
@@ -269,8 +269,8 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
       continue;
     }
   };
-  kprintf("No free Regions, Too Much Memory being used!!!\n");
-  panic("Sir madamm this should never occur");
+  kprintf("vmm(): No free Regions, Too Much Memory being used!!!\n");
+  panic("vmm(): Sir madamm this should never occur");
   return NULL;
 }
 void kvmm_region_dealloc(void *addr) {

@@ -96,7 +96,7 @@ void default_handler(struct StackFrame *frame) {
 int AllocateIrq() {
   for (int i = 32; i < 256; i++) {
     if (idt_handlers[i] == default_handler) {
-      kprintf("Found irq vector %d\n", i);
+      kprintf("AllocateIrq(): Found irq vector %d\n", i);
       return i;
     }
   }

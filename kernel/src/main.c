@@ -134,22 +134,21 @@ void kmain(void) {
   struct limine_framebuffer *framebuffer =
       framebuffer_request.response->framebuffers[0];
   init_term(framebuffer);
-  kprintf("Hello World ITS THE BEST NYAUX REWRITE EVER HERE\nDEF NOT FAMOUS "
+  kprintf("kmain(): Hello World ITS THE BEST NYAUX REWRITE EVER HERE\nDEF NOT "
+          "FAMOUS "
           "LAST WORDS HERES FUNNY NUMBER TO SHOW WE USING NANOPRINTF %d\n",
           69420);
   init_gdt();
-  kprintf("GDT Inited.\n");
+  kprintf("kmain(): GDT Inited.\n");
 
   // We're done, just hang...
   init_idt();
-  kprintf("YOOO LETS THIS THIS OUT\n");
-  assert(1 == 1);
   result r = pmm_init();
   unwrap_or_panic(r);
   vmm_init();
   init_acpi();
   free_unused_slabcaches();
-  kprintf("Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
+  kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
           total_memory() / 1048576);
 
   get_symbols();
