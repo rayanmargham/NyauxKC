@@ -158,7 +158,7 @@ result region_setup(pagemap *map, uint64_t hddm_in_pages) {
   res.okay = true;
   return res;
 }
-
+void per_cpu_vmm_init() { switch_cr3((uint64_t)(ker_map.pml4)); }
 void vmm_init() {
   ker_map.pml4 =
       (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);

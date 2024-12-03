@@ -1,4 +1,5 @@
 #pragma once
+
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
@@ -13,6 +14,7 @@ static void hcf(void) {
 #endif
   }
 }
+extern volatile struct limine_hhdm_request hhdm_request;
 #define assert(expression)                                                     \
   do {                                                                         \
     if (!(expression)) {                                                       \
@@ -48,6 +50,7 @@ static inline size_t str_hash(const char *s) {
   }
   return h;
 }
+
 static inline size_t uint64_hash(uint64_t key) {
   key ^= key >> 33;
   key *= 0xff51afd7ed558ccd;
@@ -98,7 +101,6 @@ typedef struct {
     char *err_msg;
   };
 } result;
-
 static inline void unwrap_or_panic(result res) {
   if (res.type == OKAY) {
     return;
@@ -138,7 +140,7 @@ static inline uint64_t rdmsr(uint32_t msr) {
   uint32_t low = 0;
   uint32_t hi = 0;
   __asm__ volatile("rdmsr" : "=a"(low), "=d"(hi) : "c"(msr));
-  uint64_t combined = ((uint64_t)low << 32) | hi;
+  uint64_t combined = ((uint64_t)hi >> 32) | low;
   return combined;
 }
 static inline uint64_t wrmsr(uint32_t msr, uint64_t value) {
@@ -152,4 +154,17 @@ static inline size_t strlen(const char *str) {
   for (s = str; *s; ++s)
     ;
   return (s - str);
+}
+static inline uint64_t get_lapic_address() {
+  uint64_t addr = (rdmsr(0x1b) & 0xfffff000);
+  return addr;
+}
+static inline uint32_t get_lapic_id() {
+  volatile uint64_t addr = (rdmsr(0x1b) & 0xfffff000);
+
+  volatile uint32_t *ptr =
+      (volatile uint32_t *)(addr + hhdm_request.response->offset);
+  volatile uint32_t val = *(volatile uint32_t *)((uint64_t)ptr + 0x20);
+
+  return (val >> 24);
 }

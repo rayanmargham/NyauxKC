@@ -189,12 +189,13 @@ void uacpi_kernel_reset_event(uacpi_handle) {}
 uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request *) {
   return UACPI_STATUS_OK;
 }
-void uacpi_wrap_irq_fn(struct StackFrame *frame) {
+void *uacpi_wrap_irq_fn(struct StackFrame *frame) {
   if (isr_ctxt[frame->intnum] == NULL) {
     panic("Could not handle uacpi interrupt :c");
   }
   uacpi_irq_wrap_info *info = isr_ctxt[frame->intnum];
   info->fn(info->ctx);
+  return 0;
 }
 uacpi_status uacpi_kernel_install_interrupt_handler(
     uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,

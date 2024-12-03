@@ -15,15 +15,16 @@ void tputc(int ch, void *) {
   if (ft_ctx == NULL) {
     return;
   }
-  spinlock_lock(&lock);
+
   char c = ch;
   flanterm_write(ft_ctx, &c, 1);
   outb(0x3F8, (uint8_t)c);
-  spinlock_unlock(&lock);
 }
 void kprintf(const char *format, ...) {
+  spinlock_lock(&lock);
   va_list args;
   va_start(args, format);
   npf_vpprintf(tputc, NULL, format, args);
   va_end(args);
+  spinlock_unlock(&lock);
 }

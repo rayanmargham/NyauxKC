@@ -20,3 +20,4 @@ uint64_t kvmm_region_bytesused();
 #define PAGE2MB (1ul << 7)
 #define WRITETHROUGH (1ul << 3)
 extern void *memset(void *s, int c, size_t n);
+void per_cpu_vmm_init();

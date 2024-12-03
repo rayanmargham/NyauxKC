@@ -39,15 +39,7 @@ isr_stub_%1:
 
     push gs                  ; Save previous state of segment registers
     push fs
-    mov eax, es
-    push rax
-    mov eax, ds
-    push rax
 
-    mov eax, 0x30            ; Load data selectors with kernel data selector
-    mov ds, eax
-    mov es, eax
-    mov fs, eax
 
     push %1                  ; Push the interrupt number
 
@@ -57,11 +49,7 @@ isr_stub_%1:
     cld                      ; Required by the 64-bit System V ABI
     call rax
     add rsp, 8               ; skip int number
-
-    pop rax                  ; Restore previous state of segment registers
-    mov ds, eax
-    pop rax
-    mov es, eax
+              ; Restore previous state of segment registers
     pop fs
     pop gs
 
@@ -128,7 +116,68 @@ isr_stub 31, 0                 ; Reserved
 ; All external interrupts (32-47) are the treated
 ; the same as an ISR without an error code pushed
 ; by the CPU.
-%assign cur_int 32
+isr_stub_32:
+    test byte [rsp + 16], 0x3; Are lower 2 bits(priv lvl) of CS selector 0?
+    jz .skipswapgs1          ; If they are 0 (kernel mode) then skip swap
+    swapgs                   ; Otherwise swapgs in user mode
+.skipswapgs1:
+    push qword 0x0
+    push rbp
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+
+    push gs                  ; Save previous state of segment registers
+    push fs
+
+
+    push 32                  ; Push the interrupt number
+
+    mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
+    mov rax, [idt_handlers + 32 * 8]
+                             ; Get the registered handler to call
+    cld                      ; Required by the 64-bit System V ABI
+    call rax
+    mov rsp, rax
+    add rsp, 8               ; skip int number
+
+    pop fs
+    pop gs
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    pop rbp
+
+    test byte [rsp + 16], 0x3; Are lower 2 bits(priv lvl) of CS selector 0?
+    jz .skipswapgs2          ; If they are 0 (kernel mode) then skip swap
+    swapgs                   ; Otherwise swapgs in user mode
+.skipswapgs2:
+    add rsp, 8               ; Skip error code
+    iretq
+%assign cur_int 33
 %rep 224
 isr_stub cur_int, 0
 %assign cur_int cur_int+1
