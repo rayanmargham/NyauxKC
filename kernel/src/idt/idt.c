@@ -112,10 +112,10 @@ int AllocateIrq() {
   return -1;
 }
 void *sched(struct StackFrame *frame) {
-  if (get_lapic_id() == 0) {
-    send_eoi();
-    return frame;
-  }
+  // if (get_lapic_id() == 0) {
+  //   send_eoi();
+  //   return frame;
+  // }
   kprintf("CPU %d Says: MY LAPIC TICKED HAHAHAHA\n", get_lapic_id());
   send_eoi();
   return frame;

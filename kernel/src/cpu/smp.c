@@ -20,6 +20,6 @@ void init_smp() {
     cpu->goto_address = bootstrap;
     kprintf("init_smp(): Found CPU %d\n", cpu->lapic_id);
   }
-  stall_with_hpetclk(100);
-  init_lapic();
+  // stall_with_hpetclk(100);
+  // init_lapic();
 }

@@ -22,7 +22,6 @@ void init_lapic() {
   stall_with_hpetclk(10);
   *lapic_inital_count = 0xffffffff - *lapic_cur_count;
   *lapic_config = 32 | (0 << 16) | (1 << 17);
-  kprintf("Done\n");
   __asm__("sti");
 }
 void send_eoi() {
