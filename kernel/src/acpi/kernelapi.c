@@ -1,10 +1,12 @@
 #include "kernelapi.h"
-#include "idt/idt.h"
 #include "mem/pmm.h"
+#include "timers/hpet.h"
 #include "uacpi/status.h"
 #include "uacpi/types.h"
 #include "utils/basic.h"
+#include <arch/arch.h>
 #include <stdint.h>
+
 uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rdsp_address) {
   *out_rdsp_address =
       (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
@@ -59,40 +61,14 @@ uacpi_status uacpi_kernel_raw_io_read(uacpi_io_addr address,
                                       uacpi_u8 byte_width,
                                       uacpi_u64 *out_value) {
 
-  switch (byte_width) {
-  case 1:
-    *out_value = inb(address);
-    break;
-  case 2:
-    *out_value = inw(address);
-    break;
-  case 4:
-    *out_value = ind(address);
-    break;
-  case 8:
-    return UACPI_STATUS_INVALID_ARGUMENT;
-    break;
-  }
+  *out_value = raw_io_in(address, byte_width);
   return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_raw_io_write(uacpi_io_addr address,
                                        uacpi_u8 byte_width,
                                        uacpi_u64 in_value) {
 
-  switch (byte_width) {
-  case 1:
-    outb(address, in_value);
-    break;
-  case 2:
-    outw(address, in_value);
-    break;
-  case 4:
-    outd(address, in_value);
-    break;
-  case 8:
-    return UACPI_STATUS_INVALID_ARGUMENT;
-    break;
-  }
+  raw_io_write(address, in_value, byte_width);
   return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_pci_read(uacpi_pci_address *address,
@@ -175,10 +151,10 @@ uacpi_handle uacpi_kernel_create_event(void) { return (void *)1; }
 void uacpi_kernel_free_event(uacpi_handle) {}
 
 uacpi_thread_id uacpi_kernel_get_thread_id(void) { return 0; }
-uacpi_bool uacpi_kernel_acquire_mutex(uacpi_handle thing, uacpi_u16 w) {
+uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle thing, uacpi_u16 w) {
 
   spinlock_lock((spinlock_t *)thing);
-  return true;
+  return UACPI_STATUS_OK;
 }
 void uacpi_kernel_release_mutex(uacpi_handle thing) {
   spinlock_unlock((spinlock_t *)thing);
@@ -189,29 +165,15 @@ void uacpi_kernel_reset_event(uacpi_handle) {}
 uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request *) {
   return UACPI_STATUS_OK;
 }
-void *uacpi_wrap_irq_fn(struct StackFrame *frame) {
-  if (isr_ctxt[frame->intnum] == NULL) {
-    panic("Could not handle uacpi interrupt :c");
-  }
-  uacpi_irq_wrap_info *info = isr_ctxt[frame->intnum];
-  info->fn(info->ctx);
-  return 0;
-}
+
 uacpi_status uacpi_kernel_install_interrupt_handler(
     uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
     uacpi_handle *out_irq_handle) {
-  // CHANGE WHEN WE DO SMP
-  int vec = AllocateIrq();
-  if (vec == -1) {
+  int ret = uacpi_arch_install_irq(handler, ctx, out_irq_handle);
+  if (ret == -1) {
     return UACPI_STATUS_NO_HANDLER;
   }
-  uacpi_irq_wrap_info *info = kmalloc(sizeof(uacpi_irq_wrap_info));
-  info->fn = handler;
-  info->ctx = ctx;
-  *out_irq_handle = (uacpi_handle)(uint64_t)vec;
-  isr_ctxt[vec] = info;
-  RegisterHandler(vec, uacpi_wrap_irq_fn);
-  // when u get ioapic install the irq pls
+
   return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler,
@@ -238,4 +200,7 @@ uacpi_status uacpi_kernel_schedule_work(uacpi_work_type, uacpi_work_handler,
 }
 uacpi_status uacpi_kernel_wait_for_work_completion(void) {
   return UACPI_STATUS_UNIMPLEMENTED;
+}
+uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void) {
+  return read_hpet_counter();
 }

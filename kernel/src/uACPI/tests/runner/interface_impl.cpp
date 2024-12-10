@@ -36,12 +36,20 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rdsp_address)
     return UACPI_STATUS_OK;
 }
 
+static uint8_t *io_space;
+
 #ifdef UACPI_KERNEL_INITIALIZATION
-uacpi_status uacpi_kernel_initialize(uacpi_init_level)
+uacpi_status uacpi_kernel_initialize(uacpi_init_level lvl)
 {
+    if (lvl == UACPI_INIT_LEVEL_EARLY)
+        io_space = new uint8_t[UINT16_MAX + 1];
     return UACPI_STATUS_OK;
 }
-void uacpi_kernel_deinitialize(void) { }
+
+void uacpi_kernel_deinitialize(void)
+{
+    delete[] io_space;
+}
 #endif
 
 uacpi_status uacpi_kernel_raw_memory_read(
@@ -60,50 +68,46 @@ uacpi_status uacpi_kernel_raw_memory_write(
 }
 
 uacpi_status uacpi_kernel_raw_io_read(
-    uacpi_io_addr, uacpi_u8, uacpi_u64 *ret
+    uacpi_io_addr addr, uacpi_u8 width, uacpi_u64 *ret
 )
 {
-    *ret = 0xFFFFFFFFFFFFFFFF;
+    if (io_space && addr <= UINT16_MAX) {
+        *ret = 0;
+        memcpy(ret, &io_space[addr], width);
+    } else {
+        *ret = 0xFFFFFFFFFFFFFFFF;
+    }
+
     return UACPI_STATUS_OK;
 }
 
 uacpi_status uacpi_kernel_raw_io_write(
-    uacpi_io_addr, uacpi_u8, uacpi_u64
+    uacpi_io_addr addr, uacpi_u8 width, uacpi_u64 value
 )
 {
+    if (io_space && addr <= UINT16_MAX)
+        memcpy(&io_space[addr], &value, width);
+
     return UACPI_STATUS_OK;
 }
 
-uacpi_status uacpi_kernel_io_map(uacpi_io_addr, uacpi_size,
+uacpi_status uacpi_kernel_io_map(uacpi_io_addr addr, uacpi_size,
                                  uacpi_handle *out_handle)
 {
-    *out_handle = nullptr;
+    *out_handle = (uacpi_handle)addr;
     return UACPI_STATUS_OK;
 }
 
 void uacpi_kernel_io_unmap(uacpi_handle) {}
 
 uacpi_status uacpi_kernel_io_read(
-    uacpi_handle, uacpi_size,
+    uacpi_handle handle, uacpi_size offset,
     uacpi_u8 byte_width, uacpi_u64 *value
 )
 {
-    switch (byte_width)
-    {
-    case 1:
-        *value = 0xFF;
-        break;
-    case 2:
-        *value = 0xFFFF;
-        break;
-    case 4:
-        *value = 0xFFFFFFFF;
-        break;
-    default:
-        return UACPI_STATUS_INVALID_ARGUMENT;
-    }
-
-    return UACPI_STATUS_OK;
+    return uacpi_kernel_raw_io_read(
+        (uacpi_io_addr)handle + offset, byte_width, value
+    );
 }
 
 uacpi_status uacpi_kernel_pci_read(
@@ -115,18 +119,13 @@ uacpi_status uacpi_kernel_pci_read(
 }
 
 uacpi_status uacpi_kernel_io_write(
-    uacpi_handle, uacpi_size,
-    uacpi_u8 byte_width, uacpi_u64
+    uacpi_handle handle, uacpi_size offset,
+    uacpi_u8 byte_width, uacpi_u64 value
 )
 {
-    switch (byte_width) {
-    case 1:
-    case 2:
-    case 4:
-        return UACPI_STATUS_OK;
-    default:
-        return UACPI_STATUS_INVALID_ARGUMENT;
-    }
+    return uacpi_kernel_raw_io_write(
+        (uacpi_io_addr)handle + offset, byte_width, value
+    );
 }
 
 uacpi_status uacpi_kernel_pci_write(
@@ -221,6 +220,9 @@ static std::unordered_map<void*, uacpi_size> allocations;
 
 void* uacpi_kernel_alloc(uacpi_size size)
 {
+    if (size == 0)
+        std::abort();
+
     auto *ret = malloc(size);
     if (ret == nullptr)
         return ret;
@@ -265,6 +267,9 @@ void *uacpi_kernel_calloc(uacpi_size count, uacpi_size size)
 #else
 void* uacpi_kernel_alloc(uacpi_size size)
 {
+    if (size == 0)
+        std::abort();
+
     return malloc(size);
 }
 
@@ -320,8 +325,10 @@ void uacpi_kernel_log(enum uacpi_log_level lvl, const char* text)
 }
 #endif
 
+[[maybe_unused]]
+constexpr auto nanoseconds_per_second = 1000ull * 1000ull * 1000ull;
 
-uacpi_u64 uacpi_kernel_get_ticks(void)
+uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 {
 #ifdef _WIN32
     static LARGE_INTEGER frequency;
@@ -339,13 +346,11 @@ uacpi_u64 uacpi_kernel_get_ticks(void)
         std::abort();
     }
 
-    // Convert to 100 nanoseconds
-    counter.QuadPart *= 10000000;
+    counter.QuadPart *= nanoseconds_per_second;
     return counter.QuadPart / frequency.QuadPart;
 #elif defined(__APPLE__)
     static struct mach_timebase_info tb;
     static bool initialized;
-    uacpi_u64 nanoseconds;
 
     if (!initialized) {
         if (mach_timebase_info(&tb) != KERN_SUCCESS) {
@@ -355,8 +360,7 @@ uacpi_u64 uacpi_kernel_get_ticks(void)
         initialized = true;
     }
 
-    nanoseconds = (mach_absolute_time() * tb.numer) / tb.denom;
-    return nanoseconds / 100;
+    return (mach_absolute_time() * tb.numer) / tb.denom;
 #else
     struct timespec ts;
 
@@ -365,7 +369,7 @@ uacpi_u64 uacpi_kernel_get_ticks(void)
         std::abort();
     }
 
-    return (ts.tv_nsec + ts.tv_sec * 1000000000ull) / 100;
+    return ts.tv_nsec + ts.tv_sec * nanoseconds_per_second;
 #endif
 }
 
@@ -408,19 +412,20 @@ uacpi_thread_id uacpi_kernel_get_thread_id(void)
 #endif
 }
 
-uacpi_bool uacpi_kernel_acquire_mutex(uacpi_handle handle, uacpi_u16 timeout)
+uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle handle, uacpi_u16 timeout)
 {
     auto *mutex = (std::timed_mutex*)handle;
 
     if (timeout == 0)
-        return mutex->try_lock();
+        return mutex->try_lock() ? UACPI_STATUS_OK : UACPI_STATUS_TIMEOUT;
 
     if (timeout == 0xFFFF) {
         mutex->lock();
-        return UACPI_TRUE;
+        return UACPI_STATUS_OK;
     }
 
-    return mutex->try_lock_for(std::chrono::milliseconds(timeout));
+    return mutex->try_lock_for(std::chrono::milliseconds(timeout)) ?
+        UACPI_STATUS_OK : UACPI_STATUS_TIMEOUT;
 }
 
 void uacpi_kernel_release_mutex(uacpi_handle handle)

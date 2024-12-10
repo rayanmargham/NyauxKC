@@ -6,3 +6,4 @@
 #include <utils/basic.h>
 void init_hpet();
 void stall_with_hpetclk(uint64_t ms);
+uint64_t read_hpet_counter();

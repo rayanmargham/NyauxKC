@@ -47,11 +47,12 @@ static void validate_ret_against_expected(
         throw std::runtime_error(err);
     };
 
+    auto type = uacpi_object_get_type(&obj);
 
-    if (obj.type != expected_type) {
+    if (type != expected_type) {
         std::string err;
         err += "returned type '";
-        err += uacpi_object_type_to_string((uacpi_object_type)obj.type);
+        err += uacpi_object_type_to_string(type);
         err += "' doesn't match expected '";
         err += uacpi_object_type_to_string(expected_type);
         err += "'";
@@ -59,17 +60,21 @@ static void validate_ret_against_expected(
         throw std::runtime_error(err);
     }
 
-    switch (obj.type) {
+    switch (type) {
     case UACPI_OBJECT_INTEGER: {
         auto expected_int = std::stoull(expected_val.data(), nullptr, 0);
-        auto& actual_int = obj.integer;
+        uacpi_u64 actual_int;
+
+        uacpi_object_get_integer(&obj, &actual_int);
 
         if (expected_int != actual_int)
             ret_is_wrong(expected_val, std::to_string(actual_int));
     } break;
     case UACPI_OBJECT_STRING: {
-        auto actual_str = std::string_view(obj.buffer->text,
-                                           obj.buffer->size - 1);
+        uacpi_data_view view;
+
+        uacpi_object_get_string_or_buffer(&obj, &view);
+        auto actual_str = std::string_view(view.text, view.length - 1);
 
         if (expected_val != actual_str)
             ret_is_wrong(expected_val, actual_str);
@@ -81,10 +86,8 @@ static void validate_ret_against_expected(
 
 static void enumerate_namespace()
 {
-    auto dump_one_node = [](void*, uacpi_namespace_node *node) {
+    auto dump_one_node = [](void*, uacpi_namespace_node *node, uacpi_u32 depth) {
         uacpi_namespace_node_info *info;
-
-        auto depth = uacpi_namespace_node_depth(node);
 
         auto nested_printf = [depth](const char *fmt, ...) {
             va_list va;
@@ -179,13 +182,13 @@ static void enumerate_namespace()
         }
 
         uacpi_free_namespace_node_info(info);
-        return UACPI_NS_ITERATION_DECISION_CONTINUE;
+        return UACPI_ITERATION_DECISION_CONTINUE;
     };
 
     auto *root = uacpi_namespace_root();
 
-    dump_one_node(nullptr, root);
-    uacpi_namespace_for_each_node_depth_first(root, dump_one_node, nullptr);
+    dump_one_node(nullptr, root, 0);
+    uacpi_namespace_for_each_child_simple(root, dump_one_node, nullptr);
 }
 
 /*
@@ -269,6 +272,107 @@ static uacpi_status handle_ec(uacpi_region_op op, uacpi_handle op_data)
     }
 }
 
+static void ensure_ok_status(uacpi_status st)
+{
+    if (st == UACPI_STATUS_OK)
+        return;
+
+    auto msg = uacpi_status_to_string(st);
+    throw std::runtime_error(std::string("uACPI error: ") + msg);
+}
+
+static void test_object_api()
+{
+    uacpi_status st;
+    uacpi_object_array arr;
+    uacpi_object *objects[2];
+    uacpi_u64 ret;
+
+    arr.objects = objects;
+    arr.count = sizeof(objects) / sizeof(*objects);
+    objects[0] = uacpi_object_create_integer(1);
+
+    auto check_ok = [&] {
+        st = uacpi_eval_integer(UACPI_NULL, "CHEK", &arr, &ret);
+        ensure_ok_status(st);
+        if (!ret)
+            throw std::runtime_error("integer check failed");
+        uacpi_object_unref(objects[1]);
+    };
+
+    st = uacpi_object_create_integer_safe(
+        0xDEADBEEFDEADBEEF, UACPI_OVERFLOW_DISALLOW, &objects[1]
+    );
+    if (st != UACPI_STATUS_INVALID_ARGUMENT)
+        throw std::runtime_error("expected integer creation to fail");
+
+    objects[1] = uacpi_object_create_integer(0xDEADBEEF);
+    check_ok();
+
+    st = uacpi_object_assign_integer(objects[0], 2);
+    ensure_ok_status(st);
+
+    objects[1] = uacpi_object_create_cstring("Hello World");
+    uacpi_object_ref(objects[1]);
+    check_ok();
+
+    uacpi_data_view view;
+    view.const_text = "Hello World";
+    // Don't include the null byte to check if this is accounted for
+    view.length = 11;
+
+    uacpi_object_assign_string(objects[1], view);
+    check_ok();
+
+    st = uacpi_object_assign_integer(objects[0], 3);
+    ensure_ok_status(st);
+    auto *tmp = uacpi_object_create_cstring("XXXX");
+    objects[1] = uacpi_object_create_reference(tmp);
+    uacpi_object_unref(tmp);
+    check_ok();
+
+    st = uacpi_object_assign_integer(objects[0], 4);
+    ensure_ok_status(st);
+    uint8_t buffer[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
+    view.const_bytes = buffer;
+    view.length = sizeof(buffer);
+    objects[1] = uacpi_object_create_buffer(view);
+    check_ok();
+
+    st = uacpi_object_assign_integer(objects[0], 5);
+    ensure_ok_status(st);
+    uacpi_object *pkg[3];
+
+    pkg[0] = uacpi_object_create_uninitialized();
+    view.const_text = "First Element";
+    view.length = strlen(view.const_text);
+    uacpi_object_assign_string(pkg[0], view);
+
+    pkg[1] = uacpi_object_create_cstring("test");
+    st = uacpi_object_assign_integer(pkg[1], 2);
+    ensure_ok_status(st);
+
+    buffer[0] = 1;
+    buffer[1] = 2;
+    buffer[2] = 3;
+    view.const_bytes = buffer;
+    view.length = 3;
+    pkg[2] = uacpi_object_create_buffer(view);
+    st = uacpi_object_assign_buffer(pkg[2], view);
+
+    uacpi_object_array arr1;
+    arr1.objects = pkg;
+    arr1.count = 3;
+    objects[1] = uacpi_object_create_package(arr1);
+    uacpi_object_assign_package(objects[1], arr1);
+    check_ok();
+    uacpi_object_unref(pkg[0]);
+    uacpi_object_unref(pkg[1]);
+    uacpi_object_unref(pkg[2]);
+
+    uacpi_object_unref(objects[0]);
+}
+
 static void run_test(
     std::string_view dsdt_path, const std::vector<std::string>& ssdt_paths,
     uacpi_object_type expected_type, std::string_view expected_value,
@@ -277,10 +381,16 @@ static void run_test(
 {
     acpi_rsdp rsdp {};
 
+    memcpy(&rsdp.signature, ACPI_RSDP_SIGNATURE, sizeof(ACPI_RSDP_SIGNATURE) - 1);
+    set_oem(rsdp.oemid);
+
     auto xsdt_bytes = sizeof(full_xsdt);
     xsdt_bytes += ssdt_paths.size() * sizeof(acpi_sdt_hdr*);
 
     auto *xsdt = new (std::calloc(xsdt_bytes, 1)) full_xsdt();
+    set_oem(xsdt->hdr.oemid);
+    set_oem_table_id(xsdt->hdr.oem_table_id);
+
     auto xsdt_delete = ScopeGuard(
         [&xsdt, &ssdt_paths] {
             uacpi_state_reset();
@@ -303,14 +413,6 @@ static void run_test(
         }
     );
     build_xsdt(*xsdt, rsdp, dsdt_path, ssdt_paths);
-
-    auto ensure_ok_status = [] (uacpi_status st) {
-        if (st == UACPI_STATUS_OK)
-            return;
-
-        auto msg = uacpi_status_to_string(st);
-        throw std::runtime_error(std::string("uACPI error: ") + msg);
-    };
 
     g_rsdp = reinterpret_cast<uacpi_phys_addr>(&rsdp);
 
@@ -385,12 +487,16 @@ static void run_test(
     ensure_ok_status(st);
 
     if (is_test_mode) {
-        uacpi_object *runner_id;
+        uacpi_object *runner_id = UACPI_NULL;
         st = uacpi_eval_typed(UACPI_NULL, "\\_SI.TID", UACPI_NULL,
                               UACPI_OBJECT_STRING_BIT, &runner_id);
         ensure_ok_status(st);
 
-        if (strcmp(runner_id->buffer->text, "uACPI") != 0)
+        uacpi_data_view view;
+        st = uacpi_object_get_string_or_buffer(runner_id, &view);
+        ensure_ok_status(st);
+
+        if (strcmp(view.text, "uACPI") != 0)
             throw std::runtime_error("invalid test runner id");
         uacpi_object_unref(runner_id);
     }
@@ -411,6 +517,11 @@ static void run_test(
         // We're done with emulation mode
         return;
 
+    if (expected_value == "check-object-api-works") {
+        test_object_api();
+        return;
+    }
+
     uacpi_object* ret = UACPI_NULL;
     auto guard = ScopeGuard(
         [&ret] { uacpi_object_unref(ret); }
@@ -419,6 +530,8 @@ static void run_test(
     st = uacpi_eval(UACPI_NULL, "\\MAIN", UACPI_NULL, &ret);
 
     ensure_ok_status(st);
+    if (ret == UACPI_NULL)
+        throw std::runtime_error("\\MAIN didn't return a value");
     validate_ret_against_expected(*ret, expected_type, expected_value);
 }
 

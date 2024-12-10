@@ -1,11 +1,9 @@
 #include "elf/symbols/symbols.h"
-#include "gdt/gdt.h"
-#include "idt/idt.h"
 #include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include <acpi/acpi.h>
-#include <cpu/smp.h>
+#include <arch/arch.h>
 #include <elf/symbols/symbols.h>
 #include <limine.h>
 #include <mem/kmem.h>
@@ -138,11 +136,10 @@ void kmain(void) {
           "FAMOUS "
           "LAST WORDS HERES FUNNY NUMBER TO SHOW WE USING NANOPRINTF %d\n",
           69420);
-  init_gdt();
-  kprintf("kmain(): GDT Inited.\n");
 
+  arch_init();
   // We're done, just hang...
-  init_idt();
+
   result r = pmm_init();
   unwrap_or_panic(r);
   vmm_init();
@@ -152,7 +149,7 @@ void kmain(void) {
           total_memory() / 1048576);
 
   get_symbols();
-  init_hpet();
-  init_smp();
+
+  // init_smp();
   panic("Uhhh yeah wssup");
 }

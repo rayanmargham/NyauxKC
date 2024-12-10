@@ -1,8 +1,10 @@
 #include "idt.h"
-#include "elf/symbols/symbols.h"
-#include "term/term.h"
-#include "timers/lapic.h"
-#include "utils/basic.h"
+#include "../cpu/lapic.h"
+#include "../instructions/instructions.h"
+#include <elf/symbols/symbols.h>
+#include <term/term.h>
+
+#include <utils/basic.h>
 
 #include <stdint.h>
 #define INTERRUPT_GATE 0xE
@@ -65,6 +67,14 @@ void *kprintf_symbol(nyauxsymbol h) {
   return 0;
 }
 
+void *uacpi_wrap_irq_fn(struct StackFrame *frame) {
+  if (isr_ctxt[frame->intnum] == NULL) {
+    panic("Could not handle uacpi interrupt :c");
+  }
+  uacpi_irq_wrap_info *info = isr_ctxt[frame->intnum];
+  info->fn(info->ctx);
+  return 0;
+}
 void *division_by_zero(struct StackFrame *frame) {
   kprintf("Division Error\n");
   if (symbolarray != NULL) {
@@ -84,14 +94,14 @@ uint64_t read_cr2() {
 void *page_fault_handler(struct StackFrame *frame) {
   kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
   kprintf("RIP is 0x%lx\n", frame->rip);
-  STACKTRACE
+  // STACKTRACE
   panic("Page Fault:c");
   return 0;
 }
 
 void *default_handler(struct StackFrame *frame) {
   kprintf("Unhandled interrupt/exception number 0x%x\n", frame->intnum);
-  kprintf("CS:RIP is 0x%02x:0x%lx\n", frame->cs, frame->rip);
+  kprintf("CS:RIP is 0x%02lx:0x%lx\n", frame->cs, frame->rip);
   STACKTRACE
   panic("CPU halted");
   return 0;

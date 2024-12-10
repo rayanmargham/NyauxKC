@@ -2,10 +2,8 @@
 #include <uacpi/internal/utilities.h>
 #include <uacpi/internal/stdlib.h>
 #include <uacpi/internal/interpreter.h>
-
-#ifndef UACPI_STATIC_TABLE_ARRAY_LEN
-    #define UACPI_STATIC_TABLE_ARRAY_LEN 16
-#endif
+#include <uacpi/platform/config.h>
+#include <uacpi/internal/mutex.h>
 
 DYNAMIC_ARRAY_WITH_INLINE_STORAGE(
     table_array, struct uacpi_installed_table, UACPI_STATIC_TABLE_ARRAY_LEN
@@ -13,18 +11,6 @@ DYNAMIC_ARRAY_WITH_INLINE_STORAGE(
 DYNAMIC_ARRAY_WITH_INLINE_STORAGE_IMPL(
     table_array, struct uacpi_installed_table,
 )
-
-#define UACPI_MUTEX_ACQUIRE_IF_EXISTS(mtx) \
-    do {                                   \
-        if ((mtx) != UACPI_NULL)           \
-            UACPI_MUTEX_ACQUIRE(mtx);      \
-    } while (0)
-
-#define UACPI_MUTEX_RELEASE_IF_EXISTS(mtx) \
-    do {                                   \
-        if ((mtx) != UACPI_NULL)           \
-            UACPI_MUTEX_RELEASE(mtx);      \
-    } while (0)
 
 static struct table_array tables;
 static uacpi_bool early_table_access;
@@ -44,6 +30,38 @@ UACPI_PACKED(struct uacpi_rxsdt {
     uacpi_u8 ptr_bytes[];
 })
 
+static void dump_table_header(
+    uacpi_phys_addr phys_addr, void *hdr
+)
+{
+    struct acpi_sdt_hdr *sdt = hdr;
+
+    if (uacpi_signatures_match(hdr, ACPI_FACS_SIGNATURE)) {
+        uacpi_info(
+            "FACS 0x%016"UACPI_PRIX64" %08X\n", UACPI_FMT64(phys_addr),
+            sdt->length
+        );
+        return;
+    }
+
+    if (!uacpi_memcmp(hdr, ACPI_RSDP_SIGNATURE, sizeof(ACPI_RSDP_SIGNATURE) - 1)) {
+        struct acpi_rsdp *rsdp = hdr;
+
+        uacpi_info(
+            "RSDP 0x%016"UACPI_PRIX64" %08X v%02X (%.6s)\n",
+            UACPI_FMT64(phys_addr), rsdp->length, rsdp->revision,
+            rsdp->oemid
+        );
+        return;
+    }
+
+    uacpi_info(
+        "%.4s 0x%016"UACPI_PRIX64" %08X v%02X (%.6s %.8s)\n",
+        sdt->signature, UACPI_FMT64(phys_addr), sdt->length, sdt->revision,
+        sdt->oemid, sdt->oem_table_id
+    );
+}
+
 static uacpi_status initialize_from_rxsdt(uacpi_phys_addr rxsdt_addr,
                                           uacpi_size entry_size)
 {
@@ -55,6 +73,8 @@ static uacpi_status initialize_from_rxsdt(uacpi_phys_addr rxsdt_addr,
     rxsdt = uacpi_kernel_map(rxsdt_addr, map_len);
     if (rxsdt == UACPI_NULL)
         return UACPI_STATUS_MAPPING_FAILED;
+
+    dump_table_header(rxsdt_addr, rxsdt);
 
     ret = uacpi_check_table_signature(rxsdt,
         entry_size == 8 ? ACPI_XSDT_SIGNATURE : ACPI_RSDT_SIGNATURE);
@@ -120,6 +140,8 @@ static uacpi_status initialize_from_rsdp(void)
     if (rsdp == UACPI_NULL)
         return UACPI_STATUS_MAPPING_FAILED;
 
+    dump_table_header(rsdp_phys, rsdp);
+
     if (rsdp->revision > 1 && rsdp->xsdt_addr &&
         !uacpi_check_flag(UACPI_FLAG_BAD_XSDT))
     {
@@ -164,7 +186,7 @@ uacpi_status uacpi_setup_early_table_access(
     return ret;
 }
 
-static enum uacpi_table_iteration_decision warn_if_early_referenced(
+static uacpi_iteration_decision warn_if_early_referenced(
     void *user, struct uacpi_installed_table *tbl, uacpi_size idx
 )
 {
@@ -177,7 +199,7 @@ static enum uacpi_table_iteration_decision warn_if_early_referenced(
         );
     }
 
-    return UACPI_TABLE_ITERATION_DECISION_CONTINUE;
+    return UACPI_ITERATION_DECISION_CONTINUE;
 }
 
 uacpi_status uacpi_initialize_tables(void)
@@ -290,14 +312,11 @@ uacpi_status uacpi_set_table_installation_handler(
     uacpi_table_installation_handler handler
 )
 {
-    uacpi_status ret = UACPI_STATUS_OK;
+    uacpi_status ret;
 
-    /*
-     * The mutex might not exist yet because uacpi_initialize_tables might not
-     * have been called at this point, allow that possibility since the user
-     * might want to install this handler early.
-     */
-    UACPI_MUTEX_ACQUIRE_IF_EXISTS(table_mutex);
+    ret = uacpi_acquire_native_mutex_may_be_null(table_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
 
     if (installation_handler != UACPI_NULL && handler != UACPI_NULL)
         goto out;
@@ -305,7 +324,7 @@ uacpi_status uacpi_set_table_installation_handler(
     installation_handler = handler;
 
 out:
-    UACPI_MUTEX_RELEASE_IF_EXISTS(table_mutex);
+    uacpi_release_native_mutex_may_be_null(table_mutex);
     return ret;
 }
 
@@ -539,6 +558,8 @@ static uacpi_status verify_and_install_table(
     if (uacpi_unlikely_error(ret))
         return ret;
 
+    dump_table_header(phys_addr, hdr);
+
     uacpi_memcpy(&table->hdr, hdr, sizeof(*hdr));
     table->phys_addr = phys_addr;
     table->ptr = virt_addr;
@@ -662,11 +683,14 @@ uacpi_status uacpi_table_install_physical_with_origin(
 {
     uacpi_status ret;
 
-    UACPI_MUTEX_ACQUIRE_IF_EXISTS(table_mutex);
+    ret = uacpi_acquire_native_mutex_may_be_null(table_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
+
     ret = table_install_physical_with_origin_unlocked(
         phys, origin, UACPI_NULL, out_table
     );
-    UACPI_MUTEX_RELEASE_IF_EXISTS(table_mutex);
+    uacpi_release_native_mutex_may_be_null(table_mutex);
 
     return ret;
 }
@@ -727,10 +751,13 @@ uacpi_status uacpi_table_install_with_origin(
 {
     uacpi_status ret;
 
-    UACPI_MUTEX_ACQUIRE_IF_EXISTS(table_mutex);
-    ret = table_install_with_origin_unlocked(virt, origin, out_table);
-    UACPI_MUTEX_RELEASE_IF_EXISTS(table_mutex);
+    ret = uacpi_acquire_native_mutex_may_be_null(table_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
 
+    ret = table_install_with_origin_unlocked(virt, origin, out_table);
+
+    uacpi_release_native_mutex_may_be_null(table_mutex);
     return ret;
 }
 
@@ -760,14 +787,17 @@ uacpi_status uacpi_for_each_table(
     uacpi_size base_idx, uacpi_table_iteration_callback cb, void *user
 )
 {
+    uacpi_status ret;
     uacpi_size idx;
     struct uacpi_installed_table *tbl;
-    enum uacpi_table_iteration_decision ret;
+    uacpi_iteration_decision dec;
 
     if (!early_table_access)
         UACPI_ENSURE_INIT_LEVEL_AT_LEAST(UACPI_INIT_LEVEL_SUBSYSTEM_INITIALIZED);
 
-    UACPI_MUTEX_ACQUIRE_IF_EXISTS(table_mutex);
+    ret = uacpi_acquire_native_mutex_may_be_null(table_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
 
     for (idx = base_idx; idx < table_array_size(&tables); ++idx) {
         tbl = table_array_at(&tables, idx);
@@ -775,13 +805,13 @@ uacpi_status uacpi_for_each_table(
         if (tbl->flags & UACPI_TABLE_INVALID)
             continue;
 
-        ret = cb(user, tbl, idx);
-        if (ret == UACPI_TABLE_ITERATION_DECISION_BREAK)
+        dec = cb(user, tbl, idx);
+        if (dec == UACPI_ITERATION_DECISION_BREAK)
             break;
     }
 
-    UACPI_MUTEX_RELEASE_IF_EXISTS(table_mutex);
-    return UACPI_STATUS_OK;
+    uacpi_release_native_mutex_may_be_null(table_mutex);
+    return ret;
 }
 
 enum search_type {
@@ -800,7 +830,7 @@ struct table_search_ctx {
     uacpi_status status;
 };
 
-static enum uacpi_table_iteration_decision do_search_tables(
+static uacpi_iteration_decision do_search_tables(
     void *user, struct uacpi_installed_table *tbl, uacpi_size idx
 )
 {
@@ -813,27 +843,27 @@ static enum uacpi_table_iteration_decision do_search_tables(
         const uacpi_table_identifiers *id = ctx->id;
 
         if (!uacpi_signatures_match(&id->signature, tbl->hdr.signature))
-            return UACPI_TABLE_ITERATION_DECISION_CONTINUE;
+            return UACPI_ITERATION_DECISION_CONTINUE;
         if (id->oemid[0] != '\0' &&
             uacpi_memcmp(id->oemid, tbl->hdr.oemid, sizeof(id->oemid)) != 0)
-            return UACPI_TABLE_ITERATION_DECISION_CONTINUE;
+            return UACPI_ITERATION_DECISION_CONTINUE;
 
         if (id->oem_table_id[0] != '\0' &&
             uacpi_memcmp(id->oem_table_id, tbl->hdr.oem_table_id,
                          sizeof(id->oem_table_id)) != 0)
-            return UACPI_TABLE_ITERATION_DECISION_CONTINUE;
+            return UACPI_ITERATION_DECISION_CONTINUE;
 
         break;
     }
 
     case SEARCH_TYPE_MATCH:
         if (!ctx->match_cb(tbl))
-            return UACPI_TABLE_ITERATION_DECISION_CONTINUE;
+            return UACPI_ITERATION_DECISION_CONTINUE;
         break;
 
     default:
         ctx->status = UACPI_STATUS_INVALID_ARGUMENT;
-        return UACPI_TABLE_ITERATION_DECISION_BREAK;
+        return UACPI_ITERATION_DECISION_BREAK;
     }
 
     ret = table_ref_unlocked(tbl);
@@ -842,7 +872,7 @@ static enum uacpi_table_iteration_decision do_search_tables(
         out_table->ptr = tbl->ptr;
         out_table->index = idx;
         ctx->status = ret;
-        return UACPI_TABLE_ITERATION_DECISION_BREAK;
+        return UACPI_ITERATION_DECISION_BREAK;
     }
 
     /*
@@ -850,10 +880,10 @@ static enum uacpi_table_iteration_decision do_search_tables(
      * existed and go on with the search.
      */
     if (ret == UACPI_STATUS_BAD_CHECKSUM)
-        return UACPI_TABLE_ITERATION_DECISION_CONTINUE;
+        return UACPI_ITERATION_DECISION_CONTINUE;
 
     ctx->status = ret;
-    return UACPI_TABLE_ITERATION_DECISION_BREAK;
+    return UACPI_ITERATION_DECISION_BREAK;
 }
 
 uacpi_status uacpi_table_match(
@@ -963,13 +993,16 @@ struct table_ctl_request {
 
 static uacpi_status table_ctl(uacpi_size idx, struct table_ctl_request *req)
 {
-    uacpi_status ret = UACPI_STATUS_OK;
+    uacpi_status ret;
     struct uacpi_installed_table *tbl;
 
     if (!early_table_access)
         UACPI_ENSURE_INIT_LEVEL_AT_LEAST(UACPI_INIT_LEVEL_SUBSYSTEM_INITIALIZED);
 
-    UACPI_MUTEX_ACQUIRE_IF_EXISTS(table_mutex);
+    ret = uacpi_acquire_native_mutex_may_be_null(table_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
+
     if (uacpi_unlikely(table_array_size(&tables) <= idx)) {
         uacpi_error(
             "requested invalid table index %zu (%zu tables installed)\n",
@@ -1029,7 +1062,7 @@ static uacpi_status table_ctl(uacpi_size idx, struct table_ctl_request *req)
         tbl->flags &= ~req->clear;
 
 out:
-    UACPI_MUTEX_RELEASE_IF_EXISTS(table_mutex);
+    uacpi_release_native_mutex_may_be_null(table_mutex);
     return ret;
 }
 
@@ -1049,19 +1082,11 @@ uacpi_status uacpi_table_load_with_cause(
     if (uacpi_unlikely_error(ret))
         return ret;
 
-    /*
-     * FIXME:
-     * The reference to the table is leaked intentionally as any created
-     * methods inside still reference the virtual mapping here.
-     *
-     * There are two solutions I can think of:
-     * 1. Allocate a heap buffer for method code and copy it there, then the
-     *    methods no longer need to execute tables after the first pass.
-     * 2. Make methods explicitly take references to the table they're a part
-     *    of. This would allows us to drop the leaked reference here after the
-     *    table load.
-     */
-    return uacpi_execute_table(req.out_tbl, cause);
+    ret = uacpi_execute_table(req.out_tbl, cause);
+
+    req.type = TABLE_CTL_PUT;
+    table_ctl(idx, &req);
+    return ret;
 }
 
 uacpi_status uacpi_table_load(uacpi_size idx)

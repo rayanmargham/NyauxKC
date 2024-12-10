@@ -16,6 +16,11 @@ void stall_with_hpetclk(uint64_t ms) {
   while ((*pol_cur - pol_start) * ctr_clock_period < ms * 1000000) {
   }
 }
+uint64_t read_hpet_counter() {
+  assert(hpetvirtaddr != NULL);
+  return (*(volatile uint64_t *)((volatile uint64_t)hpetvirtaddr + 0xf0) *
+          ctr_clock_period);
+}
 void init_hpet() {
   if (hpetvirtaddr != NULL) {
     return;

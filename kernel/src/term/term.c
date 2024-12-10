@@ -1,5 +1,6 @@
 #include "term.h"
 #include "utils/basic.h"
+#include <arch/x86_64/instructions/instructions.h>
 #include <stdint.h>
 struct flanterm_context *ft_ctx = NULL;
 spinlock_t lock;
@@ -18,7 +19,11 @@ void tputc(int ch, void *) {
 
   char c = ch;
   flanterm_write(ft_ctx, &c, 1);
+
+#if defined(__x86_64__)
+  // THIS IS SO FUCKING HACKY SKULL EMOJI
   outb(0x3F8, (uint8_t)c);
+#endif
 }
 void kprintf(const char *format, ...) {
   spinlock_lock(&lock);

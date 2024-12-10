@@ -4,8 +4,9 @@
 #include <uacpi/internal/registers.h>
 #include <uacpi/internal/context.h>
 #include <uacpi/kernel_api.h>
+#include <uacpi/internal/namespace.h>
 
-#if UACPI_REDUCED_HARDWARE == 0
+#ifndef UACPI_REDUCED_HARDWARE
 
 #define GLOBAL_LOCK_PENDING (1 << 0)
 
@@ -120,9 +121,31 @@ UACPI_STUB_IF_REDUCED_HARDWARE(
     void uacpi_release_global_lock_to_firmware(void)
 )
 
+uacpi_status uacpi_acquire_native_mutex_with_timeout(
+    uacpi_handle mtx, uacpi_u16 timeout
+)
+{
+    uacpi_status ret;
+
+    if (uacpi_unlikely(mtx == UACPI_NULL))
+        return UACPI_STATUS_INVALID_ARGUMENT;
+
+    ret = uacpi_kernel_acquire_mutex(mtx, timeout);
+    if (uacpi_likely_success(ret))
+        return ret;
+
+    if (uacpi_unlikely(ret != UACPI_STATUS_TIMEOUT || timeout == 0xFFFF)) {
+        uacpi_error(
+            "unexpected status %08X (%s) while acquiring %p (timeout=%04X)\n",
+            ret, uacpi_status_to_string(ret), mtx, timeout
+        );
+    }
+
+    return ret;
+}
+
 uacpi_status uacpi_acquire_global_lock(uacpi_u16 timeout, uacpi_u32 *out_seq)
 {
-    uacpi_bool did_acquire;
     uacpi_status ret;
 
     UACPI_ENSURE_INIT_LEVEL_AT_LEAST(UACPI_INIT_LEVEL_SUBSYSTEM_INITIALIZED);
@@ -130,15 +153,15 @@ uacpi_status uacpi_acquire_global_lock(uacpi_u16 timeout, uacpi_u32 *out_seq)
     if (uacpi_unlikely(out_seq == UACPI_NULL))
         return UACPI_STATUS_INVALID_ARGUMENT;
 
-    UACPI_MUTEX_ACQUIRE_WITH_TIMEOUT(
-        g_uacpi_rt_ctx.global_lock_mutex, timeout, did_acquire
+    ret = uacpi_acquire_native_mutex_with_timeout(
+        g_uacpi_rt_ctx.global_lock_mutex->handle, timeout
     );
-    if (!did_acquire)
-        return UACPI_STATUS_TIMEOUT;
+    if (ret != UACPI_STATUS_OK)
+        return ret;
 
     ret = uacpi_acquire_global_lock_from_firmware();
     if (uacpi_unlikely_error(ret)) {
-        UACPI_MUTEX_RELEASE(g_uacpi_rt_ctx.global_lock_mutex);
+        uacpi_release_native_mutex(g_uacpi_rt_ctx.global_lock_mutex->handle);
         return ret;
     }
 
@@ -160,7 +183,7 @@ uacpi_status uacpi_release_global_lock(uacpi_u32 seq)
 
     g_uacpi_rt_ctx.global_lock_acquired = UACPI_FALSE;
     uacpi_release_global_lock_to_firmware();
-    UACPI_MUTEX_RELEASE(g_uacpi_rt_ctx.global_lock_mutex);
+    uacpi_release_native_mutex(g_uacpi_rt_ctx.global_lock_mutex->handle);
 
     return UACPI_STATUS_OK;
 }
@@ -173,10 +196,10 @@ uacpi_bool uacpi_this_thread_owns_aml_mutex(uacpi_mutex *mutex)
     return id == uacpi_kernel_get_thread_id();
 }
 
-uacpi_bool uacpi_acquire_aml_mutex(uacpi_mutex *mutex, uacpi_u16 timeout)
+uacpi_status uacpi_acquire_aml_mutex(uacpi_mutex *mutex, uacpi_u16 timeout)
 {
     uacpi_thread_id this_id;
-    uacpi_bool did_acquire;
+    uacpi_status ret = UACPI_STATUS_OK;
 
     this_id = uacpi_kernel_get_thread_id();
     if (UACPI_ATOMIC_LOAD_THREAD_ID(&mutex->owner) == this_id) {
@@ -185,40 +208,124 @@ uacpi_bool uacpi_acquire_aml_mutex(uacpi_mutex *mutex, uacpi_u16 timeout)
                 "failing an attempt to acquire mutex @%p, too many recursive "
                 "acquires\n", mutex
             );
-            return UACPI_FALSE;
+            return UACPI_STATUS_DENIED;
         }
 
         mutex->depth++;
-        return UACPI_TRUE;
+        return ret;
     }
 
-    UACPI_MUTEX_ACQUIRE_WITH_TIMEOUT(mutex->handle, timeout, did_acquire);
-    if (!did_acquire)
-        return UACPI_FALSE;
+    uacpi_namespace_write_unlock();
+    ret = uacpi_acquire_native_mutex_with_timeout(mutex->handle, timeout);
+    if (ret != UACPI_STATUS_OK)
+        goto out;
 
-    if (mutex->handle == g_uacpi_rt_ctx.global_lock_mutex) {
-        uacpi_status ret;
-
+    if (mutex->handle == g_uacpi_rt_ctx.global_lock_mutex->handle) {
         ret = uacpi_acquire_global_lock_from_firmware();
         if (uacpi_unlikely_error(ret)) {
-            UACPI_MUTEX_RELEASE(mutex->handle);
-            return UACPI_FALSE;
+            uacpi_release_native_mutex(mutex->handle);
+            goto out;
         }
     }
 
     UACPI_ATOMIC_STORE_THREAD_ID(&mutex->owner, this_id);
     mutex->depth = 1;
-    return UACPI_TRUE;
+
+out:
+    uacpi_namespace_write_lock();
+    return ret;
 }
 
-void uacpi_release_aml_mutex(uacpi_mutex *mutex)
+uacpi_status uacpi_release_aml_mutex(uacpi_mutex *mutex)
 {
     if (mutex->depth-- > 1)
-        return;
+        return UACPI_STATUS_OK;
 
-    if (mutex->handle == g_uacpi_rt_ctx.global_lock_mutex)
+    if (mutex->handle == g_uacpi_rt_ctx.global_lock_mutex->handle)
         uacpi_release_global_lock_to_firmware();
 
     UACPI_ATOMIC_STORE_THREAD_ID(&mutex->owner, UACPI_THREAD_ID_NONE);
-    UACPI_MUTEX_RELEASE(mutex->handle);
+    uacpi_release_native_mutex(mutex->handle);
+
+    return UACPI_STATUS_OK;
+}
+
+uacpi_status uacpi_rw_lock_init(struct uacpi_rw_lock *lock)
+{
+    lock->read_mutex = uacpi_kernel_create_mutex();
+    if (uacpi_unlikely(lock->read_mutex == UACPI_NULL))
+        return UACPI_STATUS_OUT_OF_MEMORY;
+
+    lock->write_mutex = uacpi_kernel_create_mutex();
+    if (uacpi_unlikely(lock->write_mutex == UACPI_NULL)) {
+        uacpi_kernel_free_mutex(lock->read_mutex);
+        lock->read_mutex = UACPI_NULL;
+        return UACPI_STATUS_OUT_OF_MEMORY;
+    }
+
+    lock->num_readers = 0;
+    return UACPI_STATUS_OK;
+}
+
+uacpi_status uacpi_rw_lock_deinit(struct uacpi_rw_lock *lock)
+{
+    if (uacpi_unlikely(lock->num_readers)) {
+        uacpi_warn("de-initializing rw_lock %p with %zu active readers\n",
+                   lock, lock->num_readers);
+        lock->num_readers = 0;
+    }
+
+    if (lock->read_mutex != UACPI_NULL) {
+        uacpi_kernel_free_mutex(lock->read_mutex);
+        lock->read_mutex = UACPI_NULL;
+    }
+    if (lock->write_mutex != UACPI_NULL) {
+        uacpi_kernel_free_mutex(lock->write_mutex);
+        lock->write_mutex = UACPI_NULL;
+    }
+
+    return UACPI_STATUS_OK;
+}
+
+uacpi_status uacpi_rw_lock_read(struct uacpi_rw_lock *lock)
+{
+    uacpi_status ret;
+
+    ret = uacpi_acquire_native_mutex(lock->read_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
+
+    if (lock->num_readers++ == 0) {
+        ret = uacpi_acquire_native_mutex(lock->write_mutex);
+        if (uacpi_unlikely_error(ret))
+            lock->num_readers = 0;
+    }
+
+    uacpi_kernel_release_mutex(lock->read_mutex);
+    return ret;
+}
+
+uacpi_status uacpi_rw_unlock_read(struct uacpi_rw_lock *lock)
+{
+    uacpi_status ret;
+
+    ret = uacpi_acquire_native_mutex(lock->read_mutex);
+    if (uacpi_unlikely_error(ret))
+        return ret;
+
+    if (lock->num_readers-- == 1)
+        uacpi_release_native_mutex(lock->write_mutex);
+
+    uacpi_kernel_release_mutex(lock->read_mutex);
+    return ret;
+}
+
+uacpi_status uacpi_rw_lock_write(struct uacpi_rw_lock *lock)
+{
+    return uacpi_acquire_native_mutex(lock->write_mutex);
+}
+
+uacpi_status uacpi_rw_unlock_write(struct uacpi_rw_lock *lock)
+{
+    return uacpi_release_native_mutex(lock->write_mutex);
 }

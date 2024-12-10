@@ -1,10 +1,11 @@
 #include <uacpi/types.h>
 #include <uacpi/status.h>
+#include <uacpi/uacpi.h>
 
 #include <uacpi/internal/context.h>
 #include <uacpi/internal/utilities.h>
 #include <uacpi/internal/log.h>
-#include <uacpi/uacpi.h>
+#include <uacpi/internal/namespace.h>
 
 void uacpi_eisa_id_to_string(uacpi_u32 id, uacpi_char *out_string)
 {
@@ -927,33 +928,26 @@ struct device_find_ctx {
     uacpi_iteration_callback cb;
 };
 
-enum uacpi_ns_iteration_decision find_one_device(
-    void *opaque, uacpi_namespace_node *node
+uacpi_iteration_decision find_one_device(
+    void *opaque, uacpi_namespace_node *node, uacpi_u32 depth
 )
 {
     struct device_find_ctx *ctx = opaque;
     uacpi_status ret;
     uacpi_u32 flags;
-    uacpi_object *obj;
-
-    obj = uacpi_namespace_node_get_object(node);
-    if (uacpi_unlikely(obj == UACPI_NULL))
-        return UACPI_NS_ITERATION_DECISION_CONTINUE;
-    if (obj->type != UACPI_OBJECT_DEVICE)
-        return UACPI_NS_ITERATION_DECISION_CONTINUE;
 
     if (!uacpi_device_matches_pnp_id(node, ctx->target_hids))
-        return UACPI_NS_ITERATION_DECISION_CONTINUE;
+        return UACPI_ITERATION_DECISION_CONTINUE;
 
     ret = uacpi_eval_sta(node, &flags);
     if (uacpi_unlikely_error(ret))
-        return UACPI_NS_ITERATION_DECISION_NEXT_PEER;
+        return UACPI_ITERATION_DECISION_NEXT_PEER;
 
     if (!(flags & ACPI_STA_RESULT_DEVICE_PRESENT) &&
         !(flags & ACPI_STA_RESULT_DEVICE_FUNCTIONING))
-        return UACPI_NS_ITERATION_DECISION_NEXT_PEER;
+        return UACPI_ITERATION_DECISION_NEXT_PEER;
 
-    return ctx->cb(ctx->user, node);
+    return ctx->cb(ctx->user, node, depth);
 }
 
 
@@ -970,8 +964,10 @@ uacpi_status uacpi_find_devices_at(
         .cb = cb,
     };
 
-    uacpi_namespace_for_each_node_depth_first(parent, find_one_device, &ctx);
-    return UACPI_STATUS_OK;
+    return uacpi_namespace_for_each_child(
+        parent, find_one_device, UACPI_NULL, UACPI_OBJECT_DEVICE_BIT,
+        UACPI_MAX_DEPTH_ANY, &ctx
+    );
 }
 
 uacpi_status uacpi_find_devices(
@@ -989,7 +985,7 @@ uacpi_status uacpi_set_interrupt_model(uacpi_interrupt_model model)
 {
     uacpi_status ret;
     uacpi_object *arg;
-    uacpi_args args;
+    uacpi_object_array args;
 
     UACPI_ENSURE_INIT_LEVEL_AT_LEAST(UACPI_INIT_LEVEL_NAMESPACE_LOADED);
 
@@ -1085,12 +1081,12 @@ uacpi_status uacpi_get_pci_routing_table(
         elem_obj = entry_pkg->objects[2];
         switch (elem_obj->type) {
         case UACPI_OBJECT_STRING:
-            entry->source = uacpi_namespace_node_resolve_from_aml_namepath(
-                parent, elem_obj->buffer->text
+            ret = uacpi_object_resolve_as_aml_namepath(
+                elem_obj, parent, &entry->source
             );
-            if (uacpi_unlikely(entry->source == UACPI_NULL)) {
-                uacpi_error("unable to lookup _PRT source: %s\n",
-                            elem_obj->buffer->text);
+            if (uacpi_unlikely_error(ret)) {
+                uacpi_error("unable to lookup _PRT source %s: %s\n",
+                            elem_obj->buffer->text, uacpi_status_to_string(ret));
                 goto out_bad_encoding;
             }
             break;

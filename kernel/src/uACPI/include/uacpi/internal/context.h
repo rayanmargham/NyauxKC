@@ -50,11 +50,20 @@ struct uacpi_runtime_context {
     uacpi_bool has_global_lock;
     uacpi_handle sci_handle;
 #endif
+    uacpi_u64 opcodes_executed;
+
     uacpi_u32 loop_timeout_seconds;
     uacpi_u32 max_call_stack_depth;
 
     uacpi_u32 global_lock_seq_num;
-    uacpi_handle *global_lock_mutex;
+
+    /*
+     * These are stored here to protect against stuff like:
+     * - CopyObject(JUNK, \)
+     * - CopyObject(JUNK, \_GL)
+     */
+    uacpi_mutex *global_lock_mutex;
+    uacpi_object *root_object;
 
 #ifndef UACPI_REDUCED_HARDWARE
     uacpi_handle *global_lock_event;

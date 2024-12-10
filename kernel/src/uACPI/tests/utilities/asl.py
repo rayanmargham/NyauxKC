@@ -152,6 +152,10 @@ class ASLSource:
 
             # One or more objects within the Pathname do not exist
             "-vw", "6161",
+            # Too few arguments
+            "-vw", "6005",
+            # Called method returns no value
+            "-vw", "6080",
             # Object does not exist
             "-vw", "6084",
 
