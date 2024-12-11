@@ -20,8 +20,6 @@ void init_gdt() {
   gdt[8] = 0x00affb000000ffff;
   gptr.offset = (uint64_t)&gdt;
   gptr.size = sizeof(gdt) - 1;
-  kprintf("gdt(): Offset is %lx\n", gptr.offset);
-  kprintf("gdt(): Size is %d\n", gptr.size);
 
   gdt_flush(&gptr);
 }

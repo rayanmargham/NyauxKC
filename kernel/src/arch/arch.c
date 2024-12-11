@@ -2,10 +2,14 @@
 #include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/gdt/gdt.h"
 #include "arch/x86_64/instructions/instructions.h"
+
+#include "arch/x86_64/idt/idt.h"
+#include "mem/vmm.h"
 #include "term/term.h"
 #include <arch/x86_64/idt/idt.h>
 #include <mem/kmem.h>
 #include <stdint.h>
+#include <utils/basic.h>
 // case 1:
 //     outb(address, in_value);
 //     break;
@@ -82,8 +86,22 @@ void arch_init() {
 #if defined(__x86_64__)
   kprintf("Welcome to Nyaux on x86_64!\n");
   init_gdt();
-  kprintf("init_gdt(): done init.\n");
+  kprintf("arch_init(): gdt loaded.\n");
   init_idt();
-  kprintf("init_idt(): done init.\n");
+  kprintf("arch_init(): idt loaded.\n");
+#else
+  kprintf("Nyaux Cannot Run on this archiecture.");
+  hcf();
+#endif
+}
+void arch_late_init() {
+#if defined(__x86_64__)
+
+  init_gdt();
+  init_idt();
+  per_cpu_vmm_init();
+  kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\n",
+          get_lapic_id());
+  init_lapic();
 #endif
 }

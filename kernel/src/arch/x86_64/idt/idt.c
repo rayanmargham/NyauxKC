@@ -126,7 +126,7 @@ void *sched(struct StackFrame *frame) {
   //   send_eoi();
   //   return frame;
   // }
-  kprintf("CPU %d Says: MY LAPIC TICKED HAHAHAHA\n", get_lapic_id());
+  // kprintf("CPU %d Says: MY LAPIC TICKED HAHAHAHA\n", get_lapic_id());
   send_eoi();
   return frame;
 }

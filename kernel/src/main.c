@@ -1,5 +1,6 @@
 #include "elf/symbols/symbols.h"
 #include "mem/vmm.h"
+#include "smp/smp.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include <acpi/acpi.h>
@@ -150,6 +151,6 @@ void kmain(void) {
 
   get_symbols();
 
-  // init_smp();
+  init_smp();
   panic("Uhhh yeah wssup");
 }

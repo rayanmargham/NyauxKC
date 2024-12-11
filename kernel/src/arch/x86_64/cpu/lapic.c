@@ -6,7 +6,6 @@
 #include <timers/hpet.h>
 // per cpu function call
 void init_lapic() {
-  kprintf("CPU %d's lapic is being initialized.\n", get_lapic_id());
   volatile uint64_t lapic = get_lapic_address() + hhdm_request.response->offset;
   volatile uint32_t *sur_interrupt = (volatile uint32_t *)(lapic + 0xf0);
   *sur_interrupt = 34 | (*sur_interrupt & ~0xFF) |
