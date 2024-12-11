@@ -152,5 +152,5 @@ void kmain(void) {
   get_symbols();
 
   init_smp();
-  panic("Uhhh yeah wssup");
+  hcf(); // we js chill
 }
