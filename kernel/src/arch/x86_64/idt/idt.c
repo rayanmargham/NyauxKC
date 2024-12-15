@@ -100,7 +100,7 @@ void *page_fault_handler(struct StackFrame *frame) {
 }
 
 void *default_handler(struct StackFrame *frame) {
-  kprintf("Unhandled interrupt/exception number 0x%x\n", frame->intnum);
+  kprintf("Unhandled interrupt/exception number 0x%lx\n", frame->intnum);
   kprintf("CS:RIP is 0x%02lx:0x%lx\n", frame->cs, frame->rip);
   STACKTRACE
   panic("CPU halted");
