@@ -94,7 +94,7 @@ uint64_t read_cr2() {
 void *page_fault_handler(struct StackFrame *frame) {
   kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
   kprintf("RIP is 0x%lx\n", frame->rip);
-  // STACKTRACE
+  STACKTRACE
   panic("Page Fault:c");
   return 0;
 }

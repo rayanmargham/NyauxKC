@@ -95,6 +95,7 @@ slab *init_slab(uint64_t size) {
   hdr->obj_ammount = obj_amount;
   pnode *first = (pnode *)((uint64_t)page + sizeof(slab));
   pnode *cur = first;
+  first->next = NULL;
   hdr->freelist = (struct pnode *)first;
   for (uint64_t i = 1; i < obj_amount; i++) {
     pnode *new = (pnode *)((uint64_t)first + (i * size));
@@ -258,7 +259,19 @@ void slabfree(void *addr) {
   slab *guy = (slab *)(real_addr & ~0xFFF);
   memset(addr, 0, sizeof(pnode));
   pnode *node = (pnode *)addr;
+
   pnode *old = (pnode *)guy->freelist;
+
   node->next = (struct pnode *)old;
   guy->freelist = (struct pnode *)node;
+  pnode *counter = (pnode *)guy->freelist;
+  unsigned int howmanynodes = 0;
+  while (counter != NULL) {
+    howmanynodes += 1;
+    kprintf("counter: %p\n", (void *)counter);
+    counter = (pnode *)counter->next;
+  }
+  if (howmanynodes == guy->obj_ammount) {
+    kprintf("USELESS SLAB\n");
+  }
 }

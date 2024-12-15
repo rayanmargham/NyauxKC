@@ -144,13 +144,12 @@ void kmain(void) {
   result r = pmm_init();
   unwrap_or_panic(r);
   vmm_init();
+  get_symbols();
   init_acpi();
   free_unused_slabcaches();
   kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
           total_memory() / 1048576);
 
-  get_symbols();
-
-  init_smp();
+  // init_smp();
   hcf(); // we js chill
 }
