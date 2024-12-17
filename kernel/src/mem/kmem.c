@@ -3,6 +3,7 @@
 
 void *kmalloc(uint64_t amount) {
   if (amount > 1024) {
+
     void *him = kvmm_region_alloc(amount, PRESENT | RWALLOWED);
     return him;
   } else {
@@ -18,6 +19,11 @@ void *kmalloc(uint64_t amount) {
   }
 }
 void kfree(void *addr, uint64_t size) {
+  if (size > 18446744071562175) {
+    kprintf("Garbage found.\n");
+    __asm__("int 0x67");
+  }
+  kprintf("kfree(): deallocing size of %lu\n", size);
   if (size > 1024) {
     kvmm_region_dealloc(addr);
   } else {

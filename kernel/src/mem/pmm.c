@@ -109,7 +109,7 @@ void init_cache(cache *mod, uint64_t size) {
   mod->slabs = (struct slab *)init_slab(size);
 }
 result init_kmalloc() {
-  result ok = {.type = ERR, .err_msg = "init_kmalloc() failed"};
+  result ok = {.type = ERR, .err_msg = "init_kmalloc(): failed"};
   init_cache(&caches[0], 16);
   init_cache(&caches[1], 32);
   init_cache(&caches[2], 64);
@@ -192,54 +192,11 @@ uint64_t cache_getmemoryused(cache *mod) {
   };
   return bytes;
 }
-void free_unused_slabs(cache *mod) {
-  if (mod->slabs == NULL || mod->size == 0) {
-    return;
-  }
-  slab *cur = (slab *)mod->slabs;
-  slab *prev = NULL;
-  while (true) {
-    if (cur->freelist == NULL) {
-      if (cur->next != NULL) {
-        prev = cur;
-        cur = (slab *)cur->next;
-        continue;
-      }
-      break;
-    }
-    pnode *n = (pnode *)cur->freelist;
-    uint64_t free_nodes = 0;
-    while (true) {
-      if (n->next == NULL) {
-        free_nodes += 1;
-        break;
-      }
-      free_nodes += 1;
-      n = (pnode *)n->next;
-    }
-    kprintf(
-        "free_unused_slabs(): free nodes in this slab %lu, obj ammount %lu\n",
-        free_nodes, cur->obj_ammount);
-    if (free_nodes == cur->obj_ammount) {
-      if (prev != NULL) {
-        prev->next = cur->next;
-      }
-      memset(cur, 0, 4096);
-      pmm_dealloc((void *)cur);
-    }
-    if (cur->next != NULL) {
-      prev = cur;
-      cur = (slab *)cur->next;
-      continue;
-    } else {
-    }
-    break;
-  };
-}
+
 void free_unused_slabcaches() {
   for (int i = 0; i != 7; i++) {
     cache *c = &caches[i];
-    free_unused_slabs(c);
+    // free_unused_slabs(c);
   }
 }
 uint64_t total_memory() {
@@ -252,6 +209,7 @@ uint64_t total_memory() {
   return total_bytes;
 }
 void slabfree(void *addr) {
+  kprintf("address: %p\n", addr);
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
     return;

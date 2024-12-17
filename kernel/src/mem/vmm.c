@@ -239,6 +239,7 @@ uint64_t kvmm_region_bytesused() {
   return bytes;
 }
 void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
+
   assert(ker_map.head != NULL);
   assert(ker_map.pml4 != NULL);
   VMMRegion *cur = (VMMRegion *)ker_map.head;
@@ -262,6 +263,7 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
         map(ker_map.pml4, (uint64_t)page, new->base + (i * 4096), flags);
       }
       memset((void *)new->base, 0, new->length);
+      kprintf("vmm gets: %p\n", (void *)new->base);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -274,6 +276,7 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
   return NULL;
 }
 void kvmm_region_dealloc(void *addr) {
+
   if (addr == NULL) {
     return;
   }
