@@ -5,7 +5,7 @@
 extern volatile struct limine_memmap_request memmap_request;
 extern volatile struct limine_hhdm_request hhdm_request;
 extern char THE_REAL[];
-extern volatile struct limine_kernel_address_request kernel_address;
+extern volatile struct limine_executable_address_request kernel_address;
 void vmm_init();
 void *kvmm_region_alloc(uint64_t amount, uint64_t flags);
 void kvmm_region_dealloc(void *addr);

@@ -69,12 +69,12 @@ clone_repo_commit \
     freestnd-c-hdrs-0bsd \
     0353851fdebe0eb6a4d2c608c5393040d310bf35
 
-download_by_hash \
-    https://github.com/osdev0/cc-runtime/raw/d5425655388977fa12ff9b903e554a20b20c426e/cc-runtime.c \
-    src/cc-runtime.c \
-    60bb1af4f6541077b736f19bf0f5a22b5dd8a2f3bed0d9d9d89846a33ef24b74
+clone_repo_commit \
+    https://github.com/osdev0/cc-runtime.git \
+    cc-runtime \
+    9c281448fe40498a6341d74f55c9af4f642c0b1d
 
 download_by_hash \
-    https://github.com/limine-bootloader/limine/raw/97c31196a9aec28b36ed9ff64d6df77a061c3d9b/limine.h \
+    https://github.com/limine-bootloader/limine/raw/7cddb61183685d9bddd2eb13d42223d929c2abe6/limine.h \
     src/limine.h \
-    3a018a8326adb5e6cff14a8595c775fd88235eb3e5fde4a135132b6398d165d5
+    c00e7d4cd6e2674eca481f978b64a7fb8c8479cc32c466ec35aad2207761bf01

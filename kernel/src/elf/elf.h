@@ -1,3 +1,4 @@
+#include <limine.h>
 #include <stdint.h>
 #define EI_NIDENT 16
 #define Elf64_Addr uint64_t
@@ -60,6 +61,6 @@ typedef struct {
     Elf64_Addr d_ptr;
   } d_un;
 } Elf64_Dyn;
-extern volatile struct limine_kernel_file_request kernelfile;
+extern volatile struct limine_executable_file_request kernelfile;
 Elf64_Ehdr *get_kernel_elfheader();
 uint64_t get_kerneL_address();

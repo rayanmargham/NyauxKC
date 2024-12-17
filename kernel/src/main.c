@@ -42,16 +42,17 @@ __attribute__((used,
         memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 2};
 __attribute__((used, section(".requests"))) volatile struct limine_hhdm_request
     hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 2};
-__attribute__((used, section(".requests"))) volatile struct limine_smp_request
-    smp_request = {.id = LIMINE_SMP_REQUEST, .revision = 2};
+__attribute__((used, section(".requests"))) volatile struct limine_mp_request
+    smp_request = {.id = LIMINE_MP_REQUEST, .revision = 2};
 __attribute__((
-    used, section(".requests"))) volatile struct limine_kernel_address_request
-    kernel_address = {.id = LIMINE_KERNEL_ADDRESS_REQUEST, .revision = 2};
+    used,
+    section(".requests"))) volatile struct limine_executable_address_request
+    kernel_address = {.id = LIMINE_EXECUTABLE_ADDRESS_REQUEST, .revision = 2};
 __attribute__((used, section(".requests"))) volatile struct limine_rsdp_request
     rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 2};
-__attribute__((used,
-               section(".requests"))) volatile struct limine_kernel_file_request
-    kernelfile = {.id = LIMINE_KERNEL_FILE_REQUEST, .revision = 2};
+__attribute__((
+    used, section(".requests"))) volatile struct limine_executable_file_request
+    kernelfile = {.id = LIMINE_EXECUTABLE_FILE_REQUEST, .revision = 2};
 __attribute__((
     used,
     section(".requests_end_marker"))) static volatile LIMINE_REQUESTS_END_MARKER
@@ -64,6 +65,12 @@ __attribute__((
 
     void *
     memcpy(void *dest, const void *src, size_t n) {
+#ifdef __x86_64__
+  __asm__ __volatile__("rep movsb\n\t"
+                       : "+D"(dest), "+S"(src), "+c"(n)
+                       :
+                       : "memory");
+#endif
   uint8_t *pdest = (uint8_t *)dest;
   const uint8_t *psrc = (const uint8_t *)src;
 
@@ -75,6 +82,15 @@ __attribute__((
 }
 
 void *memset(void *s, int c, size_t n) {
+#ifdef __x86_64__
+  __asm__ __volatile__("rep stosb\n\t" // Repeat STOSQ for RCX times
+                       :               /* No outputs */
+                       : "D"(s),       // RDI -> destination pointer
+                         "a"(c),       // RAX -> value to store
+                         "c"(n)        // RCX -> number of quadwords to fill
+                       : "memory");
+
+#endif
   uint8_t *p = (uint8_t *)s;
 
   for (size_t i = 0; i < n; i++) {

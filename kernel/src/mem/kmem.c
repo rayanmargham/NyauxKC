@@ -23,7 +23,6 @@ void kfree(void *addr, uint64_t size) {
     kprintf("kfree: memory corruption detected\n");
     __builtin_trap();
   }
-  kprintf("kfree(%p, %#llx)\n", addr, size);
   memset(addr, 0xcc, size);
   return;
   if (size > 1024) {

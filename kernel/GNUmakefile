@@ -6,91 +6,82 @@ MAKEFLAGS += -rR
 # Change as needed.
 override OUTPUT := NyauxKC
 
-# Convenience macro to reliably declare user overridable variables.
-override USER_VARIABLE = $(if $(filter $(origin $(1)),default undefined),$(eval override $(1) := $(2)))
-
 # Target architecture to build for. Default to x86_64.
-$(call USER_VARIABLE,KARCH,x86_64)
-
-# Destination directory on install (should always be empty by default).
-$(call USER_VARIABLE,DESTDIR,)
+ARCH := x86_64
 
 # Install prefix; /usr/local is a good, standard default pick.
-$(call USER_VARIABLE,PREFIX,/usr/local)
+PREFIX := /usr/local
 
 # Check if the architecture is supported.
-ifeq ($(filter $(KARCH),aarch64 loongarch64 riscv64 x86_64),)
-    $(error Architecture $(KARCH) not supported)
+ifeq ($(filter $(ARCH),aarch64 loongarch64 riscv64 x86_64),)
+    $(error Architecture $(ARCH) not supported)
 endif
 
 # User controllable C compiler command.
-$(call USER_VARIABLE,KCC,x86_64-elf-gcc)
+CC := cc
 
-# User controllable linker command.
-$(call USER_VARIABLE,KLD,x86_64-elf-ld)
+# User controllable archiver command.
+AR := ar
 
 # User controllable C flags.
-$(call USER_VARIABLE,KCFLAGS,-g -O2 -pipe -masm=intel -Wall -Wextra -Wpedantic)
+CFLAGS := -g -O2 -pipe -I src/uACPI/include -DUACPI_SIZED_FREES
 
 # User controllable C preprocessor flags. We set none by default.
-$(call USER_VARIABLE,KCPPFLAGS,)
+CPPFLAGS :=
 
-ifeq ($(KARCH),x86_64)
+ifeq ($(ARCH),x86_64)
     # User controllable nasm flags.
-    $(call USER_VARIABLE,KNASMFLAGS,-F dwarf -g)
+    NASMFLAGS := -F dwarf -g
 endif
 
 # User controllable linker flags. We set none by default.
-$(call USER_VARIABLE,KLDFLAGS,)
+LDFLAGS :=
 
 # Ensure the dependencies have been obtained.
 ifneq ($(shell ( test '$(MAKECMDGOALS)' = clean || test '$(MAKECMDGOALS)' = distclean ); echo $$?),0)
-    ifeq ($(shell ( ! test -d freestnd-c-hdrs-0bsd || ! test -f src/cc-runtime.c || ! test -f src/limine.h ); echo $$?),0)
+    ifeq ($(shell ( ! test -d freestnd-c-hdrs-0bsd || ! test -d cc-runtime || ! test -f src/limine.h ); echo $$?),0)
         $(error Please run the ./get-deps script first)
     endif
 endif
 
-# Check if KCC is Clang.
-override KCC_IS_CLANG := $(shell ! $(KCC) --version 2>/dev/null | grep 'clang' >/dev/null 2>&1; echo $$?)
+# Check if CC is Clang.
+override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep 'clang' >/dev/null 2>&1; echo $$?)
 
 # Internal C flags that should not be changed by the user.
-override KCFLAGS += \
+override CFLAGS += \
     -Wall \
     -Wextra \
-    -std=gnu23 \
+    -std=gnu11 \
     -nostdinc \
     -ffreestanding \
     -fno-stack-protector \
     -fno-stack-check \
-    -fno-lto \
     -fno-PIC \
     -ffunction-sections \
-    -fdata-sections \
-    -fno-omit-frame-pointer \
-#    -fsanitize=kernel-address \
+    -fdata-sections
 
 # Internal C preprocessor flags that should not be changed by the user.
-override KCPPFLAGS := \
+override CPPFLAGS := \
     -I src \
-    -I src/uACPI/include \
     -isystem freestnd-c-hdrs-0bsd \
-    $(KCPPFLAGS) \
+    $(CPPFLAGS) \
+    -DLIMINE_API_REVISION=2 \
     -MMD \
     -MP
 
-ifeq ($(KARCH),x86_64)
+ifeq ($(ARCH),x86_64)
     # Internal nasm flags that should not be changed by the user.
-    override KNASMFLAGS += \
+    override NASMFLAGS += \
         -Wall
 endif
 
 # Architecture specific internal flags.
-ifeq ($(KARCH),x86_64)
-    ifeq ($(KCC_IS_CLANG),1)
-        override KCC += \
+ifeq ($(ARCH),x86_64)
+    ifeq ($(CC_IS_CLANG),1)
+        override CC += \
             -target x86_64-unknown-none
     endif
-    override KCFLAGS += \
+    override CFLAGS += \
         -m64 \
         -march=x86-64 \
         -mno-80387 \
@@ -99,119 +90,131 @@ ifeq ($(KARCH),x86_64)
         -mno-sse2 \
         -mno-red-zone \
         -mcmodel=kernel
-    override KLDFLAGS += \
-        -m elf_x86_64
-    override KNASMFLAGS += \
+    override LDFLAGS += \
+        -Wl,-m,elf_x86_64
+    override NASMFLAGS += \
         -f elf64
 endif
-ifeq ($(KARCH),aarch64)
-    ifeq ($(KCC_IS_CLANG),1)
-        override KCC += \
+ifeq ($(ARCH),aarch64)
+    ifeq ($(CC_IS_CLANG),1)
+        override CC += \
             -target aarch64-unknown-none
     endif
-    override KCFLAGS += \
+    override CFLAGS += \
         -mgeneral-regs-only
-    override KLDFLAGS += \
-        -m aarch64elf
+    override LDFLAGS += \
+        -Wl,-m,aarch64elf
 endif
-ifeq ($(KARCH),riscv64)
-    ifeq ($(KCC_IS_CLANG),1)
-        override KCC += \
+ifeq ($(ARCH),riscv64)
+    ifeq ($(CC_IS_CLANG),1)
+        override CC += \
             -target riscv64-unknown-none
-        override KCFLAGS += \
+        override CFLAGS += \
             -march=rv64imac
     else
-        override KCFLAGS += \
+        override CFLAGS += \
             -march=rv64imac_zicsr_zifencei
     endif
-    override KCFLAGS += \
+    override CFLAGS += \
         -mabi=lp64 \
         -mno-relax
-    override KLDFLAGS += \
-        -m elf64lriscv \
-        --no-relax
+    override LDFLAGS += \
+        -Wl,-m,elf64lriscv \
+        -Wl,--no-relax
 endif
-ifeq ($(KARCH),loongarch64)
-    ifeq ($(KCC_IS_CLANG),1)
-        override KCC += \
+ifeq ($(ARCH),loongarch64)
+    ifeq ($(CC_IS_CLANG),1)
+        override CC += \
             -target loongarch64-unknown-none
     endif
-    override KCFLAGS += \
+    override CFLAGS += \
         -march=loongarch64 \
         -mabi=lp64s
-    override KLDFLAGS += \
-        -m elf64loongarch \
-        --no-relax
+    override LDFLAGS += \
+        -Wl,-m,elf64loongarch \
+        -Wl,--no-relax
 endif
 
 # Internal linker flags that should not be changed by the user.
-override KLDFLAGS += \
+override LDFLAGS += \
+    -Wl,--build-id=none \
     -nostdlib \
     -static \
     -z max-page-size=0x1000 \
-    -gc-sections \
-    -T linker-$(KARCH).ld
+    -Wl,--gc-sections \
+    -T linker-$(ARCH).ld
 
 # Use "find" to glob all *.c, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
-override CFILES := $(shell cd src && find -L * -type f -name '*.c' | LC_ALL=C sort)
-override ASFILES := $(shell cd src && find -L * -type f -name '*.S' | LC_ALL=C sort)
-ifeq ($(KARCH),x86_64)
-override NASMFILES := $(shell cd src && find -L * -type f -name '*.asm' | LC_ALL=C sort)
+override SRCFILES := $(shell cd src && find -L * -type f | LC_ALL=C sort)
+override CFILES := $(filter %.c,$(SRCFILES))
+override ASFILES := $(filter %.S,$(SRCFILES))
+ifeq ($(ARCH),x86_64)
+override NASMFILES := $(filter %.asm,$(SRCFILES))
 endif
-override OBJ := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o))
-ifeq ($(KARCH),x86_64)
-override OBJ += $(addprefix obj-$(KARCH)/,$(NASMFILES:.asm=.asm.o))
+override OBJ := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o))
+ifeq ($(ARCH),x86_64)
+override OBJ += $(addprefix obj-$(ARCH)/,$(NASMFILES:.asm=.asm.o))
 endif
-override HEADER_DEPS := $(addprefix obj-$(KARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
+override HEADER_DEPS := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
 
-# Default target.
+# Default target. This must come first, before header dependencies.
 .PHONY: all
-all: bin-$(KARCH)/$(OUTPUT)
-
-# Link rules for the final executable.
-bin-$(KARCH)/$(OUTPUT): GNUmakefile linker-$(KARCH).ld $(OBJ)
-	mkdir -p "$$(dirname $@)"
-	$(KLD) $(OBJ) $(KLDFLAGS) -o $@
+all: bin-$(ARCH)/$(OUTPUT)
 
 # Include header dependencies.
 -include $(HEADER_DEPS)
 
-# Compilation rules for *.c files.
-obj-$(KARCH)/%.c.o: src/%.c GNUmakefile
+# Link rules for building the C compiler runtime.
+cc-runtime-$(ARCH)/cc-runtime.a: GNUmakefile cc-runtime/*
+	rm -rf cc-runtime-$(ARCH)
+	cp -r cc-runtime cc-runtime-$(ARCH)
+	$(MAKE) -C cc-runtime-$(ARCH) -f cc-runtime.mk \
+		CC="$(CC)" \
+		AR="$(AR)" \
+		CFLAGS="$(CFLAGS)" \
+		CPPFLAGS='-isystem ../freestnd-c-hdrs-0bsd -DCC_RUNTIME_NO_FLOAT'
+
+# Link rules for the final executable.
+bin-$(ARCH)/$(OUTPUT): GNUmakefile linker-$(ARCH).ld $(OBJ) cc-runtime-$(ARCH)/cc-runtime.a
 	mkdir -p "$$(dirname $@)"
-	$(KCC) $(KCFLAGS) $(KCPPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ) cc-runtime-$(ARCH)/cc-runtime.a -o $@
+
+# Compilation rules for *.c files.
+obj-$(ARCH)/%.c.o: src/%.c GNUmakefile
+	mkdir -p "$$(dirname $@)"
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 # Compilation rules for *.S files.
-obj-$(KARCH)/%.S.o: src/%.S GNUmakefile
+obj-$(ARCH)/%.S.o: src/%.S GNUmakefile
 	mkdir -p "$$(dirname $@)"
-	$(KCC) $(KCFLAGS) $(KCPPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-ifeq ($(KARCH),x86_64)
+ifeq ($(ARCH),x86_64)
 # Compilation rules for *.asm (nasm) files.
-obj-$(KARCH)/%.asm.o: src/%.asm GNUmakefile
+obj-$(ARCH)/%.asm.o: src/%.asm GNUmakefile
 	mkdir -p "$$(dirname $@)"
-	nasm $(KNASMFLAGS) $< -o $@
+	nasm $(NASMFLAGS) $< -o $@
 endif
 
 # Remove object files and the final executable.
 .PHONY: clean
 clean:
-	rm -rf bin-$(KARCH) obj-$(KARCH)
+	rm -rf bin-$(ARCH) obj-$(ARCH) cc-runtime-$(ARCH)
 
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean
 distclean:
-	rm -rf bin-* obj-* freestnd-c-hdrs-0bsd src/cc-runtime.c src/limine.h
+	rm -rf bin-* obj-* freestnd-c-hdrs-0bsd cc-runtime* src/limine.h
 
 # Install the final built executable to its final on-root location.
 .PHONY: install
 install: all
 	install -d "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)"
-	install -m 644 bin-$(KARCH)/$(OUTPUT) "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)/$(OUTPUT)-$(KARCH)"
+	install -m 644 bin-$(ARCH)/$(OUTPUT) "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)/$(OUTPUT)-$(ARCH)"
 
 # Try to undo whatever the "install" target did.
 .PHONY: uninstall
 uninstall:
-	rm -f "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)/$(OUTPUT)-$(KARCH)"
+	rm -f "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)/$(OUTPUT)-$(ARCH)"
 	-rmdir "$(DESTDIR)$(PREFIX)/share/$(OUTPUT)"
