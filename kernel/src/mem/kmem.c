@@ -19,11 +19,13 @@ void *kmalloc(uint64_t amount) {
   }
 }
 void kfree(void *addr, uint64_t size) {
-  if (size > 18446744071562175) {
-    kprintf("Garbage found.\n");
-    __asm__("int 0x67");
+  if (size >> 63) {
+    kprintf("kfree: memory corruption detected\n");
+    __builtin_trap();
   }
-  kprintf("kfree(): deallocing size of %lu\n", size);
+  kprintf("kfree(%p, %#llx)\n", addr, size);
+  memset(addr, 0xcc, size);
+  return;
   if (size > 1024) {
     kvmm_region_dealloc(addr);
   } else {
