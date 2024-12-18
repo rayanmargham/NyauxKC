@@ -35,7 +35,7 @@ result region_setup(pagemap *map, uint64_t hddm_in_pages) {
   res.okay = true;
   return res;
 }
-pagemap ker_map;
+pagemap ker_map = {.head = NULL, .root = NULL};
 void per_cpu_vmm_init() { arch_switch_pagemap(&ker_map); }
 void vmm_init() {
   arch_init_pagemap(&ker_map);
@@ -44,6 +44,7 @@ void vmm_init() {
   kprintf("vmm(): HDDM Pages %lu\n", hhdm_pages);
   // panic("h");
   arch_switch_pagemap(&ker_map);
+  kprintf("vmm(): Creating Regions...\n");
   result res = region_setup(&ker_map, hhdm_pages);
   unwrap_or_panic(res);
   kprintf("vmm(): Kernel is now in its own pagemap :)\n");
