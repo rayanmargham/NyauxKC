@@ -21,3 +21,12 @@ uint64_t kvmm_region_bytesused();
 #define WRITETHROUGH (1ul << 3)
 extern void *memset(void *s, int c, size_t n);
 void per_cpu_vmm_init();
+typedef struct {
+  uint64_t *root;
+  struct VMMRegion *head;
+} pagemap;
+typedef struct {
+  uint64_t base;
+  uint64_t length;
+  struct VMMRegion *next;
+} VMMRegion;

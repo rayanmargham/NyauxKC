@@ -125,8 +125,7 @@ void *uacpi_kernel_calloc(uacpi_size count, uacpi_size size) {
   return man;
 }
 void uacpi_kernel_free(void *mem, uacpi_size size_hint) {
-  // kprintf("uacpi_kernel_free(): size: %lu\n", size_hint);
-  // kfree(mem, size_hint);
+  kfree(mem, size_hint);
 }
 void uacpi_kernel_log(uacpi_log_level log, const uacpi_char *cha) {
   kprintf("uacpi: %s", (char *)cha);

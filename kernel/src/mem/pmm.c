@@ -28,7 +28,8 @@ result pmm_init() {
   spinlock_lock(&pmmlock);
   pnode *cur = &head;
   result ok = {.type = ERR, .err_msg = "pmm_init() failed"};
-  kprintf("pmm_init(): entry count %d\n", memmap_request.response->entry_count);
+  kprintf("pmm_init(): entry count %lu\n",
+          memmap_request.response->entry_count);
   kprintf("%s(): The HHDM is 0x%lx\n", __FUNCTION__,
           hhdm_request.response->offset);
   for (uint64_t i = 0; i < memmap_request.response->entry_count; i++) {
@@ -193,12 +194,6 @@ uint64_t cache_getmemoryused(cache *mod) {
   return bytes;
 }
 
-void free_unused_slabcaches() {
-  for (int i = 0; i != 7; i++) {
-    cache *c = &caches[i];
-    // free_unused_slabs(c);
-  }
-}
 uint64_t total_memory() {
   uint64_t total_bytes = 0;
   for (int i = 0; i != 7; i++) {
@@ -209,7 +204,6 @@ uint64_t total_memory() {
   return total_bytes;
 }
 void slabfree(void *addr) {
-  kprintf("address: %p\n", addr);
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
     return;
@@ -226,7 +220,6 @@ void slabfree(void *addr) {
   unsigned int howmanynodes = 0;
   while (counter != NULL) {
     howmanynodes += 1;
-    kprintf("counter: %p\n", (void *)counter);
     counter = (pnode *)counter->next;
   }
   if (howmanynodes == guy->obj_ammount) {

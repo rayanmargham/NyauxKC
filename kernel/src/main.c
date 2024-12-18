@@ -70,6 +70,7 @@ __attribute__((
                        : "+D"(dest), "+S"(src), "+c"(n)
                        :
                        : "memory");
+  return dest;
 #endif
   uint8_t *pdest = (uint8_t *)dest;
   const uint8_t *psrc = (const uint8_t *)src;
@@ -89,6 +90,7 @@ void *memset(void *s, int c, size_t n) {
                          "a"(c),       // RAX -> value to store
                          "c"(n)        // RCX -> number of quadwords to fill
                        : "memory");
+  return s;
 
 #endif
   uint8_t *p = (uint8_t *)s;
@@ -162,7 +164,6 @@ void kmain(void) {
   vmm_init();
   get_symbols();
   init_acpi();
-  free_unused_slabcaches();
   kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
           total_memory() / 1048576);
 

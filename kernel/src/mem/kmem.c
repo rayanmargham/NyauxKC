@@ -23,8 +23,6 @@ void kfree(void *addr, uint64_t size) {
     kprintf("kfree: memory corruption detected\n");
     __builtin_trap();
   }
-  memset(addr, 0xcc, size);
-  return;
   if (size > 1024) {
     kvmm_region_dealloc(addr);
   } else {

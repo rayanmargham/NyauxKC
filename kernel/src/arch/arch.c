@@ -4,6 +4,7 @@
 #include "arch/x86_64/instructions/instructions.h"
 
 #include "arch/x86_64/idt/idt.h"
+#include "arch/x86_64/page_tables/pt.h"
 #include "mem/vmm.h"
 #include "term/term.h"
 #include <arch/x86_64/idt/idt.h>
@@ -62,6 +63,7 @@ uint64_t raw_io_in(uint64_t address, uint8_t byte_width) {
 #endif
     break;
   default:
+    panic("raw_io_in(): not a valid byte width");
     break;
   }
 }
@@ -103,5 +105,37 @@ void arch_late_init() {
   kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\n",
           get_lapic_id());
   init_lapic();
+#endif
+}
+uint64_t arch_mapkernelhhdmandmemorymap(pagemap *take) {
+#if defined(__x86_64__)
+  return x86_64_map_kernelhhdmandmemorymap(take);
+#endif
+}
+void arch_map_vmm_region(pagemap *take, uint64_t base,
+                         uint64_t length_in_bytes) {
+#if defined(__x86_64__)
+  return x86_64_map_vmm_region(take, base, length_in_bytes);
+#endif
+}
+void arch_unmap_vmm_region(pagemap *take, uint64_t base,
+                           uint64_t length_in_bytes) {
+#if defined(__x86_64__)
+  return x86_64_unmap_vmm_region(take, base, length_in_bytes);
+#endif
+}
+void arch_init_pagemap(pagemap *take) {
+#if defined(__x86_64__)
+  x86_64_init_pagemap(take);
+#endif
+}
+void arch_destroy_pagemap(pagemap *take) {
+#if defined(__x86_64__)
+  x86_64_destroy_pagemap(take);
+#endif
+}
+void arch_switch_pagemap(pagemap *take) {
+#if defined(__x86_64__)
+  x86_64_switch_pagemap(take);
 #endif
 }
