@@ -19,6 +19,7 @@ uint64_t kvmm_region_bytesused();
 #define PATBIT2MB (1ul << 12)
 #define PAGE2MB (1ul << 7)
 #define WRITETHROUGH (1ul << 3)
+#include <utils/basic.h>
 extern void *memset(void *s, int c, size_t n);
 void per_cpu_vmm_init();
 typedef struct {

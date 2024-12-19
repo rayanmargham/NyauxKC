@@ -40,7 +40,7 @@ void per_cpu_vmm_init() { arch_switch_pagemap(&ker_map); }
 void vmm_init() {
   arch_init_pagemap(&ker_map);
   uint64_t hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
-  hhdm_pages = (hhdm_pages * 2097152) / 4096;
+  hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
   kprintf("vmm(): HDDM Pages %lu\n", hhdm_pages);
   // panic("h");
   arch_switch_pagemap(&ker_map);

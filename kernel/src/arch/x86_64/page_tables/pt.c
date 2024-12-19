@@ -2,6 +2,7 @@
 #include "mem/vmm.h"
 #include "term/term.h"
 #include <stdint.h>
+
 uint64_t *find_pte_and_allocate(uint64_t *pt, uint64_t virt) {
   uint64_t shift = 48;
   for (int i = 0; i < 4; i++) {
@@ -148,8 +149,8 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
   }
   kprintf("vmm(x86_64)(): Kernel Mapped!\n");
   uint64_t hhdm_pages = 0;
-  for (uint64_t i = 0; i < 0x100000000; i += 2097152) {
-    assert(i % 2097152 == 0);
+  for (uint64_t i = 0; i < 0x100000000; i += MIB(2)) {
+    assert(i % MIB(2) == 0);
     map2mb(take->root, i, hhdm_request.response->offset + i,
            PRESENT | RWALLOWED);
     hhdm_pages += 1;
@@ -159,26 +160,26 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
     switch (entry->type) {
     case LIMINE_MEMMAP_FRAMEBUFFER: {
-      uint64_t disalign = entry->base % 2097152;
-      entry->base = align_down(entry->base, 2097152);
+      uint64_t disalign = entry->base % MIB(2);
+      entry->base = align_down(entry->base, MIB(2));
       uint64_t page_amount =
-          align_up(entry->length + disalign, 2097152) / 2097152;
+          align_up(entry->length + disalign, MIB(2)) / MIB(2);
       for (uint64_t j = 0; j != page_amount; j++) {
-        map2mb(take->root, entry->base + (j * 2097152),
-               hhdm_request.response->offset + entry->base + (j * 2097152),
+        map2mb(take->root, entry->base + (j * MIB(2)),
+               hhdm_request.response->offset + entry->base + (j * MIB(2)),
                PRESENT | RWALLOWED | WRITETHROUGH | PATBIT2MB);
       }
       hhdm_pages += page_amount;
       break;
     }
     default: {
-      uint64_t disalign = entry->base % 2097152;
-      entry->base = align_down(entry->base, 2097152);
+      uint64_t disalign = entry->base % MIB(2);
+      entry->base = align_down(entry->base, MIB(2));
       uint64_t page_amount =
-          align_up(entry->length + disalign, 2097152) / 2097152;
+          align_up(entry->length + disalign, MIB(2)) / MIB(2);
       for (uint64_t j = 0; j != page_amount; j++) {
-        map2mb(take->root, entry->base + (j * 2097152),
-               hhdm_request.response->offset + entry->base + (j * 2097152),
+        map2mb(take->root, entry->base + (j * MIB(2)),
+               hhdm_request.response->offset + entry->base + (j * MIB(2)),
                PRESENT | RWALLOWED);
       }
       hhdm_pages += page_amount;
@@ -186,7 +187,7 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
     }
     }
   }
-  hhdm_pages = (hhdm_pages * 2097152) / 4096;
+  hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
   return hhdm_pages;
 }
 void x86_64_init_pagemap(pagemap *take) {

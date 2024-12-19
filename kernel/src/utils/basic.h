@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
+#define MIB(x) (0x100000 * (x))
 static void hcf(void) {
   for (;;) {
 #if defined(__x86_64__)
