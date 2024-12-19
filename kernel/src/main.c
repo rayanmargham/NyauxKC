@@ -66,11 +66,12 @@ __attribute__((
     void *
     memcpy(void *dest, const void *src, size_t n) {
 #ifdef __x86_64__
+  void *tmptmp = dest;
   __asm__ __volatile__("rep movsb\n\t"
                        : "+D"(dest), "+S"(src), "+c"(n)
                        :
                        : "memory");
-  return dest;
+  return tmptmp;
 #endif
   uint8_t *pdest = (uint8_t *)dest;
   const uint8_t *psrc = (const uint8_t *)src;
@@ -84,13 +85,14 @@ __attribute__((
 
 void *memset(void *s, int c, size_t n) {
 #ifdef __x86_64__
+  void *tmp = s;
   __asm__ __volatile__("rep stosb\n\t" // Repeat STOSQ for RCX times
                        :               /* No outputs */
                        : "D"(s),       // RDI -> destination pointer
                          "a"(c),       // RAX -> value to store
                          "c"(n)        // RCX -> number of quadwords to fill
                        : "memory");
-  return s;
+  return tmp;
 
 #endif
   uint8_t *p = (uint8_t *)s;

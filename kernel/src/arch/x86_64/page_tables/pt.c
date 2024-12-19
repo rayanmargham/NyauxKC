@@ -162,7 +162,7 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
       uint64_t disalign = entry->base % 2097152;
       entry->base = align_down(entry->base, 2097152);
       uint64_t page_amount =
-          align_up(entry->length - disalign, 2097152) / 2097152;
+          align_up(entry->length + disalign, 2097152) / 2097152;
       for (uint64_t j = 0; j != page_amount; j++) {
         map2mb(take->root, entry->base + (j * 2097152),
                hhdm_request.response->offset + entry->base + (j * 2097152),
@@ -175,7 +175,7 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
       uint64_t disalign = entry->base % 2097152;
       entry->base = align_down(entry->base, 2097152);
       uint64_t page_amount =
-          align_up(entry->length - disalign, 2097152) / 2097152;
+          align_up(entry->length + disalign, 2097152) / 2097152;
       for (uint64_t j = 0; j != page_amount; j++) {
         map2mb(take->root, entry->base + (j * 2097152),
                hhdm_request.response->offset + entry->base + (j * 2097152),
