@@ -89,8 +89,8 @@ void arch_init() {
   kprintf("Welcome to Nyaux on x86_64!\n");
   init_gdt();
   kprintf("arch_init(): gdt loaded.\n");
-  init_idt();
-  kprintf("arch_init(): idt loaded.\n");
+  // init_idt();
+  kprintf("arch_init(): no idt loaded.\n");
 #else
   kprintf("Nyaux Cannot Run on this archiecture.");
   hcf();

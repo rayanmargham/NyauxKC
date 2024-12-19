@@ -51,14 +51,15 @@ override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep 'clang' >/d
 override CFLAGS += \
     -Wall \
     -Wextra \
-    -std=gnu11 \
+    -std=gnu2x \
     -nostdinc \
     -ffreestanding \
     -fno-stack-protector \
     -fno-stack-check \
     -fno-PIC \
     -ffunction-sections \
-    -fdata-sections
+    -fdata-sections \
+    -fsanitize=undefined
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
