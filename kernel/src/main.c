@@ -2,6 +2,7 @@
 #include "mem/vmm.h"
 #include "smp/smp.h"
 #include "term/term.h"
+#include "uacpi/status.h"
 #include "utils/basic.h"
 #include <acpi/acpi.h>
 #include <arch/arch.h>
@@ -133,7 +134,7 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 
   return 0;
 }
-
+#include <uacpi/sleep.h>
 // The following will be our kernel's entry point.
 // If renaming kmain() to something else, make sure to change the
 // linker script accordingly.
@@ -170,5 +171,14 @@ void kmain(void) {
           total_memory() / 1048576);
 
   // init_smp();
+  uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
+  if (uacpi_unlikely_error(ret)) {
+    kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
+  }
+  __asm__ volatile("cli");
+  ret = uacpi_enter_sleep_state(UACPI_SLEEP_STATE_S5);
+  if (uacpi_unlikely_error(ret)) {
+    kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
+  }
   hcf(); // we js chill
 }

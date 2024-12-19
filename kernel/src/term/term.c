@@ -33,3 +33,15 @@ void kprintf(const char *format, ...) {
   va_end(args);
   spinlock_unlock(&lock);
 }
+void sputc(int ch, void *) {
+#if defined(__x86_64__)
+  char c = ch;
+  outb(0x3F8, (uint8_t)c);
+#endif
+}
+void sprintf(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  npf_vpprintf(sputc, NULL, format, args);
+  va_end(args);
+}
