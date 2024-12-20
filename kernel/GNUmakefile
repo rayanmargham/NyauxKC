@@ -59,7 +59,8 @@ override CFLAGS += \
     -fno-PIC \
     -ffunction-sections \
     -fdata-sections \
-    -fsanitize=undefined
+    -fsanitize=undefined \
+    -Wstrict-prototypes \
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
@@ -143,6 +144,7 @@ override LDFLAGS += \
     -static \
     -z max-page-size=0x1000 \
     -Wl,--gc-sections \
+    -z noexecstack \
     -T linker-$(ARCH).ld
 
 # Use "find" to glob all *.c, *.S, and *.asm files in the tree and obtain the

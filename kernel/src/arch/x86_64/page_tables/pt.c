@@ -1,6 +1,7 @@
 #include "pt.h"
 #include "mem/vmm.h"
 #include "term/term.h"
+#include "utils/basic.h"
 #include <stdint.h>
 
 uint64_t *find_pte_and_allocate(uint64_t *pt, uint64_t virt) {
@@ -106,6 +107,9 @@ uint64_t pte_to_phys(uint64_t pte) { return pte & 0x000ffffffffff000; }
 void x86_64_switch_pagemap(pagemap *take) {
   assert(take != NULL);
   kprintf("Giving Address %p\n", (uint64_t *)(take->root));
+  // kprintf("u were about to tripple fault \n");
+
+  // hcf();
   switch_to_pagemap((uint64_t)(take->root));
 }
 uint64_t unmap(uint64_t *pt, uint64_t virt) {

@@ -88,10 +88,11 @@ void *memset(void *s, int c, size_t n) {
 #ifdef __x86_64__
   void *tmp = s;
   __asm__ __volatile__("rep stosb\n\t" // Repeat STOSQ for RCX times
-                       :               /* No outputs */
-                       : "D"(s),       // RDI -> destination pointer
-                         "a"(c),       // RAX -> value to store
-                         "c"(n)        // RCX -> number of quadwords to fill
+                                       /* No outputs */
+                       : "+D"(s),      // RDI -> destination pointer
+
+                         "+c"(n) // RCX -> number of quadwords to fill
+                       : "a"(c)  // RAX -> value to store
                        : "memory");
   return tmp;
 

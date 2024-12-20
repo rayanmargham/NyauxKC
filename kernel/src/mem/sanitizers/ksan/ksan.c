@@ -10,7 +10,7 @@ const uint8_t nyaux_posion[] = {
 };
 bool memcmp_b(void *addr, uint64_t size, uint8_t val) {
   const uint8_t *p1 = (const uint8_t *)addr;
-  for (int i = 0; i < size; i++) {
+  for (uint64_t i = 0; i < size; i++) {
     if (p1[i] != val) {
       return false;
     }
