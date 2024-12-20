@@ -28,7 +28,7 @@ static inline void panic(char *msg) {
   kprintf("NYAUX Panic! Reason: %s\noopsie uwu :3\n", msg);
   hcf();
 }
-
+#define is_aligned(value, align) (((value) & ((align) - 1)) == 0)
 #define SPINLOCK_INITIALIZER 0
 
 typedef int spinlock_t;
