@@ -13,6 +13,7 @@
 #include <uacpi/internal/event.h>
 #include <uacpi/internal/notify.h>
 #include <uacpi/internal/osi.h>
+#include <uacpi/internal/registers.h>
 
 struct uacpi_runtime_context g_uacpi_rt_ctx = { 0 };
 
@@ -23,6 +24,7 @@ void uacpi_state_reset(void)
     uacpi_deinitialize_events();
     uacpi_deinitialize_notify();
     uacpi_deinitialize_opregion();
+    uacpi_deininitialize_registers();
     uacpi_deinitialize_tables();
 
 #ifndef UACPI_REDUCED_HARDWARE
@@ -294,6 +296,14 @@ uacpi_status uacpi_initialize(uacpi_u64 flags)
         uacpi_context_set_max_call_stack_depth(UACPI_DEFAULT_MAX_CALL_STACK_DEPTH);
 
     ret = uacpi_initialize_tables();
+    if (uacpi_unlikely_error(ret))
+        goto out_fatal_error;
+
+    ret = uacpi_ininitialize_registers();
+    if (uacpi_unlikely_error(ret))
+        return ret;
+
+    ret = uacpi_initialize_events_early();
     if (uacpi_unlikely_error(ret))
         goto out_fatal_error;
 
