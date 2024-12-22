@@ -18,7 +18,7 @@ ifeq ($(filter $(ARCH),aarch64 loongarch64 riscv64 x86_64),)
 endif
 
 # User controllable C compiler command.
-CC := cc
+CC := clang
 
 # User controllable archiver command.
 AR := ar

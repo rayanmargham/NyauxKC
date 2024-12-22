@@ -73,6 +73,7 @@ int uacpi_arch_install_irq(uacpi_interrupt_handler handler, uacpi_handle ctx,
   // CHANGE WHEN WE DO SMP
   int vec = AllocateIrq();
   if (vec == -1) {
+    kprintf("true\n");
     return -1;
   }
   uacpi_irq_wrap_info *info = kmalloc(sizeof(uacpi_irq_wrap_info));
@@ -82,6 +83,7 @@ int uacpi_arch_install_irq(uacpi_interrupt_handler handler, uacpi_handle ctx,
   isr_ctxt[vec] = info;
   RegisterHandler(vec, uacpi_wrap_irq_fn);
   // when u get ioapic install the irq pls
+  return vec;
 #endif
 }
 void arch_init() {

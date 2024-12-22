@@ -1,6 +1,6 @@
 #include "utils/basic.h"
 #include <stdint.h>
-#if defined(__GNUC__)
+
 
 typedef struct {
   const char *filename;
@@ -70,7 +70,11 @@ typedef struct {
   source_location_t location;
   uint8_t kind;
 } data_invalid_builtin_t;
-
+struct ubsan_function_type_mismatch_data
+{
+	source_location_t location;
+	struct type_descriptor_t* type;
+} ;
 const char *kind_to_type(uint16_t kind) {
   const char *type;
   switch (kind) {
@@ -148,6 +152,12 @@ void __ubsan_handle_mul_overflow(data_location_type_t *data, uintptr_t lhs,
           lhs, rhs, info_to_bits(data->type->info),
           kind_to_type(data->type->kind), data->type->name);
 }
+void __ubsan_handle_function_type_mismatch(void* data_raw,
+                                           void* value_raw) {
+                                            struct ubsan_function_type_mismatch_data* data =
+		(struct ubsan_function_type_mismatch_data*) data_raw;
+    kprintf("UBSAN: function type mismatch @ %s:%u:%u", data->location.filename, data->location.line, data->location.column);
+                                           }
 void __ubsan_handle_divrem_overflow(data_location_type_t *data, uintptr_t lhs,
                                     uintptr_t rhs) {
   sprintf("UBSAN: divrem_overflow @ %s:%u:%u {lhs: %#lx, rhs: %#lx, type: "
@@ -182,7 +192,7 @@ void __ubsan_handle_out_of_bounds(data_out_of_bounds_t *data, uint64_t index) {
           kind_to_type(data->index_type->kind), data->index_type->name);
 }
 
-void __ubsan_handle_type_mismatch_v1(data_type_mismatch_t *data,
+void __ubsan_handle_type_mismatch(data_type_mismatch_t *data,
                                      void *pointer) {
   static const char *kind_strs[] = {"load of",
                                     "store to",
@@ -203,7 +213,43 @@ void __ubsan_handle_type_mismatch_v1(data_type_mismatch_t *data,
     sprintf("UBSAN: type_mismatch @ %s:%u:%u (%s NULL pointer of type %s)\n",
             data->location.filename, data->location.line, data->location.column,
             kind_strs[data->type_check_kind], data->type->name);
-  } else if ((1 << data->alignment) - 1) {
+  } else if (data->alignment && !is_aligned((uint64_t)pointer, data->alignment)) {
+    sprintf("UBSAN: type_mismatch @ %s:%u:%u (%s misaligned address %#lx of "
+            "type %s)\n",
+            data->location.filename, data->location.line, data->location.column,
+            kind_strs[data->type_check_kind], (uintptr_t)pointer,
+            data->type->name);
+  } else {
+    sprintf("UBSAN: type_mismatch @ %s:%u:%u (%s address %#lx not long enough "
+            "for type %s)\n",
+            data->location.filename, data->location.line, data->location.column,
+            kind_strs[data->type_check_kind], (uintptr_t)pointer,
+            data->type->name);
+  }
+}
+void __ubsan_handle_type_mismatch_v1(data_type_mismatch_t *data,
+                                     void *pointer) {
+  static const char *kind_strs[] = {"load of",
+                                    "store to",
+                                    "reference binding to",
+                                    "member access within",
+                                    "member call on",
+                                    "constructor call on",
+                                    "downcast of",
+                                    "downcast of",
+                                    "upcast of",
+                                    "cast to virtual base of",
+                                    "nonnull binding to",
+                                    "dynamic operation on"};
+  data->alignment = 1UL << data->alignment;            
+  if (strcmp(data->location.filename, "src/flanterm/backends/fb.c") == 0) {
+    return;
+  }
+  if (pointer == NULL) {
+    sprintf("UBSAN: type_mismatch @ %s:%u:%u (%s NULL pointer of type %s)\n",
+            data->location.filename, data->location.line, data->location.column,
+            kind_strs[data->type_check_kind], data->type->name);
+  } else if (data->alignment && !is_aligned((uint64_t)pointer, data->alignment)) {
     sprintf("UBSAN: type_mismatch @ %s:%u:%u (%s misaligned address %#lx of "
             "type %s)\n",
             data->location.filename, data->location.line, data->location.column,
@@ -248,4 +294,3 @@ __ubsan_handle_missing_return(data_only_location_t *data) {
           data->location.line, data->location.column);
   panic("UBSAN");
 }
-#endif
