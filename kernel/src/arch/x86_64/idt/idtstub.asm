@@ -1,7 +1,6 @@
 extern idt_handlers
 
 section .text
-
 global idt_flush
 idt_flush:
     lidt [rdi]
@@ -42,7 +41,6 @@ isr_stub_%1:
 
 
     push %1                  ; Push the interrupt number
-
     mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
     mov rax, [idt_handlers + %1 * 8]
                              ; Get the registered handler to call

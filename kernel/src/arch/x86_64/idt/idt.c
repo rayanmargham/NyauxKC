@@ -144,6 +144,13 @@ int AllocateIrq()
 void* sched(struct StackFrame* frame)
 {
 	__asm__ volatile ("cli");
+	unsigned long rsp;
+
+    // Inline assembly to read the RSP register
+    __asm__ __volatile__ (
+        "mov %%rsp, %0"
+        : "=r" (rsp) // Output operand
+    );
 	
 	schedd(frame);
 	__asm__ volatile ("sti");

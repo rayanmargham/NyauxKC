@@ -23,7 +23,6 @@ void arch_load_ctx(void *frame, struct thread_t *threadtoloadctxfrom) {
 struct per_cpu_data *arch_get_per_cpu_data() {
   #if defined (__x86_64__)
   struct per_cpu_data *hi = (struct per_cpu_data *)rdmsr(0xC0000101);
-  assert(hi != NULL);
   return hi;
   #endif
 }
@@ -55,8 +54,11 @@ void create_kentry() {
     struct thread_t *e = create_thread();
     e->proc = h;
     uint64_t kstack = (uint64_t)(kmalloc(262144) + 262144); // top of stack
+    uint64_t kstack2 = (uint64_t)(kmalloc(262144) + 262144); // top of stack
+    
     struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
     e->arch_data.frame = hh;
+    e->kernel_stack_ptr = kstack2;
     struct per_cpu_data *cpu = arch_get_per_cpu_data();
     cpu->start_of_queue = e;
     #endif
@@ -68,15 +70,15 @@ void schedd(void *frame) {
     }
     if (cpu->run_queue != NULL) {
         arch_save_ctx(frame, cpu->run_queue);
+            if (cpu->run_queue->next == NULL) {
+            cpu->run_queue = cpu->start_of_queue;
+        } else {
+            cpu->run_queue = cpu->run_queue->next;
+        }
     } else {
         cpu->run_queue = cpu->start_of_queue;
     }
-    
-    if (cpu->run_queue->next == NULL) {
-        cpu->run_queue = cpu->start_of_queue;
-    } else {
-        cpu->run_queue = cpu->run_queue->next;
-    }
+    cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
     arch_load_ctx(frame, cpu->run_queue);
     // for reading operations such as switching the pagemap
     // it is fine not to lock, otherwise we would have deadlocks and major slowdowns
