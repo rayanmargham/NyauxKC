@@ -361,6 +361,13 @@ void uacpi_opregion_uninstall_handler(uacpi_namespace_node *node)
     uacpi_recursive_lock_release(&g_opregion_lock);
 }
 
+uacpi_bool uacpi_address_space_handler_is_default(
+    uacpi_address_space_handler *handler
+)
+{
+    return handler->flags & UACPI_ADDRESS_SPACE_HANDLER_DEFAULT;
+}
+
 enum opregion_iter_action {
     OPREGION_ITER_ACTION_UNINSTALL,
     OPREGION_ITER_ACTION_INSTALL,
@@ -479,9 +486,6 @@ static uacpi_status reg_or_unreg_all_opregions(
         .connection_code = connection_code,
     };
 
-    if (!space_needs_reg(space))
-        return UACPI_STATUS_OK;
-
     handlers = uacpi_node_get_address_space_handlers(device_node);
     if (uacpi_unlikely(handlers == UACPI_NULL))
         return UACPI_STATUS_INVALID_ARGUMENT;
@@ -543,6 +547,9 @@ uacpi_status uacpi_reg_all_opregions(
 
     UACPI_ENSURE_INIT_LEVEL_AT_LEAST(UACPI_INIT_LEVEL_NAMESPACE_LOADED);
 
+    if (!space_needs_reg(space))
+        return UACPI_STATUS_OK;
+
     ret = uacpi_recursive_lock_acquire(&g_opregion_lock);
     if (uacpi_unlikely_error(ret))
         return ret;
@@ -566,9 +573,10 @@ out:
     return ret;
 }
 
-uacpi_status uacpi_install_address_space_handler(
+uacpi_status uacpi_install_address_space_handler_with_flags(
     uacpi_namespace_node *device_node, enum uacpi_address_space space,
-    uacpi_region_handler handler, uacpi_handle handler_context
+    uacpi_region_handler handler, uacpi_handle handler_context,
+    uacpi_u16 flags
 )
 {
     uacpi_status ret;
@@ -610,6 +618,7 @@ uacpi_status uacpi_install_address_space_handler(
     new_handler->user_context = handler_context;
     new_handler->callback = handler;
     new_handler->regions = UACPI_NULL;
+    new_handler->flags = flags;
     handlers->head = new_handler;
 
     iter_ctx.handler = new_handler;
@@ -634,16 +643,6 @@ uacpi_status uacpi_install_address_space_handler(
     if (g_uacpi_rt_ctx.init_level < UACPI_INIT_LEVEL_NAMESPACE_LOADED)
         goto out;
 
-    /*
-     * _REG methods for global address space handlers (installed to root)
-     * get called during the namespace initialization, no reason
-     * to call them here manually as that will be done later by init code
-     * anyway. Just delay that work until later.
-     */
-    if (device_node == uacpi_namespace_root() &&
-        g_uacpi_rt_ctx.init_level == UACPI_INIT_LEVEL_NAMESPACE_LOADED)
-        goto out;
-
     // Init level is NAMESPACE_INITIALIZED, so we can safely run _REG now
     ret = reg_or_unreg_all_opregions(
         device_node, space, ACPI_REG_CONNECT
@@ -653,6 +652,16 @@ out:
     uacpi_namespace_write_unlock();
     uacpi_recursive_lock_release(&g_opregion_lock);
     return ret;
+}
+
+uacpi_status uacpi_install_address_space_handler(
+    uacpi_namespace_node *device_node, enum uacpi_address_space space,
+    uacpi_region_handler handler, uacpi_handle handler_context
+)
+{
+    return uacpi_install_address_space_handler_with_flags(
+        device_node, space, handler, handler_context, 0
+    );
 }
 
 uacpi_status uacpi_uninstall_address_space_handler(
@@ -715,7 +724,8 @@ uacpi_status uacpi_uninstall_address_space_handler(
     }
 
 out_unreg:
-    reg_or_unreg_all_opregions(device_node, space, ACPI_REG_DISCONNECT);
+    if (space_needs_reg(space))
+        reg_or_unreg_all_opregions(device_node, space, ACPI_REG_DISCONNECT);
 
 out:
     if (handler != UACPI_NULL)
