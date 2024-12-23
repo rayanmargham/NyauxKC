@@ -2,7 +2,8 @@ global gdt_flush
 
 gdt_flush:
     lgdt [rdi]
-
+    mov eax, 0x48
+    ltr ax
     push 0x28
     lea rax, [rel .reload_CS]
     push rax
