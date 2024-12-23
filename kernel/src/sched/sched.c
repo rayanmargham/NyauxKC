@@ -18,6 +18,7 @@ void arch_save_ctx(void *frame, struct thread_t *threadtosavectx) {
 void arch_load_ctx(void *frame, struct thread_t *threadtoloadctxfrom) {
     #ifdef __x86_64__ 
     *(struct StackFrame*)frame = threadtoloadctxfrom->arch_data.frame;
+    kprintf("threads rip: 0x%lx, loaded rip 0x%lx\n", threadtoloadctxfrom->arch_data.frame.rip, (*(struct StackFrame*)frame).rip);
     #endif
 }
 struct per_cpu_data *arch_get_per_cpu_data() {
@@ -46,6 +47,7 @@ struct process_t *create_process(pagemap *map) {
 }
 struct thread_t *create_thread() {
     struct thread_t *him = (struct thread_t*)kmalloc(sizeof(struct thread_t));
+    //him->next = NULL;
     return him;
 }
 void create_kentry() {
@@ -57,13 +59,12 @@ void create_kentry() {
     struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
     e->arch_data.frame = hh;
     struct per_cpu_data *cpu = arch_get_per_cpu_data();
-    cpu->run_queue = e;
     cpu->start_of_queue = e;
     #endif
 }
 void schedd(void *frame) {
     struct per_cpu_data *cpu = arch_get_per_cpu_data();
-    if (cpu->run_queue == NULL) {
+    if (cpu->run_queue == NULL && cpu->start_of_queue == NULL) {
         return;
     }
     arch_save_ctx(frame, cpu->run_queue);
@@ -76,7 +77,7 @@ void schedd(void *frame) {
     // for reading operations such as switching the pagemap
     // it is fine not to lock, otherwise we would have deadlocks and major slowdowns
     // for writing anything however, the process MUST be locked
-    //arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+    arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 
 
 }

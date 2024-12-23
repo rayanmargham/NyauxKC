@@ -5,6 +5,7 @@ void *kmalloc(uint64_t amount) {
   if (amount > 1024) {
 
     void *him = kvmm_region_alloc(amount, PRESENT | RWALLOWED);
+    memset(him, 0, amount);
     return him;
   } else {
 #ifdef __SANITIZE_ADDRESS__
@@ -14,6 +15,7 @@ void *kmalloc(uint64_t amount) {
 
 #else
     void *him = slaballocate(amount);
+    memset(him, 0, amount);
     return him;
 #endif
   }
