@@ -193,6 +193,6 @@ void kmain(void)
 	hcf();	  // we js chill
 }
 void kentry() {
-	kprintf("Hello World!\n");
+	kprintf("kentry(): Hello World from a scheduled thread\n");
 	hcf();
 }
