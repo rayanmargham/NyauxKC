@@ -33,6 +33,7 @@ struct per_cpu_data* arch_get_per_cpu_data()
 #if defined(__x86_64__)
 	if (get_lapic_id() == bsp_id)
 	{
+		assert(&bsp != NULL);
 		return &bsp;
 	}
 	struct per_cpu_data* hi = (struct per_cpu_data*)rdmsr(0xC0000101);
