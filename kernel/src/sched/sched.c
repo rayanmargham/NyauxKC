@@ -18,7 +18,6 @@ void arch_save_ctx(void *frame, struct thread_t *threadtosavectx) {
 void arch_load_ctx(void *frame, struct thread_t *threadtoloadctxfrom) {
     #ifdef __x86_64__ 
     *(struct StackFrame*)frame = threadtoloadctxfrom->arch_data.frame;
-    kprintf("threads rip: 0x%lx, loaded rip 0x%lx\n", threadtoloadctxfrom->arch_data.frame.rip, (*(struct StackFrame*)frame).rip);
     #endif
 }
 struct per_cpu_data *arch_get_per_cpu_data() {
@@ -67,7 +66,12 @@ void schedd(void *frame) {
     if (cpu->run_queue == NULL && cpu->start_of_queue == NULL) {
         return;
     }
-    arch_save_ctx(frame, cpu->run_queue);
+    if (cpu->run_queue != NULL) {
+        arch_save_ctx(frame, cpu->run_queue);
+    } else {
+        cpu->run_queue = cpu->start_of_queue;
+    }
+    
     if (cpu->run_queue->next == NULL) {
         cpu->run_queue = cpu->start_of_queue;
     } else {
