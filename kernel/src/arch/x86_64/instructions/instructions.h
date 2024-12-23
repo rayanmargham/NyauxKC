@@ -13,7 +13,7 @@ static inline uint64_t rdmsr(uint32_t msr) {
   uint32_t low = 0;
   uint32_t hi = 0;
   __asm__ volatile("rdmsr" : "=a"(low), "=d"(hi) : "c"(msr));
-  uint64_t combined = ((uint64_t)hi >> 32) | low;
+  uint64_t combined = ((uint64_t)hi << 32) | low;
   return combined;
 }
 static inline void wrmsr(uint32_t msr, uint64_t value) {

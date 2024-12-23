@@ -25,6 +25,7 @@ extern volatile struct limine_hhdm_request hhdm_request;
     }                                                                          \
   } while (0)
 static inline void panic(char *msg) {
+  __asm__ volatile ("cli");         
   kprintf("NYAUX Panic! Reason: %s\noopsie uwu :3\n", msg);
   hcf();
 }

@@ -11,6 +11,7 @@
 
 #include "elf/symbols/symbols.h"
 #include "mem/vmm.h"
+#include "sched/sched.h"
 #include "smp/smp.h"
 #include "term/term.h"
 #include "uacpi/status.h"
@@ -176,8 +177,8 @@ void kmain(void)
 	get_symbols();
 	init_acpi();
 	kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(), total_memory() / 1048576);
-
-	//init_smp();
+	init_smp();
+	
 	// uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
 	// if (uacpi_unlikely_error(ret))
 	// {
@@ -190,4 +191,8 @@ void kmain(void)
 	// 	kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
 	// }
 	hcf();	  // we js chill
+}
+void kentry() {
+	kprintf("Hello World!\n");
+	hcf();
 }

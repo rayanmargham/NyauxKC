@@ -37,8 +37,8 @@ isr_stub_%1:
     push r14
     push r15
 
-    push gs                  ; Save previous state of segment registers
-    push fs
+    ; push gs                  ; Save previous state of segment registers
+    ; push fs
 
 
     push %1                  ; Push the interrupt number
@@ -51,8 +51,8 @@ isr_stub_%1:
     mov rsp, rax
     add rsp, 8               ; skip int number
               ; Restore previous state of segment registers
-    pop fs
-    pop gs
+    ; pop fs
+    ; pop gs
 
     pop r15
     pop r14

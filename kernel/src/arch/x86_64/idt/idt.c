@@ -7,6 +7,7 @@
 
 #include "../cpu/lapic.h"
 #include "../instructions/instructions.h"
+#include "sched/sched.h"
 #define INTERRUPT_GATE 0xE
 #define TRAP_GATE	   0xF
 extern uint64_t stubs[];
@@ -109,7 +110,7 @@ uint64_t read_cr2()
 void* page_fault_handler(struct StackFrame* frame)
 {
 	kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
-	kprintf("RIP is 0x%lx\n", frame->rip);
+	kprintf("RIP is 0x%lx. Error Code 0x%lx\n", frame->rip, frame->error_code);
 	STACKTRACE
 	panic("Page Fault:c");
 	return 0;
@@ -142,12 +143,9 @@ int AllocateIrq()
 }
 void* sched(struct StackFrame* frame)
 {
-	if (get_lapic_id() == 0)
-	{
-		send_eoi();
-		return frame;
-	}
-	kprintf("CPU %d Says: MY LAPIC TICKED HAHAHAHA\n", get_lapic_id());
+	__asm__ volatile ("cli");
+	
+	schedd(frame);
 	send_eoi();
 	return frame;
 }

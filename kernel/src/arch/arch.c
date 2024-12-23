@@ -1,11 +1,13 @@
 #include "arch.h"
 #include "arch/x86_64/cpu/lapic.h"
+#include "arch/x86_64/cpu/structures.h"
 #include "arch/x86_64/gdt/gdt.h"
 #include "arch/x86_64/instructions/instructions.h"
 
 #include "arch/x86_64/idt/idt.h"
 #include "arch/x86_64/page_tables/pt.h"
 #include "mem/vmm.h"
+#include "sched/sched.h"
 #include "term/term.h"
 #include <arch/x86_64/idt/idt.h>
 #include <mem/kmem.h>
@@ -106,6 +108,7 @@ void arch_late_init() {
   per_cpu_vmm_init();
   kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\n",
           get_lapic_id());
+  arch_create_per_cpu_data();
   init_lapic();
 #endif
 }
@@ -141,3 +144,30 @@ void arch_switch_pagemap(pagemap *take) {
   x86_64_switch_pagemap(take);
 #endif
 }
+#if defined(__x86_64__)
+struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func, uint64_t stack) {
+  if (usermode) {
+  struct StackFrame meow = {
+    .rip =  entry_func,
+    .rsp = stack,
+    .cs  = 0x40 | (3), // USER CODE
+    .ss = 0x38 | (3), // USER DATA
+    .rbp = stack,
+    .rflags = 0x202
+  };
+  return meow;
+  } else {
+    struct StackFrame meow = {
+    .rip =  entry_func,
+    .rsp = stack,
+    .cs  = 0x28, // USER CODE
+    .ss = 0x30, // USER DATA
+    .rbp = stack,
+    .rflags = 0x202
+  };
+  return meow;
+  }
+  
+  
+}
+#endif
