@@ -76,7 +76,7 @@ void schedd(void *frame) {
     // for reading operations such as switching the pagemap
     // it is fine not to lock, otherwise we would have deadlocks and major slowdowns
     // for writing anything however, the process MUST be locked
-    arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+    //arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 
 
 }

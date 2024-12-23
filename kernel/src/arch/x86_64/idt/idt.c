@@ -146,6 +146,7 @@ void* sched(struct StackFrame* frame)
 	__asm__ volatile ("cli");
 	
 	schedd(frame);
+	__asm__ volatile ("sti");
 	send_eoi();
 	return frame;
 }
