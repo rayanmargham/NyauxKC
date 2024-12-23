@@ -11,7 +11,7 @@
             inherit (pkgs) lib stdenv mkShell;
         in {
             devShells.default = mkShell {
-                shellHook = "export DEVSHELL_PS1_PREFIX='Nyax'";
+                shellHook = "export DEVSHELL_PS1_PREFIX='Nyaux'";
                 nativeBuildInputs = with pkgs; [
                     libisoburn # xorisso
                     nasm
