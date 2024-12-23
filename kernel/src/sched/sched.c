@@ -13,11 +13,13 @@
 void arch_save_ctx(void *frame, struct thread_t *threadtosavectx) {
     #ifdef __x86_64__ 
     threadtosavectx->arch_data.frame = *(struct StackFrame*)frame;
+    __asm__ volatile ("mov %%rsp, %0" : : "r"(threadtosavectx->kernel_stack_ptr));
     #endif
 }
 void arch_load_ctx(void *frame, struct thread_t *threadtoloadctxfrom) {
     #ifdef __x86_64__ 
     *(struct StackFrame*)frame = threadtoloadctxfrom->arch_data.frame;
+    __asm__ volatile ("mov %0, %%rsp" : : "r"(threadtoloadctxfrom->kernel_stack_ptr));
     #endif
 }
 struct per_cpu_data *arch_get_per_cpu_data() {
@@ -48,17 +50,25 @@ struct thread_t *create_thread() {
     //him->next = NULL;
     return him;
 }
+#if defined (__x86_64)
+void load_ctx_into_kstack(struct thread_t *t, struct StackFrame fr) {
+    
+    t->kernel_stack_ptr -= sizeof(struct StackFrame);
+    *(struct StackFrame*)t->kernel_stack_ptr = fr;
+}
+#endif
+
 void create_kentry() {
     #if defined(__x86_64__)
     struct process_t *h = create_process(&ker_map);
     struct thread_t *e = create_thread();
     e->proc = h;
     uint64_t kstack = (uint64_t)(kmalloc(262144) + 262144); // top of stack
-    uint64_t kstack2 = (uint64_t)(kmalloc(262144) + 262144); // top of stack
     
     struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
     e->arch_data.frame = hh;
-    e->kernel_stack_ptr = kstack2;
+    load_ctx_into_kstack(e, hh);
+    kprintf("ran fine\n");
     struct per_cpu_data *cpu = arch_get_per_cpu_data();
     cpu->start_of_queue = e;
     #endif
