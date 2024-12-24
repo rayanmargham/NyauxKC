@@ -6,6 +6,7 @@
 #include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
+
 result init_kmalloc();
 // OH MY GOD SO HARd
 // THIS IS THE PMM
@@ -148,6 +149,7 @@ void* slab_alloc(cache* mod)
 		return NULL;
 	}
 	slab* cur = (slab*)mod->slabs;
+	assert(cur);
 	while (true)
 	{
 		if (cur->freelist == NULL)
@@ -155,17 +157,21 @@ void* slab_alloc(cache* mod)
 			if (cur->next != NULL)
 			{
 				cur = (slab*)cur->next;
+
 				continue;
 			}
 			break;
 		}
+		assert(cur != NULL);
 		void* guy = cur->freelist;
 		cur->freelist = ((pnode*)cur->freelist)->next;
 		memset(guy, 0, mod->size);
 		return guy;
 	};
+	assert(cur);
 	cur->next = (struct slab*)init_slab(mod->size);
 	cur = (slab*)cur->next;
+	assert(cur);
 	void* guy = cur->freelist;
 	cur->freelist = ((pnode*)cur->freelist)->next;
 	memset(guy, 0, mod->size);

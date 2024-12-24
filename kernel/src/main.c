@@ -64,6 +64,7 @@ __attribute__((used, section(".requests_end_marker"))) static volatile LIMINE_RE
 	void*
 	memcpy(void* dest, const void* src, size_t n)
 {
+	assert(dest);
 #ifdef __x86_64__
 	void* tmptmp = dest;
 	__asm__ __volatile__("rep movsb\n\t" : "+D"(dest), "+S"(src), "+c"(n) : : "memory");
@@ -178,7 +179,7 @@ void kmain(void)
 	init_acpi();
 	kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(), total_memory() / 1048576);
 	init_smp();
-	
+
 	// uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
 	// if (uacpi_unlikely_error(ret))
 	// {
@@ -192,7 +193,8 @@ void kmain(void)
 	// }
 	hcf();	  // we js chill
 }
-void kentry() {
+void kentry()
+{
 	// change font or smthin
 	kprintf("kentry(): Hello World from a scheduled thread\n");
 	hcf();

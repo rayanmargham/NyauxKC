@@ -15,14 +15,14 @@ void arch_save_ctx(void* frame, struct thread_t* threadtosavectx)
 {
 #ifdef __x86_64__
 	threadtosavectx->arch_data.frame = *(struct StackFrame*)frame;
-	__asm__ volatile("mov %%rsp, %0" : : "r"(threadtosavectx->kernel_stack_ptr));
+	//__asm__ volatile("mov %%rsp, %0" : : "r"(threadtosavectx->kernel_stack_ptr));
 #endif
 }
 void arch_load_ctx(void* frame, struct thread_t* threadtoloadctxfrom)
 {
 #ifdef __x86_64__
 	*(struct StackFrame*)frame = threadtoloadctxfrom->arch_data.frame;
-	__asm__ volatile("mov %0, %%rsp" : : "r"(threadtoloadctxfrom->kernel_stack_ptr));
+	//__asm__ volatile("mov %0, %%rsp" : : "r"(threadtoloadctxfrom->kernel_stack_ptr));
 #endif
 }
 #if defined(__x86_64__)
@@ -83,7 +83,7 @@ void create_kentry()
 
 	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
 	e->arch_data.frame = hh;
-	load_ctx_into_kstack(e, hh);
+	// load_ctx_into_kstack(e, hh);
 	kprintf("ran fine\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->start_of_queue = e;
