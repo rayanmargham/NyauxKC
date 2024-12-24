@@ -11,17 +11,21 @@
 // ARCH STUFF
 #include "arch/x86_64/cpu/structures.h"
 
+#ifdef __x86_64__
+extern void do_savekstackandloadkstack(struct thread_t* old, struct thread_t* new);
+#endif
 void arch_save_ctx(void* frame, struct thread_t* threadtosavectx)
 {
 #ifdef __x86_64__
-	threadtosavectx->arch_data.frame = *(struct StackFrame*)frame;
+	// threadtosavectx->arch_data.frame = *(struct StackFrame*)frame;
 	//__asm__ volatile("mov %%rsp, %0" : : "r"(threadtosavectx->kernel_stack_ptr));
 #endif
 }
 void arch_load_ctx(void* frame, struct thread_t* threadtoloadctxfrom)
 {
 #ifdef __x86_64__
-	*(struct StackFrame*)frame = threadtoloadctxfrom->arch_data.frame;
+	// *(struct StackFrame*)frame = threadtoloadctxfrom->arch_data.frame;
+
 	//__asm__ volatile("mov %0, %%rsp" : : "r"(threadtoloadctxfrom->kernel_stack_ptr));
 #endif
 }
@@ -66,10 +70,14 @@ struct thread_t* create_thread()
 	return him;
 }
 #if defined(__x86_64)
-void load_ctx_into_kstack(struct thread_t* t, struct StackFrame fr)
+extern void return_from_kernel_in_new_thread();
+void load_ctx_into_kstack(struct thread_t* t, struct StackFrame usrctx)
 {
 	t->kernel_stack_ptr -= sizeof(struct StackFrame);
-	*(struct StackFrame*)t->kernel_stack_ptr = fr;
+	*(struct StackFrame*)t->kernel_stack_ptr = usrctx;
+	t->kernel_stack_ptr -= sizeof(uint64_t*);
+	*(uint64_t*)t->kernel_stack_ptr = (uint64_t)return_from_kernel_in_new_thread;
+	t->kernel_stack_ptr -= sizeof(uint64_t) * 6;
 }
 #endif
 
@@ -82,8 +90,9 @@ void create_kentry()
 	uint64_t kstack = (uint64_t)(kmalloc(262144) + 262144);	   // top of stack
 
 	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
+	e->kernel_stack_ptr = kstack;
 	e->arch_data.frame = hh;
-	// load_ctx_into_kstack(e, hh);
+	load_ctx_into_kstack(e, hh);
 	kprintf("ran fine\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->start_of_queue = e;
@@ -98,24 +107,45 @@ void schedd(void* frame)
 	}
 	if (cpu->run_queue != NULL)
 	{
-		arch_save_ctx(frame, cpu->run_queue);
+		// arch_save_ctx(frame, cpu->run_queue);
+
 		if (cpu->run_queue->next == NULL)
 		{
+			struct thread_t* tmp = cpu->run_queue;
 			cpu->run_queue = cpu->start_of_queue;
+			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
+			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+// save and load
+#ifdef __x86_64__
+			do_savekstackandloadkstack(tmp, cpu->run_queue);
+#endif
 		}
 		else
 		{
+			struct thread_t* tmp = cpu->run_queue;
 			cpu->run_queue = cpu->run_queue->next;
+			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
+			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+// save and load
+#ifdef __x86_64__
+			do_savekstackandloadkstack(tmp, cpu->run_queue);
+#endif
 		}
 	}
 	else
 	{
+		struct thread_t* tmp = cpu->start_of_queue;
 		cpu->run_queue = cpu->start_of_queue;
+		cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
+		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+// save and load
+#ifdef __x86_64__
+		do_savekstackandloadkstack(NULL, cpu->run_queue);
+#endif
 	}
-	cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
-	arch_load_ctx(frame, cpu->run_queue);
-	// for reading operations such as switching the pagemap
-	// it is fine not to lock, otherwise we would have deadlocks and major slowdowns
-	// for writing anything however, the process MUST be locked
-	arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+	// arch_load_ctx(frame, cpu->run_queue);
+	//  for reading operations such as switching the pagemap
+	//  it is fine not to lock, otherwise we would have deadlocks and major slowdowns
+	//  for writing anything however, the process MUST be locked
+	// we dont ever return
 }

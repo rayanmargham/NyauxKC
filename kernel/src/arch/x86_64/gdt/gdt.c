@@ -45,3 +45,8 @@ void init_gdt()
 
 	gdt_flush(&gptr);
 }
+void change_rsp0(uint64_t stackaddr)
+{
+	struct per_cpu_data* wtv = arch_get_per_cpu_data();
+	wtv->arch_data.tss.rsp[0] = stackaddr;
+}
