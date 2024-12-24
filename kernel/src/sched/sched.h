@@ -14,6 +14,7 @@ struct thread_t
 	struct process_t* proc;	   // there should be a lock on this
 	struct arch_thread_t arch_data;
 	uint64_t kernel_stack_ptr;
+	uint64_t kernel_stack_base;
 	struct thread_t* next;
 };
 struct per_cpu_data

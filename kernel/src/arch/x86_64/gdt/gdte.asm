@@ -47,10 +47,10 @@ do_savekstackandloadkstack: ; rdi has thread old and rsi has thread new
     push r15 ; dont ask why these 6 registers only, mr miskakov never bothered explaining
     test rdi, rdi
     jz .skipstore
-    mov [rdi + 0xB0], rsp ; store into kernel stack ptr the value of rsp
+    mov [rdi + 0xB8], rsp ; store into kernel stack ptr the value of rsp
     .skipstore
-    mov rsp, [rsi + 0xB0] ; load from kernel stack ptr into rsp
-    mov rdi, rsp
+    mov rsp, [rsi + 0xB8] ; load from kernel stack ptr into rsp
+    mov rdi, [rsi + 0xC0] ; ;pad kernel stack base in rsp0
     call change_rsp0 
     pop r15
     pop r14

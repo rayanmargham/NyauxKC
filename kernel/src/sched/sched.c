@@ -90,6 +90,7 @@ void create_kentry()
 	uint64_t kstack = (uint64_t)(kmalloc(262144) + 262144);	   // top of stack
 
 	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
+	e->kernel_stack_base = kstack;
 	e->kernel_stack_ptr = kstack;
 	e->arch_data.frame = hh;
 	load_ctx_into_kstack(e, hh);
@@ -113,7 +114,7 @@ void schedd(void* frame)
 		{
 			struct thread_t* tmp = cpu->run_queue;
 			cpu->run_queue = cpu->start_of_queue;
-			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
+			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
 			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 // save and load
 #ifdef __x86_64__
@@ -124,7 +125,7 @@ void schedd(void* frame)
 		{
 			struct thread_t* tmp = cpu->run_queue;
 			cpu->run_queue = cpu->run_queue->next;
-			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
+			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
 			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 // save and load
 #ifdef __x86_64__
@@ -136,7 +137,7 @@ void schedd(void* frame)
 	{
 		struct thread_t* tmp = cpu->start_of_queue;
 		cpu->run_queue = cpu->start_of_queue;
-		cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_ptr;
+		cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
 		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 // save and load
 #ifdef __x86_64__
