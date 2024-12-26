@@ -36,6 +36,11 @@ typedef struct
 	base_ptr = (uint64_t*)temp; \
 	while (base_ptr != 0) \
 	{ \
+		uint64_t* next = (uint64_t*)*(uint64_t*)(base_ptr); \
+		if (!next) \
+		{ \
+			break; \
+		} \
 		uint64_t ret_addr = *(uint64_t*)((uint64_t)base_ptr + 8); \
 		if (ret_addr != 0) \
 		{ \
@@ -112,27 +117,7 @@ void* page_fault_handler(struct StackFrame* frame)
 	__asm__ volatile("cli");
 	kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
 	kprintf("RIP is 0x%lx. Error Code 0x%lx\n", frame->rip, frame->error_code);
-	nyauxsymbol h = find_from_rip(frame->rip);
-	uint64_t* base_ptr = 0;
-	uint64_t temp = 0;
-	temp = frame->rbp;
-	kprintf_symbol(h);
-	base_ptr = (uint64_t*)temp;
-	while (base_ptr != 0)
-	{
-		uint64_t ret_addr = *(uint64_t*)((uint64_t)base_ptr + 8);
-		if (ret_addr != 0)
-		{
-			h = find_from_rip(ret_addr);
-			kprintf_symbol(h);
-		}
-		else
-		{
-			kprintf("-> Function: none -- 0x0\n");
-		}
-
-		base_ptr = (uint64_t*)*(uint64_t*)(base_ptr);
-	}
+	STACKTRACE
 	panic("Page Fault:c");
 	return 0;
 }

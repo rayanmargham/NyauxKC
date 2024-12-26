@@ -37,6 +37,7 @@ return_from_kernel_in_new_thread:
     swapgs                   ; Otherwise swapgs in user mode
 .skipswapgs3:
     add rsp, 8               ; Skip error code
+    sti
     iretq
 do_savekstackandloadkstack: ; rdi has thread old and rsi has thread new
     push rbx

@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "arch/arch.h"
+#include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "mem/vmm.h"
 #include "smp/smp.h"
@@ -118,6 +119,7 @@ void schedd(void* frame)
 			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 // save and load
 #ifdef __x86_64__
+			send_eoi();
 			do_savekstackandloadkstack(tmp, cpu->run_queue);
 #endif
 		}
@@ -129,6 +131,7 @@ void schedd(void* frame)
 			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 // save and load
 #ifdef __x86_64__
+			send_eoi();
 			do_savekstackandloadkstack(tmp, cpu->run_queue);
 #endif
 		}
@@ -141,6 +144,7 @@ void schedd(void* frame)
 		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
 // save and load
 #ifdef __x86_64__
+		send_eoi();
 		do_savekstackandloadkstack(NULL, cpu->run_queue);
 #endif
 	}
