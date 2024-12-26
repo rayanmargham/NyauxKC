@@ -10,6 +10,7 @@
 #include "arch/x86_64/gdt/gdt.h"
 #include "arch/x86_64/idt/idt.h"
 #include "arch/x86_64/instructions/instructions.h"
+#include "arch/x86_64/interrupt_controllers/ioapic.h"
 #include "arch/x86_64/page_tables/pt.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
@@ -99,6 +100,7 @@ void arch_init()
 	kprintf("arch_init(): gdt loaded.\n");
 	init_idt();
 	kprintf("arch_init(): idt loaded.\n");
+
 #else
 	kprintf("Nyaux Cannot Run on this archiecture.");
 	hcf();
@@ -177,3 +179,9 @@ struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func, uint64_t
 	}
 }
 #endif
+void arch_init_interruptcontrollers()
+{
+#ifdef __x86_64__
+	populate_ioapic();
+#endif
+}

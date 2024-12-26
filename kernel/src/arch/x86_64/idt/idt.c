@@ -109,6 +109,7 @@ uint64_t read_cr2()
 
 void* page_fault_handler(struct StackFrame* frame)
 {
+	__asm__ volatile("cli");
 	kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
 	kprintf("RIP is 0x%lx. Error Code 0x%lx\n", frame->rip, frame->error_code);
 	STACKTRACE
@@ -143,17 +144,16 @@ int AllocateIrq()
 }
 void* sched(struct StackFrame* frame)
 {
-	__asm__ volatile ("cli");
+	__asm__ volatile("cli");
 	unsigned long rsp;
 
-    // Inline assembly to read the RSP register
-    __asm__ __volatile__ (
-        "mov %%rsp, %0"
-        : "=r" (rsp) // Output operand
-    );
-	
+	// Inline assembly to read the RSP register
+	__asm__ __volatile__("mov %%rsp, %0"
+						 : "=r"(rsp)	// Output operand
+	);
+
 	schedd(frame);
-	__asm__ volatile ("sti");
+	__asm__ volatile("sti");
 	send_eoi();
 	return frame;
 }

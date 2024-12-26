@@ -178,6 +178,7 @@ void kmain(void)
 	get_symbols();
 	init_acpi();
 	kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(), total_memory() / 1048576);
+
 	init_smp();
 
 	// uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
@@ -197,5 +198,6 @@ void kentry()
 {
 	// change font or smthin
 	kprintf("kentry(): Hello World from a scheduled thread\n");
+	arch_init_interruptcontrollers();
 	hcf();
 }
