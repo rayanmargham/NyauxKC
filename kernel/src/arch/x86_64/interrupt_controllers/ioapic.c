@@ -12,7 +12,7 @@
 
 void populate_ioapic()
 {
-	int* x = 0;
+	volatile int* x = 0;
 	*x = 6;
 	struct uacpi_table l;
 	uacpi_status ret = uacpi_table_find_by_signature(ACPI_MADT_SIGNATURE, &l);

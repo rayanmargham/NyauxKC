@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "mem/pmm.h"
+#include "mem/vmm.h"
 #include "term/term.h"
 void kprintf_elfsect(Elf64_Shdr* hdr)
 {
@@ -14,11 +15,14 @@ nyauxsymbol find_from_rip(uint64_t rip)
 	for (uint64_t i = 0; i != symbolarray->size - 1; i++)
 	{
 		nyauxsymbol bro = symbolarray->array[i];
-		if (bro.function_address <= rip && bro.function_address != 0)
+		if (bro.function_address <= rip && bro.function_address != 0 &&
+			kernel_address.response->virtual_base < bro.function_address)
 		{
 			return symbolarray->array[i];
 		}
 	}
+	nyauxsymbol h = {.function_address = 0x0, .function_name = "Unknown"};
+	return h;
 }
 nyauxsymbolresource* symbolarray;
 
@@ -28,8 +32,7 @@ void bubblesort(int length)
 	{
 		for (int j = 0; j < (length - i - 1); j++)
 		{
-			if (symbolarray->array[j].function_address < symbolarray->array[j + 1].function_address &&
-				symbolarray->array[j].function_address != 0xa)
+			if (symbolarray->array[j].function_address < symbolarray->array[j + 1].function_address)
 			{
 				nyauxsymbol temp = symbolarray->array[j];
 				symbolarray->array[j] = symbolarray->array[j + 1];
