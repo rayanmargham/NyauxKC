@@ -163,7 +163,7 @@ struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func, uint64_t
 								  .rsp = stack,
 								  .cs = 0x40 | (3),	   // USER CODE
 								  .ss = 0x38 | (3),	   // USER DATA
-								  .rbp = stack,
+								  .rbp = 0,
 								  .rflags = 0x202};
 		return meow;
 	}
@@ -173,7 +173,7 @@ struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func, uint64_t
 								  .rsp = stack,
 								  .cs = 0x28,	 // USER CODE
 								  .ss = 0x30,	 // USER DATA
-								  .rbp = stack,
+								  .rbp = 0,
 								  .rflags = 0x202};
 		return meow;
 	}

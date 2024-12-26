@@ -103,7 +103,7 @@ void* division_by_zero(struct StackFrame* frame)
 uint64_t read_cr2()
 {
 	uint64_t cr2 = 0;
-	__asm__ volatile("mov %0, %%cr2" : "=r"(cr2));
+	__asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
 	return cr2;
 }
 
@@ -112,7 +112,27 @@ void* page_fault_handler(struct StackFrame* frame)
 	__asm__ volatile("cli");
 	kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
 	kprintf("RIP is 0x%lx. Error Code 0x%lx\n", frame->rip, frame->error_code);
-	STACKTRACE
+	nyauxsymbol h = find_from_rip(frame->rip);
+	uint64_t* base_ptr = 0;
+	uint64_t temp = 0;
+	temp = frame->rbp;
+	kprintf_symbol(h);
+	base_ptr = (uint64_t*)temp;
+	while (base_ptr != 0)
+	{
+		uint64_t ret_addr = *(uint64_t*)((uint64_t)base_ptr + 8);
+		if (ret_addr != 0)
+		{
+			h = find_from_rip(ret_addr);
+			kprintf_symbol(h);
+		}
+		else
+		{
+			kprintf("-> Function: none -- 0x0\n");
+		}
+
+		base_ptr = (uint64_t*)*(uint64_t*)(base_ptr);
+	}
 	panic("Page Fault:c");
 	return 0;
 }
