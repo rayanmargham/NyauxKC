@@ -39,7 +39,6 @@ isr_stub_%1:
     ; push gs                  ; Save previous state of segment registers
     ; push fs
 
-
     push %1                  ; Push the interrupt number
     mov rdi, rsp ; put value of stack pointer into paramter 1 of c interrupt handler
     mov rax, [idt_handlers + %1 * 8]
