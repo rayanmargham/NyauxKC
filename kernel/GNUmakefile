@@ -55,6 +55,7 @@ override CFLAGS += \
     -nostdinc \
     -ffreestanding \
     -fno-stack-protector \
+    -fno-omit-frame-pointer \
     -fno-stack-check \
     -fno-PIC \
     -ffunction-sections \
