@@ -8,6 +8,7 @@
 #include "../cpu/lapic.h"
 #include "../instructions/instructions.h"
 #include "sched/sched.h"
+
 #define INTERRUPT_GATE 0xE
 #define TRAP_GATE	   0xF
 extern uint64_t stubs[];
@@ -115,8 +116,13 @@ uint64_t read_cr2()
 void* page_fault_handler(struct StackFrame* frame)
 {
 	__asm__ volatile("cli");
+
 	kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
 	kprintf("RIP is 0x%lx. Error Code 0x%lx\n", frame->rip, frame->error_code);
+	if (arch_get_per_cpu_data() != NULL)
+	{
+		kprintf("Page Fault Happened in a thread.\n");
+	}
 	STACKTRACE
 	panic("Page Fault:c");
 	return 0;

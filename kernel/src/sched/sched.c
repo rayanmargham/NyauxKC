@@ -88,7 +88,8 @@ void create_kentry()
 	struct process_t* h = create_process(&ker_map);
 	struct thread_t* e = create_thread();
 	e->proc = h;
-	uint64_t kstack = (uint64_t)(kmalloc(262144) + 262144);	   // top of stack
+	// 16kib kstack lol
+	uint64_t kstack = (uint64_t)(kmalloc(16384) + 16384);	 // top of stack
 
 	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
 	e->kernel_stack_base = kstack;
