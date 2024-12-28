@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "sched/sched.h"
+#include "utils/basic.h"
 
 typedef struct
 {
@@ -12,9 +13,10 @@ typedef struct
 uint64_t gdt[11];
 extern void gdt_flush(void*);
 GDTR gptr = {};
-
+static spinlock_t gdt_lock;
 void init_gdt()
 {
+	spinlock_lock(&gdt_lock);
 	gdt[0] = 0x0;
 	gdt[1] = 0x00009a000000ffff;
 	gdt[2] = 0x000093000000ffff;
@@ -44,6 +46,7 @@ void init_gdt()
 	gptr.size = sizeof(gdt) - 1;
 
 	gdt_flush(&gptr);
+	spinlock_unlock(&gdt_lock);
 }
 void change_rsp0(uint64_t stackaddr)
 {

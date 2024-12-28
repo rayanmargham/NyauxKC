@@ -119,7 +119,8 @@ slab* init_slab(uint64_t size)
 	for (uint64_t i = 1; i < obj_amount; i++)
 	{
 		pnode* new = (pnode*)((uint64_t)first + (i * size));
-		new->next = (struct pnode*)cur;
+		new->next = NULL;
+		cur->next = (struct pnode*)new;
 		cur = new;
 	};
 	return hdr;
@@ -173,7 +174,8 @@ void* slaballocate(uint64_t amount)
 	for (int i = 0; i != 7; i++)
 	{
 		cache* c = &caches[i];
-		assert(c->size != 0);
+		if (c->size < amount)
+			continue;
 		return slab_alloc(c);
 	}
 	return NULL;
@@ -257,6 +259,6 @@ void slabfree(void* addr)
 	}
 	if (howmanynodes == guy->obj_ammount)
 	{
-		kprintf("USELESS SLAB\n");
+		// kprintf("USELESS SLAB\n");
 	}
 }
