@@ -210,5 +210,5 @@ void populate_ioapic()
 		offset += ent->length;
 	}
 
-	route_irq(9, 56, 0, get_lapic_id());
+	// route_irq(9, 56, 0, get_lapic_id());
 }

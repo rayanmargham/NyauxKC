@@ -90,8 +90,8 @@ void create_kentry()
 	e->proc = h;
 	// 16kib kstack lol
 	uint64_t kstack = (uint64_t)(kmalloc(16384) + 16384);	 // top of stack
-
-	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack);
+	// profiler will crash because it expects a return address
+	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack - 8);
 	e->kernel_stack_base = kstack;
 	e->kernel_stack_ptr = kstack;
 	e->arch_data.frame = hh;
