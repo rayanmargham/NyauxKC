@@ -163,7 +163,9 @@ void kmain(void)
 
 	// Fetch the first framebuffer.
 	struct limine_framebuffer* framebuffer = framebuffer_request.response->framebuffers[0];
+
 	init_term(framebuffer);
+
 	kprintf("kmain(): Hello World ITS THE BEST NYAUX REWRITE EVER HERE\nDEF NOT "
 			"FAMOUS "
 			"LAST WORDS HERES FUNNY NUMBER TO SHOW WE USING NANOPRINTF %d\n",

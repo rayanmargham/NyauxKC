@@ -41,6 +41,7 @@ void kprintf(const char* format, ...)
 	spinlock_lock(&lock);
 	va_list args;
 	va_start(args, format);
+
 	npf_vpprintf(tputc, NULL, format, args);
 	va_end(args);
 	spinlock_unlock(&lock);

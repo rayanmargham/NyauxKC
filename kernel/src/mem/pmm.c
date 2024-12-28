@@ -145,37 +145,25 @@ result init_kmalloc()
 void* slab_alloc(cache* mod)
 {
 	if (mod->slabs == NULL || mod->size == 0)
-	{
 		return NULL;
-	}
-	slab* cur = (slab*)mod->slabs;
-	assert(cur);
-	while (true)
-	{
-		if (cur->freelist == NULL)
-		{
-			if (cur->next != NULL)
-			{
-				cur = (slab*)cur->next;
 
-				continue;
-			}
-			break;
+	slab* cur = (slab*)mod->slabs;
+	assert(cur != NULL);
+
+	while (cur->freelist == NULL)
+	{
+		if (cur->next == NULL)
+		{
+			cur->next = (struct slab*)init_slab(mod->size);
 		}
-		assert(cur != NULL);
-		void* guy = cur->freelist;
-		cur->freelist = ((pnode*)cur->freelist)->next;
-		memset(guy, 0, mod->size);
-		return guy;
-	};
-	assert(cur);
-	cur->next = (struct slab*)init_slab(mod->size);
-	cur = (slab*)cur->next;
-	assert(cur);
-	void* guy = cur->freelist;
+
+		cur = (slab*)cur->next;
+		// assert(cur != NULL);
+	}
+
+	void* ptr = cur->freelist;
 	cur->freelist = ((pnode*)cur->freelist)->next;
-	memset(guy, 0, mod->size);
-	return guy;
+	return ptr;
 }
 void* slaballocate(uint64_t amount)
 {
