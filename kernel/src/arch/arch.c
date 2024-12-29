@@ -72,7 +72,8 @@ uint64_t raw_io_in(uint64_t address, uint8_t byte_width)
 		default: panic("raw_io_in(): not a valid byte width"); break;
 	}
 }
-int uacpi_arch_install_irq(uacpi_interrupt_handler handler, uacpi_handle ctx, uacpi_handle* out_irq_handle)
+int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
+						   uacpi_handle* out_irq_handle)
 {
 #if defined(__x86_64__)
 	// CHANGE WHEN WE DO SMP
@@ -89,6 +90,7 @@ int uacpi_arch_install_irq(uacpi_interrupt_handler handler, uacpi_handle ctx, ua
 	isr_ctxt[vec] = info;
 	RegisterHandler(vec, uacpi_wrap_irq_fn);
 	// when u get ioapic install the irq pls
+	route_irq(irq, vec, 0, get_lapic_id());
 	return vec;
 #endif
 }

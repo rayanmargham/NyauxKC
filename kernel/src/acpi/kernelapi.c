@@ -182,7 +182,7 @@ uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request*)
 uacpi_status uacpi_kernel_install_interrupt_handler(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
 													uacpi_handle* out_irq_handle)
 {
-	int ret = uacpi_arch_install_irq(handler, ctx, out_irq_handle);
+	int ret = uacpi_arch_install_irq(irq, handler, ctx, out_irq_handle);
 	if (ret == -1)
 	{
 		return UACPI_STATUS_NO_HANDLER;
@@ -220,5 +220,5 @@ uacpi_status uacpi_kernel_wait_for_work_completion(void)
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 {
-	return read_hpet_counter();
+	// return read_hpet_counter();
 }

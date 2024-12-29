@@ -11,7 +11,8 @@
 #endif
 void raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width);
 uint64_t raw_io_in(uint64_t address, uint8_t byte_width);
-int uacpi_arch_install_irq(uacpi_interrupt_handler handler, uacpi_handle ctx, uacpi_handle* out_irq_handle);
+int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
+						   uacpi_handle* out_irq_handle);
 void arch_init();
 void arch_late_init();
 uint64_t arch_mapkernelhhdmandmemorymap(pagemap* take);
