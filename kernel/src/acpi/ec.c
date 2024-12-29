@@ -289,6 +289,7 @@ void initecfromecdt()
 	ec_control_register = ok->ec_control;
 	ec_data_register = ok->ec_data;
 	ec_gpe_idx = ok->gpe_bit;
+	uacpi_namespace_node_find(NULL, ok->ec_id, &ec_node);
 	ec_inited = true;
 	install_ec_handlers();
 	kprintf("ec(): found ecdt table, installed and inited ec successfully\n");
