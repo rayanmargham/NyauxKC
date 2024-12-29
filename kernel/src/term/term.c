@@ -22,6 +22,10 @@ void tputc(int ch, void*)
 {
 	if (ft_ctx == NULL)
 	{
+		char c = ch;
+		while (is_transmit_empty() == 0)
+			;
+		outb(0x3F8, (uint8_t)c);
 		return;
 	}
 

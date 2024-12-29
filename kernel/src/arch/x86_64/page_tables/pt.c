@@ -214,6 +214,7 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap* take)
 			{
 				uint64_t addr = entry->base;
 				uint64_t length = entry->length;
+				kprintf("vmm()(x86_64): framebuffer located at %p, length is %lu\r\n", (uint64_t*)addr, length);
 				while (length >= PAGESIZE)
 				{
 					if (is2mibaligned(addr, MIB(2)) && length >= MIB(2))

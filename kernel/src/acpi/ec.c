@@ -152,6 +152,7 @@ static bool ec_burst_time()
 		kprintf("ec(): burst enable didnt get listened to by ec because its racist towards nyaux\n");
 		return false;
 	}
+	ec_wait_for_bit(&ec_control_register, EC_BURST, EC_BURST);
 	return true;
 }
 static void ec_burst_nomoretime(bool wasthereack)
