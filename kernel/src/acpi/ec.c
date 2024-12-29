@@ -178,13 +178,15 @@ static uacpi_status ec_writeuacpi(uacpi_region_rw_data* data)
 	bool ack = ec_burst_time();
 	ec_writereal(data->offset, data->value);
 	ec_burst_nomoretime(ack);
+	spinlock_unlock(&ec_lock);
 	return UACPI_STATUS_OK;
 }
 static uacpi_status ecamlhandler(uacpi_region_op op, uacpi_handle data)
 {
+	kprintf("handling an op\n");
 	switch (op)
 	{
-		case UACPI_REGION_OP_ATTACH: break;
+		case UACPI_REGION_OP_ATTACH:
 		case UACPI_REGION_OP_DETACH: return UACPI_STATUS_OK;
 		case UACPI_REGION_OP_READ:
 			// do ec read
@@ -220,26 +222,33 @@ uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev
 {
 	spinlock_lock(&ec_lock);
 	uint8_t idx = 0;
+	kprintf("got ec event\n");
 	if (!ec_querytime(&idx))
 	{
+		spinlock_unlock(&ec_lock);
 		return UACPI_INTERRUPT_HANDLED | UACPI_GPE_REENABLE;
 	}
 	uacpi_kernel_schedule_work(UACPI_WORK_GPE_EXECUTION, ecevulatemethod, (void*)(uintptr_t)idx);
+	spinlock_unlock(&ec_lock);
 	return UACPI_INTERRUPT_HANDLED;
 }
 static void install_ec_handlers()
 {
+	kprintf("installing address space handler\n");
 	uacpi_install_address_space_handler(uacpi_namespace_root(), UACPI_ADDRESS_SPACE_EMBEDDED_CONTROLLER, ecamlhandler,
 										NULL);
+	kprintf("installed address space handler\n");
 	uint64_t tmp = 0;
 	// evulate _GPE for the gpe ec will come from
 	uacpi_status status = uacpi_eval_simple_integer(ec_node, "_GPE", &tmp);
+	kprintf("evulated _GPE from ec node\n");
 	if (uacpi_unlikely_error(status))
 	{
 		return;
 	}
 	ec_gpe_idx = tmp & 0xFFFF;
 	status = uacpi_install_gpe_handler(ec_gpe_node, ec_gpe_idx, UACPI_GPE_TRIGGERING_EDGE, eccoolness, NULL);
+	kprintf("installed gpe\n");
 	if (uacpi_unlikely_error(status))
 	{
 		panic("cannot install gpe");
@@ -247,13 +256,16 @@ static void install_ec_handlers()
 }
 void ec_init()
 {
+	kprintf("ec(): initing from namespace\n");
 	if (ec_inited)
 	{
 		return;
 	}
+	kprintf("ec(): finding device\n");
 	uacpi_find_devices("PNP0C09", ec_match, NULL);
 	if (ec_inited)
 	{
+		kprintf("installing handlers\n");
 		install_ec_handlers();
 		kprintf("ec(): device has ec!!\n");
 		return;

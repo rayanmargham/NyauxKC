@@ -197,7 +197,7 @@ void populate_ioapic()
 				struct acpi_madt_ioapic* blah = (struct acpi_madt_ioapic*)ent;
 				kprintf("populate_ioapic(): found ioapic %d, manages from gsi %d, phys address %lx\n", ioapiccount,
 						blah->gsi_base, (uint64_t)blah->address);
-				kprintf("populate_ioapic(): ioapic version is %d. max gsi is %lx\n",
+				kprintf("populate_ioapic(): ioapic version is %d. max gsi is %d\n",
 						0xF & (24 >> (uint64_t)ioapic_read(blah, 0)), 0xFF & (((uint64_t)ioapic_read(blah, 1)) >> 16));
 				assert(ioapiccount < 20);
 				apics[ioapiccount] = *blah;

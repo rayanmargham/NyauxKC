@@ -220,5 +220,5 @@ uacpi_status uacpi_kernel_wait_for_work_completion(void)
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 {
-	// return read_hpet_counter();
+	return read_hpet_counter();
 }
