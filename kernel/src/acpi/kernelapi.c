@@ -235,10 +235,12 @@ void uacpi_kernel_unlock_spinlock(uacpi_handle lock, uacpi_cpu_flags)
 }
 uacpi_status uacpi_kernel_schedule_work(uacpi_work_type t, uacpi_work_handler f, uacpi_handle ctx)
 {
+	kprintf("uacpi called kernel schedule work\n");
 	return UACPI_STATUS_UNIMPLEMENTED;
 }
 uacpi_status uacpi_kernel_wait_for_work_completion(void)
 {
+	kprintf("uacpi called wait for work completion\n");
 	return UACPI_STATUS_UNIMPLEMENTED;
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)

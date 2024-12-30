@@ -229,6 +229,8 @@ static bool ec_querytime(uint8_t* idx)
 		return false;
 	}
 	bool ack = ec_burst_time();
+	uint8_t val = ec_read(&ec_control_register);
+	kprintf("in %s: ec status reg: %b\n", __func__, val);
 	ec_write(&ec_control_register, QR_EC);
 	*idx = ec_read(&ec_data_register);
 	ec_burst_nomoretime(ack);
@@ -239,11 +241,14 @@ uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev
 	kprintf("got ec event\n");
 	spinlock_lock(&ec_lock);
 	uint8_t idx = 0;
+	uint8_t val = ec_read(&ec_control_register);
+	kprintf("in %s: ec status reg: %b\n", __func__, val);
 	if (!ec_querytime(&idx))
 	{
 		spinlock_unlock(&ec_lock);
 		return UACPI_INTERRUPT_HANDLED | UACPI_GPE_REENABLE;
 	}
+
 	ecevulatemethod((uacpi_handle)(uint64_t)gpe_idx);
 	spinlock_unlock(&ec_lock);
 	return UACPI_INTERRUPT_HANDLED;
@@ -262,6 +267,7 @@ static void install_ec_handlers()
 	{
 		return;
 	}
+
 	ec_gpe_idx = tmp & 0xFFFF;
 	status = uacpi_install_gpe_handler(ec_gpe_node, ec_gpe_idx, UACPI_GPE_TRIGGERING_EDGE, eccoolness, NULL);
 	kprintf("installed gpe\n");
@@ -283,6 +289,8 @@ void ec_init()
 	{
 		kprintf("installing handlers\n");
 		install_ec_handlers();
+		uint8_t val = ec_read(&ec_control_register);
+		kprintf("in %s: ec status reg: %b\n", __func__, val);
 		kprintf("ec(): device has ec!!\n");
 		return;
 	}
