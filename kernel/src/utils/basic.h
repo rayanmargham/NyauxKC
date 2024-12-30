@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <term/term.h>
 #define MIB(x) (0x100000 * (x))
-static void hcf(void)
+__attribute__((noreturn)) static void hcf(void)
 {
 	for (;;)
 	{
