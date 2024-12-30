@@ -84,6 +84,7 @@ void* kprintf_symbol(nyauxsymbol h)
 
 void* uacpi_wrap_irq_fn(struct StackFrame* frame)
 {
+	kprintf("attempting to execute a uacpi irq method\n");
 	if (isr_ctxt[frame->intnum] == NULL)
 	{
 		panic("Could not handle uacpi interrupt :c");

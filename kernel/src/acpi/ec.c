@@ -236,9 +236,9 @@ static bool ec_querytime(uint8_t* idx)
 }
 uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev, uint16_t gpe_idx)
 {
+	kprintf("got ec event\n");
 	spinlock_lock(&ec_lock);
 	uint8_t idx = 0;
-	kprintf("got ec event\n");
 	if (!ec_querytime(&idx))
 	{
 		spinlock_unlock(&ec_lock);
