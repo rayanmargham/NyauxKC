@@ -20,23 +20,23 @@ uacpi_status uacpi_kernel_raw_memory_read(uacpi_phys_addr address, uacpi_u8 byte
 	uint64_t virt = (uint64_t)address + hhdm_request.response->offset;
 	switch (byte_width)
 	{
-		case 1: *out_value = *(uint8_t*)virt; break;
-		case 2: *out_value = *(uint16_t*)virt; break;
-		case 4: *out_value = *(uint32_t*)virt; break;
-		case 8: *out_value = *(uint64_t*)virt; break;
+		case 1: *out_value = *(volatile uint8_t*)virt; break;
+		case 2: *out_value = *(volatile uint16_t*)virt; break;
+		case 4: *out_value = *(volatile uint32_t*)virt; break;
+		case 8: *out_value = *(volatile uint64_t*)virt; break;
 		default: return UACPI_STATUS_INVALID_ARGUMENT;
 	}
 	return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_raw_memory_write(uacpi_phys_addr address, uacpi_u8 byte_width, uacpi_u64 in_value)
 {
-	uint64_t* virt = (uint64_t*)((uint64_t)address + hhdm_request.response->offset);
+	volatile uint64_t* virt = (volatile uint64_t*)((uint64_t)address + hhdm_request.response->offset);
 	switch (byte_width)
 	{
-		case 1: *(uint8_t*)virt = in_value; break;
-		case 2: *(uint16_t*)virt = in_value; break;
-		case 4: *(uint32_t*)virt = in_value; break;
-		case 8: *(uint64_t*)virt = in_value; break;
+		case 1: *(volatile uint8_t*)virt = in_value; break;
+		case 2: *(volatile uint16_t*)virt = in_value; break;
+		case 4: *(volatile uint32_t*)virt = in_value; break;
+		case 8: *(volatile uint64_t*)virt = in_value; break;
 		default: return UACPI_STATUS_INVALID_ARGUMENT;
 	}
 	return UACPI_STATUS_OK;
