@@ -188,3 +188,7 @@ void init_idt()
 
 	idt_flush(&idr);
 }
+void per_cpu_init_idt()
+{
+	idt_flush(&idr);
+}
