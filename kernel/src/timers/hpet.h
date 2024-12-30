@@ -7,3 +7,4 @@
 void init_hpet();
 void stall_with_hpetclk(uint64_t ms);
 uint64_t read_hpet_counter();
+void stall_with_hpetclkmicro(uint64_t usec);

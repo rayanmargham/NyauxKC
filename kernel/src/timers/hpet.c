@@ -30,6 +30,25 @@ void stall_with_hpetclk(uint64_t ms)
 		}
 	}
 }
+void stall_with_hpetclkmicro(uint64_t usec)
+{
+	if (bit32 == false)
+	{
+		volatile uint64_t pol_start = *(volatile uint64_t*)((volatile uint64_t)hpetvirtaddr + 0xf0);
+		volatile uint64_t* pol_cur = (volatile uint64_t*)((volatile uint64_t)hpetvirtaddr + 0xf0);
+		while ((*pol_cur - pol_start) * ctr_clock_period < usec * 1000)
+		{
+		}
+	}
+	else
+	{
+		volatile uint64_t pol_start = *(volatile uint32_t*)((volatile uint64_t)hpetvirtaddr + 0xf0);
+		volatile uint32_t* pol_cur = (volatile uint32_t*)((volatile uint64_t)hpetvirtaddr + 0xf0);
+		while ((*pol_cur - pol_start) * ctr_clock_period < usec * 1000)
+		{
+		}
+	}
+}
 uint64_t read_hpet_counter()
 {
 	assert(hpetvirtaddr != NULL);

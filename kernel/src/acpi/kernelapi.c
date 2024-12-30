@@ -148,6 +148,7 @@ uacpi_u64 uacpi_kernel_get_ticks(void)
 
 void uacpi_kernel_stall(uacpi_u8 usec)
 {
+	stall_with_hpetclkmicro(usec);
 }
 void uacpi_kernel_sleep(uacpi_u64 msec)
 {
