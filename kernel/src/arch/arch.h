@@ -9,8 +9,8 @@
 #if defined(__x86_64__)
 #include "x86_64/cpu/structures.h"
 #endif
-void raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width);
-uint64_t raw_io_in(uint64_t address, uint8_t byte_width);
+void arch_raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width);
+uint64_t arch_raw_io_in(uint64_t address, uint8_t byte_width);
 int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
 						   uacpi_handle* out_irq_handle);
 void arch_init();
@@ -22,7 +22,8 @@ void arch_init_pagemap(pagemap* take);
 void arch_destroy_pagemap(pagemap* take);
 void arch_switch_pagemap(pagemap* take);
 void arch_init_interruptcontrollers();
-
+void arch_enable_interrupts();
+void arch_disable_interrupts();
 #ifdef __x86_64__
 #define ARCH_CHECK_SPACE(amount) (align_up((amount), 4096) + 0x1000)
 struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func, uint64_t stack);

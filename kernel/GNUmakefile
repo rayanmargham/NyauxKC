@@ -182,7 +182,7 @@ cc-runtime-$(ARCH)/cc-runtime.a: GNUmakefile cc-runtime/*
 # Link rules for the final executable.
 bin-$(ARCH)/$(OUTPUT): GNUmakefile linker-$(ARCH).ld $(OBJ) cc-runtime-$(ARCH)/cc-runtime.a
 	mkdir -p "$$(dirname $@)"
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJ) cc-runtime-$(ARCH)/cc-runtime.a -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,--start-group $(OBJ) -Wl,--end-group cc-runtime-$(ARCH)/cc-runtime.a -o $@
 
 # Compilation rules for *.c files.
 obj-$(ARCH)/%.c.o: src/%.c GNUmakefile

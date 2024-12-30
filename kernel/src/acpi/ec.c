@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "arch/arch.h"
 #include "uacpi/acpi.h"
 #include "uacpi/event.h"
 #include "uacpi/kernel_api.h"
@@ -113,8 +114,10 @@ static uint8_t ec_read(struct acpi_gas* ec)
 	// waits til output buf is full lol
 	if (ec != &ec_control_register)
 	{
+		// kprintf("waiting til output buffer is full\n");
 		ec_wait_for_bit(&ec_control_register, EC_OBF, EC_OBF);
 	}
+	// kprintf("done \n");
 	uacpi_status status = uacpi_gas_read(ec, &val);
 	assert(status == UACPI_STATUS_OK);
 
@@ -130,10 +133,13 @@ static void ec_write(struct acpi_gas* ec, uint8_t val)
 static uint8_t ec_readreal(uint8_t offset)
 {
 	// send a command to the ec to read a value from its registers
+	// kprintf("telling ec in control register to read a register\n");
 	ec_write(&ec_control_register, RD_EC);
+	// kprintf("write complete, writing offset in data register\n");
 	// send the address byte in the ec data register, basically the offset
 	ec_write(&ec_data_register, offset);
-	return (uint8_t)ec_read(&ec_data_register);
+	// kprintf("write complete, attemping to read the data register\n");
+	return (volatile uint8_t)ec_read(&ec_data_register);
 }
 static void ec_writereal(uint8_t offset, uint8_t value)
 {
@@ -166,34 +172,43 @@ static void ec_burst_nomoretime(bool wasthereack)
 }
 static uacpi_status ec_readuacpi(uacpi_region_rw_data* data)
 {
+	arch_disable_interrupts();
 	spinlock_lock(&ec_lock);
 	bool ack = ec_burst_time();
+	// kprintf("reading ec offset register %lu\n", data->offset);
 	data->value = ec_readreal(data->offset);
+	// kprintf("read complete, disabling burst mode and unlocking spinlock\n");
 	ec_burst_nomoretime(ack);
 	spinlock_unlock(&ec_lock);
+	arch_enable_interrupts();
+	kprintf("done\n");
 	return UACPI_STATUS_OK;
 }
 static uacpi_status ec_writeuacpi(uacpi_region_rw_data* data)
 {
+	arch_disable_interrupts();
 	spinlock_lock(&ec_lock);
 	bool ack = ec_burst_time();
 	ec_writereal(data->offset, data->value);
 	ec_burst_nomoretime(ack);
 	spinlock_unlock(&ec_lock);
+	arch_enable_interrupts();
 	return UACPI_STATUS_OK;
 }
 static uacpi_status ecamlhandler(uacpi_region_op op, uacpi_handle data)
 {
-	kprintf("handling an op\n");
+	// kprintf("handling op\n");
 	switch (op)
 	{
-		case UACPI_REGION_OP_ATTACH:
+		case UACPI_REGION_OP_ATTACH: kprintf("attached\n"); return UACPI_STATUS_OK;
 		case UACPI_REGION_OP_DETACH: return UACPI_STATUS_OK;
 		case UACPI_REGION_OP_READ:
 			// do ec read
+			// kprintf("doing ec read\n");
 			return ec_readuacpi((uacpi_region_rw_data*)data);
 		case UACPI_REGION_OP_WRITE:
 			// do ec write
+			// kprintf("doing ec write\n");
 			return ec_writeuacpi((uacpi_region_rw_data*)data);
 		default: return UACPI_STATUS_OK;
 	}
@@ -221,6 +236,7 @@ static bool ec_querytime(uint8_t* idx)
 }
 uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev, uint16_t gpe_idx)
 {
+	arch_disable_interrupts();
 	spinlock_lock(&ec_lock);
 	uint8_t idx = 0;
 	kprintf("got ec event\n");

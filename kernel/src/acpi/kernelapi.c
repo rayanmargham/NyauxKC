@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "mem/pmm.h"
+#include "pci/pci.h"
 #include "timers/hpet.h"
 #include "uacpi/status.h"
 #include "uacpi/types.h"
@@ -42,21 +43,43 @@ uacpi_status uacpi_kernel_raw_memory_write(uacpi_phys_addr address, uacpi_u8 byt
 }
 uacpi_status uacpi_kernel_raw_io_read(uacpi_io_addr address, uacpi_u8 byte_width, uacpi_u64* out_value)
 {
-	*out_value = raw_io_in(address, byte_width);
+	*out_value = arch_raw_io_in(address, byte_width);
 	return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_raw_io_write(uacpi_io_addr address, uacpi_u8 byte_width, uacpi_u64 in_value)
 {
-	raw_io_write(address, in_value, byte_width);
+	arch_raw_io_write(address, in_value, byte_width);
 	return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_pci_read(uacpi_pci_address* address, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64* value)
 {
-	return UACPI_STATUS_UNIMPLEMENTED;
+	if (address->segment != 0)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	switch (byte_width)
+	{
+		case 1: *value = pciconfigreadbyte(address->bus, address->device, address->function, offset); break;
+		case 2: *value = pciconfigreadword(address->bus, address->device, address->function, offset); break;
+		case 4: *value = pciconfigread32(address->bus, address->device, address->function, offset); break;
+		default: return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_pci_write(uacpi_pci_address* address, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value)
 {
-	return UACPI_STATUS_UNIMPLEMENTED;
+	if (address->segment != 0)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	switch (byte_width)
+	{
+		case 1: pciconfigwritebyte(address->bus, address->device, address->function, offset, (uint8_t)value); break;
+		case 2: pciconfigwriteword(address->bus, address->device, address->function, offset, (uint16_t)value); break;
+		case 4: pciconfigwrite32(address->bus, address->device, address->function, offset, (uint32_t)value); break;
+		default: return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	return UACPI_STATUS_OK;
 }
 struct io_range
 {

@@ -13,7 +13,7 @@ void init_acpi()
 {
 	uint64_t rsdp = (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
 	kprintf("init_acpi(): initing uacpi\n");
-	uacpi_context_set_log_level(UACPI_LOG_TRACE);
+	// uacpi_context_set_log_level(UACPI_LOG_TRACE);
 	uacpi_status st = uacpi_initialize(0);
 	init_hpet();
 	populate_ioapic();
@@ -28,6 +28,7 @@ void init_acpi()
 		st = uacpi_finalize_gpe_initialization();
 
 		kprintf("init_acpi(): uacpi finished\n");
+		__asm__ volatile("int $0x21");
 	}
 	else
 	{

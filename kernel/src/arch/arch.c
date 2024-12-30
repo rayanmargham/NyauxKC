@@ -28,7 +28,7 @@
 //     return UACPI_STATUS_INVALID_ARGUMENT;
 //     break;
 //   }
-void raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width)
+void arch_raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width)
 {
 	switch (byte_width)
 	{
@@ -50,7 +50,7 @@ void raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width)
 		default: break;
 	}
 }
-uint64_t raw_io_in(uint64_t address, uint8_t byte_width)
+uint64_t arch_raw_io_in(uint64_t address, uint8_t byte_width)
 {
 	switch (byte_width)
 	{
@@ -118,6 +118,18 @@ void arch_late_init()
 
 	kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\n", get_lapic_id());
 	init_lapic();
+#endif
+}
+void arch_disable_interrupts()
+{
+#if defined(__x86_64__)
+	__asm__ volatile("cli");
+#endif
+}
+void arch_enable_interrupts()
+{
+#if defined(__x86_64__)
+	__asm__ volatile("sti");
 #endif
 }
 uint64_t arch_mapkernelhhdmandmemorymap(pagemap* take)

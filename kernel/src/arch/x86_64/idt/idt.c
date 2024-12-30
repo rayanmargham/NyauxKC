@@ -90,7 +90,7 @@ void* uacpi_wrap_irq_fn(struct StackFrame* frame)
 	}
 	uacpi_irq_wrap_info* info = isr_ctxt[frame->intnum];
 	info->fn(info->ctx);
-	return 0;
+	return frame;
 }
 void* division_by_zero(struct StackFrame* frame)
 {
@@ -177,6 +177,7 @@ void init_idt()
 
 		// Setup an IDT entry for all the interrupt stubs
 		kernel_interrupt_gate(i, stubs[i]);
+		isr_ctxt[i] = NULL;
 	};
 	RegisterHandler(0, division_by_zero);
 	RegisterHandler(0xe, page_fault_handler);
