@@ -233,7 +233,7 @@ void uacpi_kernel_unlock_spinlock(uacpi_handle lock, uacpi_cpu_flags)
 	spinlock_unlock((spinlock_t*)lock);
 	__asm__ volatile("sti");
 }
-uacpi_status uacpi_kernel_schedule_work(uacpi_work_type, uacpi_work_handler, uacpi_handle ctx)
+uacpi_status uacpi_kernel_schedule_work(uacpi_work_type t, uacpi_work_handler f, uacpi_handle ctx)
 {
 	return UACPI_STATUS_UNIMPLEMENTED;
 }

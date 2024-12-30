@@ -14,3 +14,5 @@
 #include "term/term.h"
 void initecfromecdt();
 void ec_init();
+void OBOS_InitializeECFromECDT();
+void OBOS_InitializeECFromNamespace();

@@ -99,14 +99,14 @@ static uacpi_iteration_decision ec_match(void* udata, uacpi_namespace_node* node
 static void ec_wait_for_bit(struct acpi_gas* reg, uint8_t mask, uint8_t desired_mask)
 {
 	uint64_t val = 0;
-	while ((val & mask) != desired_mask)
+	do
 	{
 		uacpi_status status = uacpi_gas_read(reg, &val);
 		if (uacpi_unlikely_error(status))
 		{
 			panic("ec(): encountered an error reading the ec, uacpi_status_reason: %s\n");
 		}
-	}
+	} while ((val & mask) != desired_mask);
 }
 static uint8_t ec_read(struct acpi_gas* ec)
 {
@@ -236,7 +236,6 @@ static bool ec_querytime(uint8_t* idx)
 }
 uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev, uint16_t gpe_idx)
 {
-	arch_disable_interrupts();
 	spinlock_lock(&ec_lock);
 	uint8_t idx = 0;
 	kprintf("got ec event\n");
@@ -245,7 +244,7 @@ uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev
 		spinlock_unlock(&ec_lock);
 		return UACPI_INTERRUPT_HANDLED | UACPI_GPE_REENABLE;
 	}
-	uacpi_kernel_schedule_work(UACPI_WORK_GPE_EXECUTION, ecevulatemethod, (void*)(uintptr_t)idx);
+	ecevulatemethod((uacpi_handle)(uint64_t)gpe_idx);
 	spinlock_unlock(&ec_lock);
 	return UACPI_INTERRUPT_HANDLED;
 }

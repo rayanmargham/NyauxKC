@@ -28,7 +28,6 @@ void init_acpi()
 		st = uacpi_finalize_gpe_initialization();
 
 		kprintf("init_acpi(): uacpi finished\n");
-		__asm__ volatile("int $0x21");
 	}
 	else
 	{
