@@ -4,6 +4,7 @@
 #include <uacpi/internal/log.h>
 #include <uacpi/internal/mutex.h>
 #include <uacpi/internal/utilities.h>
+#include <uacpi/internal/stdlib.h>
 #include <uacpi/kernel_api.h>
 
 static uacpi_handle notify_mutex;
@@ -164,7 +165,7 @@ uacpi_status uacpi_install_notify_handler(
         goto out;
     }
 
-    new_handler = uacpi_kernel_calloc(1, sizeof(*new_handler));
+    new_handler = uacpi_kernel_alloc_zeroed(sizeof(*new_handler));
     if (uacpi_unlikely(new_handler == UACPI_NULL))
         return UACPI_STATUS_OUT_OF_MEMORY;
 

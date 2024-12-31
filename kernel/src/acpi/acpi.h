@@ -5,4 +5,4 @@
 #include "uacpi/types.h"
 #include "uacpi/uacpi.h"
 extern volatile struct limine_rsdp_request rsdp_request;
-void init_acpi();
+void init_acpi_early();

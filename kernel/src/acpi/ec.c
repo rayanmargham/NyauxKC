@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "arch/arch.h"
+#include "arch/x86_64/cpu/lapic.h"
 #include "uacpi/acpi.h"
 #include "uacpi/event.h"
 #include "uacpi/kernel_api.h"
@@ -172,8 +173,10 @@ static void ec_burst_nomoretime(bool wasthereack)
 }
 static uacpi_status ec_readuacpi(uacpi_region_rw_data* data)
 {
+	kprintf("attempting to lock spinlock for read\n");
 	arch_disable_interrupts();
 	spinlock_lock(&ec_lock);
+	kprintf("reading from ec now\n");
 	bool ack = ec_burst_time();
 	// kprintf("reading ec offset register %lu\n", data->offset);
 	data->value = ec_readreal(data->offset);
@@ -186,8 +189,10 @@ static uacpi_status ec_readuacpi(uacpi_region_rw_data* data)
 }
 static uacpi_status ec_writeuacpi(uacpi_region_rw_data* data)
 {
+	kprintf("attempting to lock spinlock for write\n");
 	arch_disable_interrupts();
 	spinlock_lock(&ec_lock);
+	kprintf("reading from ec now\n");
 	bool ack = ec_burst_time();
 	ec_writereal(data->offset, data->value);
 	ec_burst_nomoretime(ack);
@@ -213,18 +218,39 @@ static uacpi_status ecamlhandler(uacpi_region_op op, uacpi_handle data)
 		default: return UACPI_STATUS_OK;
 	}
 }
+static uacpi_iteration_decision hi(void* udata, uacpi_namespace_node* node, uint32_t unused)
+{
+	char* hihihihi = (char*)uacpi_namespace_node_generate_absolute_path(node);
+	kprintf("node found in ec_node, name is %s\n", hihihihi);
+	uacpi_free_absolute_path((const uacpi_char*)hihihihi);
+	return UACPI_ITERATION_DECISION_CONTINUE;
+}
 void ecevulatemethod(uacpi_handle hand)
 {
+	kprintf("attempting to handle ec eml\n");
 	uint8_t hnd = (uint8_t)(uint64_t)hand;
+	kprintf("got idx %d\n", hnd);
 	char method[] = {'_', 'Q', 0, 0, 0};
 	npf_snprintf(method + 2, 3, "%02X", hnd);
-	uacpi_eval_simple(ec_node, method, NULL);
-	uacpi_finish_handling_gpe(ec_gpe_node, ec_gpe_idx);
+	kprintf("method im trying to give bro: %s, length is: %lu\n", method, strlen(method));
+	uacpi_status tt = uacpi_eval(ec_node, method, NULL, NULL);
+	// uacpi_namespace_for_each_child(ec_node, hi, NULL, UACPI_OBJECT_METHOD_BIT, 1, NULL);
+	if (tt != UACPI_STATUS_OK)
+	{
+		kprintf("failed to evaulate aml because of %s\n", uacpi_status_to_string(tt));
+		panic("failed\n");
+	}
+	tt = uacpi_finish_handling_gpe(ec_gpe_node, ec_gpe_idx);
+	if (tt != UACPI_STATUS_OK)
+	{
+		kprintf("eeee %s\n", uacpi_status_to_string(tt));
+		panic("failed\n");
+	}
 }
-static bool ec_querytime(uint8_t* idx)
+static uint8_t ec_querytime(uint8_t* idx)
 {
 	uint8_t status = ec_read(&ec_control_register);
-	if (~status & EC_SCI_EVT)
+	if (!(status & EC_SCI_EVT))
 	{
 		return false;
 	}
@@ -233,8 +259,9 @@ static bool ec_querytime(uint8_t* idx)
 	kprintf("in %s: ec status reg: %b\n", __func__, val);
 	ec_write(&ec_control_register, QR_EC);
 	*idx = ec_read(&ec_data_register);
+	kprintf("got method num %d from ec\n", *idx);
 	ec_burst_nomoretime(ack);
-	return (bool)*idx;
+	return *idx;
 }
 uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev, uint16_t gpe_idx)
 {
@@ -243,14 +270,17 @@ uacpi_interrupt_ret eccoolness(uacpi_handle udata, uacpi_namespace_node* gpe_dev
 	uint8_t idx = 0;
 	uint8_t val = ec_read(&ec_control_register);
 	kprintf("in %s: ec status reg: %b\n", __func__, val);
-	if (!ec_querytime(&idx))
+	kprintf("idx is %d in eccoolness\n", idx);
+	if (ec_querytime(&idx) == 0)
 	{
 		spinlock_unlock(&ec_lock);
+		send_eoi();
 		return UACPI_INTERRUPT_HANDLED | UACPI_GPE_REENABLE;
 	}
 
-	ecevulatemethod((uacpi_handle)(uint64_t)gpe_idx);
+	ecevulatemethod((uacpi_handle)(uint64_t)idx);
 	spinlock_unlock(&ec_lock);
+	send_eoi();
 	return UACPI_INTERRUPT_HANDLED;
 }
 static void install_ec_handlers()
@@ -292,6 +322,12 @@ void ec_init()
 		uint8_t val = ec_read(&ec_control_register);
 		kprintf("in %s: ec status reg: %b\n", __func__, val);
 		kprintf("ec(): device has ec!!\n");
+		uacpi_status stat = uacpi_enable_gpe(ec_gpe_node, ec_gpe_idx);
+		if (stat != UACPI_STATUS_OK)
+		{
+			kprintf("failed to enable gpe: %s\n", uacpi_status_to_string(stat));
+			panic("Could not install ec gpe!");
+		}
 		return;
 	}
 	else
@@ -317,5 +353,7 @@ void initecfromecdt()
 	ec_inited = true;
 	install_ec_handlers();
 	kprintf("ec(): found ecdt table, installed and inited ec successfully\n");
+	stat = uacpi_enable_gpe(ec_node, ec_gpe_idx);
+	assert(stat == UACPI_STATUS_OK);
 	return;
 }

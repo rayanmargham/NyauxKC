@@ -51,8 +51,14 @@ uacpi_status uacpi_kernel_raw_io_write(uacpi_io_addr address, uacpi_u8 byte_widt
 	arch_raw_io_write(address, in_value, byte_width);
 	return UACPI_STATUS_OK;
 }
-uacpi_status uacpi_kernel_pci_read(uacpi_pci_address* address, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64* value)
+void uacpi_kernel_pci_device_close(uacpi_handle dev)
 {
+	kfree((void*)(uint64_t)dev, sizeof(uacpi_pci_address));
+}
+uacpi_status uacpi_kernel_pci_read(uacpi_handle device, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64* value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
+#warning When u want to port other archiectures, ADD ECAM for pci, dont know what that is? look at the osdev.wiki about it
 	if (address->segment != 0)
 	{
 		return UACPI_STATUS_INVALID_ARGUMENT;
@@ -66,8 +72,16 @@ uacpi_status uacpi_kernel_pci_read(uacpi_pci_address* address, uacpi_size offset
 	}
 	return UACPI_STATUS_OK;
 }
-uacpi_status uacpi_kernel_pci_write(uacpi_pci_address* address, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value)
+uacpi_status uacpi_kernel_pci_device_open(uacpi_pci_address address, uacpi_handle* out_handle)
 {
+	uacpi_pci_address* ptr = kmalloc(sizeof(uacpi_pci_address));
+	*ptr = address;
+	*out_handle = (uacpi_handle)(uint64_t)ptr;
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_pci_write(uacpi_handle device, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
 	if (address->segment != 0)
 	{
 		return UACPI_STATUS_INVALID_ARGUMENT;
@@ -236,13 +250,13 @@ void uacpi_kernel_unlock_spinlock(uacpi_handle lock, uacpi_cpu_flags)
 }
 uacpi_status uacpi_kernel_schedule_work(uacpi_work_type t, uacpi_work_handler f, uacpi_handle ctx)
 {
-	kprintf("uacpi called kernel schedule work\n");
-	return UACPI_STATUS_UNIMPLEMENTED;
+	f(ctx);
+	return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_wait_for_work_completion(void)
 {
 	kprintf("uacpi called wait for work completion\n");
-	return UACPI_STATUS_UNIMPLEMENTED;
+	return UACPI_STATUS_OK;
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 {

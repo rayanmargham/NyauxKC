@@ -99,14 +99,15 @@ void create_kentry()
 	kprintf("ran fine\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->start_of_queue = e;
+	refcount_inc(&e->count);
 #endif
 }
-void schedd(void* frame)
+// returns the old thread
+struct thread_t* switch_queue(struct per_cpu_data* cpu)
 {
-	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	if (cpu->run_queue == NULL && cpu->start_of_queue == NULL)
 	{
-		return;
+		return NULL;
 	}
 	if (cpu->run_queue != NULL)
 	{
@@ -117,38 +118,45 @@ void schedd(void* frame)
 			struct thread_t* tmp = cpu->run_queue;
 			cpu->run_queue = cpu->start_of_queue;
 			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
-			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
-// save and load
-#ifdef __x86_64__
-			send_eoi();
-			do_savekstackandloadkstack(tmp, cpu->run_queue);
-#endif
+			return tmp;
 		}
 		else
 		{
 			struct thread_t* tmp = cpu->run_queue;
 			cpu->run_queue = cpu->run_queue->next;
 			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
-			arch_switch_pagemap(cpu->run_queue->proc->cur_map);
-// save and load
-#ifdef __x86_64__
-			send_eoi();
-			do_savekstackandloadkstack(tmp, cpu->run_queue);
-#endif
+			return tmp;
 		}
 	}
 	else
 	{
-		struct thread_t* tmp = cpu->start_of_queue;
 		cpu->run_queue = cpu->start_of_queue;
 		cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
-		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
-// save and load
-#ifdef __x86_64__
-		send_eoi();
-		do_savekstackandloadkstack(NULL, cpu->run_queue);
-#endif
+		return NULL;
 	}
+}
+
+void schedd(void* frame)
+{
+	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	struct thread_t* old = switch_queue(cpu);
+	if (cpu->run_queue != NULL)
+	{
+		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
+#if defined(__x86_64__)
+		send_eoi();
+#endif
+		do_savekstackandloadkstack(old, cpu->run_queue);
+	}
+	else
+	{
+#if defined(__x86_64__)
+
+		send_eoi();
+#endif
+		return;
+	}
+	panic("why am i here\n");
 	// arch_load_ctx(frame, cpu->run_queue);
 	//  for reading operations such as switching the pagemap
 	//  it is fine not to lock, otherwise we would have deadlocks and major slowdowns

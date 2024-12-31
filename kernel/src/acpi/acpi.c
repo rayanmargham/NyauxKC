@@ -9,7 +9,7 @@
 #include "uacpi/event.h"
 #include "uacpi/types.h"
 
-void init_acpi()
+void init_acpi_early()
 {
 	uint64_t rsdp = (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
 	kprintf("init_acpi(): initing uacpi\n");
@@ -22,12 +22,8 @@ void init_acpi()
 	kprintf("init_acpi(): now loading namespace\n");
 	if (st == UACPI_STATUS_OK)
 	{
-		st = uacpi_namespace_load();
-		st = uacpi_namespace_initialize();
-		ec_init();
-		st = uacpi_finalize_gpe_initialization();
-
-		kprintf("init_acpi(): uacpi finished\n");
+		kprintf("init_acpi(): uacpi early init finished\n");
+		return;
 	}
 	else
 	{

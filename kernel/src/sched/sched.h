@@ -9,6 +9,12 @@ struct process_t
 	pagemap* cur_map;
 	spinlock_t lock;	// lock for accessing this
 };
+enum TASKSTATE
+{
+	READY = 0,
+	RUNNING = 1,
+	ZOMBIE = 2,
+};
 struct thread_t
 {
 	struct process_t* proc;	   // there should be a lock on this
@@ -16,12 +22,15 @@ struct thread_t
 	uint64_t kernel_stack_ptr;
 	uint64_t kernel_stack_base;
 	struct thread_t* next;
+	enum TASKSTATE state;
+	refcount_t count;
 };
 struct per_cpu_data
 {
 	struct arch_per_cpu_data arch_data;
 	struct thread_t* run_queue;			// real run queue
 	struct thread_t* start_of_queue;	// contains just the start of the queue
+	struct thread_t* zombie_thread;
 };
 
 void schedd(void* frame);

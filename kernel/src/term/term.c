@@ -11,7 +11,7 @@ void init_term(struct limine_framebuffer* buf)
 {
 	ft_ctx = flanterm_fb_init(NULL, NULL, buf->address, buf->width, buf->height, buf->pitch, buf->blue_mask_size,
 							  buf->red_mask_shift, buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
-							  buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 50);
+							  buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
 	stolen_osdevwikiserialinit();
 }
 int is_transmit_empty()

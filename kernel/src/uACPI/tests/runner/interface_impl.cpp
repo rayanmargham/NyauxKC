@@ -79,8 +79,17 @@ uacpi_status uacpi_kernel_io_read(
     return UACPI_STATUS_OK;
 }
 
+uacpi_status uacpi_kernel_pci_device_open(
+    uacpi_pci_address, uacpi_handle *out_handle
+)
+{
+    *out_handle = nullptr;
+    return UACPI_STATUS_OK;
+}
+void uacpi_kernel_pci_device_close(uacpi_handle) {}
+
 uacpi_status uacpi_kernel_pci_read(
-    uacpi_pci_address*, uacpi_size offset,
+    uacpi_handle, uacpi_size offset,
     uacpi_u8 byte_width, uacpi_u64 *value
 )
 {
@@ -101,7 +110,7 @@ uacpi_status uacpi_kernel_io_write(
 }
 
 uacpi_status uacpi_kernel_pci_write(
-    uacpi_pci_address*, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value
+    uacpi_handle, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value
 )
 {
     return uacpi_kernel_io_write(nullptr, offset, byte_width, value);
@@ -226,16 +235,6 @@ void uacpi_kernel_free(void* mem, uacpi_size size)
     allocations.erase(it);
     free(mem);
 }
-
-void *uacpi_kernel_calloc(uacpi_size count, uacpi_size size)
-{
-    auto *ret = uacpi_kernel_alloc(count * size);
-    if (ret == nullptr)
-        return ret;
-
-    memset(ret, 0, count * size);
-    return ret;
-}
 #else
 void* uacpi_kernel_alloc(uacpi_size size)
 {
@@ -249,10 +248,17 @@ void uacpi_kernel_free(void* mem)
 {
     return free(mem);
 }
+#endif
 
-void *uacpi_kernel_calloc(uacpi_size count, uacpi_size size)
+#ifdef UACPI_NATIVE_ALLOC_ZEROED
+void *uacpi_kernel_alloc_zeroed(uacpi_size size)
 {
-    return calloc(count, size);
+    auto *ret = uacpi_kernel_alloc(size);
+    if (ret == nullptr)
+        return ret;
+
+    memset(ret, 0, size);
+    return ret;
 }
 #endif
 

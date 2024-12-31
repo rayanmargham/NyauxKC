@@ -39,7 +39,16 @@ __attribute__((noreturn)) static inline void panic(char* msg)
 #define SPINLOCK_INITIALIZER	 0
 
 typedef int spinlock_t;
+typedef int refcount_t;
 
+static inline void refcount_inc(refcount_t* ref)
+{
+	__atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST);
+}
+static inline void refcount_dec(refcount_t* ref)
+{
+	__atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL);
+}
 static inline void spinlock_lock(spinlock_t* lock)
 {
 	while (!__sync_bool_compare_and_swap(lock, 0, 1))
@@ -104,7 +113,13 @@ static inline void spinlock_unlock(spinlock_t* lock)
 {
 	__sync_bool_compare_and_swap(lock, 1, 0);
 }
-
+static inline size_t strlen(const char* s)
+{
+	size_t i;
+	for (i = 0; s[i] != '\0'; i++)
+		;
+	return i;
+}
 typedef enum
 {
 	OKAY,

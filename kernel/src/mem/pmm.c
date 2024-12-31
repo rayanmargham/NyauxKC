@@ -24,7 +24,7 @@ typedef struct
 {
 	struct slab* next;
 	struct pnode* freelist;
-	uint64_t obj_ammount
+	uint64_t obj_ammount;
 } __attribute__((packed)) slab;
 typedef struct
 {

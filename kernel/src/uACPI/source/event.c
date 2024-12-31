@@ -8,6 +8,7 @@
 #include <uacpi/internal/notify.h>
 #include <uacpi/internal/utilities.h>
 #include <uacpi/internal/mutex.h>
+#include <uacpi/internal/stdlib.h>
 #include <uacpi/acpi.h>
 
 #define UACPI_EVENT_DISABLED 0
@@ -416,7 +417,7 @@ static void async_run_gpe_handler(uacpi_handle opaque)
 
     ret = uacpi_namespace_write_lock();
     if (uacpi_unlikely_error(ret))
-        goto out;
+        goto out_no_unlock;
 
     switch (event->handler_type) {
     case GPE_HANDLER_TYPE_AML_HANDLER: {
@@ -445,7 +446,6 @@ static void async_run_gpe_handler(uacpi_handle opaque)
                 uacpi_status_to_string(ret)
             );
         }
-        uacpi_object_unref(method_obj);
         break;
     }
 
@@ -469,10 +469,9 @@ static void async_run_gpe_handler(uacpi_handle opaque)
         break;
     }
 
-out:
-    if (uacpi_likely_success(ret))
-        uacpi_namespace_write_unlock();
+    uacpi_namespace_write_unlock();
 
+out_no_unlock:
     /*
      * We schedule the work as NOTIFICATION to make sure all other notifications
      * finish before this GPE is re-enabled.
@@ -648,7 +647,7 @@ static uacpi_status find_or_create_gpe_interrupt_ctx(
         entry = entry->next;
     }
 
-    entry = uacpi_kernel_calloc(1, sizeof(*entry));
+    entry = uacpi_kernel_alloc_zeroed(sizeof(*entry));
     if (uacpi_unlikely(entry == UACPI_NULL))
         return UACPI_STATUS_OUT_OF_MEMORY;
 
@@ -1003,7 +1002,7 @@ static uacpi_status create_gpe_block(
     struct gp_event *event;
     uacpi_size i, j;
 
-    block = uacpi_kernel_calloc(1, sizeof(*block));
+    block = uacpi_kernel_alloc_zeroed(sizeof(*block));
     if (uacpi_unlikely(block == UACPI_NULL))
         return ret;
 
@@ -1011,15 +1010,15 @@ static uacpi_status create_gpe_block(
     block->base_idx = base_idx;
 
     block->num_registers = num_registers;
-    block->registers = uacpi_kernel_calloc(
-        num_registers, sizeof(*block->registers)
+    block->registers = uacpi_kernel_alloc_zeroed(
+        num_registers * sizeof(*block->registers)
     );
     if (uacpi_unlikely(block->registers == UACPI_NULL))
         goto error_out;
 
     block->num_events = num_registers * EVENTS_PER_GPE_REGISTER;
-    block->events = uacpi_kernel_calloc(
-        block->num_events, sizeof(*block->events)
+    block->events = uacpi_kernel_alloc_zeroed(
+        block->num_events * sizeof(*block->events)
     );
     if (uacpi_unlikely(block->events == UACPI_NULL))
         goto error_out;
@@ -2147,6 +2146,7 @@ uacpi_status uacpi_initialize_events(void)
         );
         return ret;
     }
+    g_uacpi_rt_ctx.sci_handle_valid = UACPI_TRUE;
 
     g_uacpi_rt_ctx.global_lock_event = uacpi_kernel_create_event();
     if (uacpi_unlikely(g_uacpi_rt_ctx.global_lock_event == UACPI_NULL))
@@ -2181,6 +2181,13 @@ void uacpi_deinitialize_events(void)
     uacpi_size i;
 
     g_gpes_finalized = UACPI_FALSE;
+
+    if (g_uacpi_rt_ctx.sci_handle_valid) {
+        uacpi_kernel_uninstall_interrupt_handler(
+            handle_sci, g_uacpi_rt_ctx.sci_handle
+        );
+        g_uacpi_rt_ctx.sci_handle_valid = UACPI_FALSE;
+    }
 
     while (next_ctx) {
         ctx = next_ctx;
