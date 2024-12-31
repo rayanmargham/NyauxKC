@@ -40,6 +40,7 @@ return_from_kernel_in_new_thread:
     sti
     iretq
 do_savekstackandloadkstack: ; rdi has thread old and rsi has thread new
+    push qword 0x0
     push rbx
     push rbp
     push r12
@@ -53,10 +54,12 @@ do_savekstackandloadkstack: ; rdi has thread old and rsi has thread new
     mov rsp, [rsi + 0xB8] ; load from kernel stack ptr into rsp
     mov rdi, [rsi + 0xC0] ; load kernel stack base in rsp0
     call change_rsp0 
+    
     pop r15
     pop r14
     pop r13
     pop r12
     pop rbp
     pop rbx
+    add rsp, 8
     ret

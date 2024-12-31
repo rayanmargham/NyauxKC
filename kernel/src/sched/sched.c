@@ -134,8 +134,10 @@ void schedd(void* frame)
 {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	struct thread_t* old = switch_queue(cpu);
+
 	if (cpu->run_queue != NULL)
 	{
+		// kprintf("old thread %p, new thread %p", old, cpu->run_queue);
 		if (old != NULL)
 		{
 			if (old->state == ZOMBIE)
@@ -159,6 +161,7 @@ void schedd(void* frame)
 		do_savekstackandloadkstack(old, cpu->run_queue);
 #endif
 	}
+
 	// arch_load_ctx(frame, cpu->run_queue);
 	//  for reading operations such as switching the pagemap
 	//  it is fine not to lock, otherwise we would have deadlocks and major slowdowns
