@@ -180,7 +180,7 @@ void kmain(void)
 	get_symbols();
 	init_acpi_early();
 	kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(), total_memory() / 1048576);
-
+	create_kentry();
 	init_smp();
 
 	// uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);

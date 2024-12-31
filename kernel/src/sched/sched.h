@@ -22,15 +22,15 @@ struct thread_t
 	uint64_t kernel_stack_ptr;
 	uint64_t kernel_stack_base;
 	struct thread_t* next;
+	struct thread_t* back;
 	enum TASKSTATE state;
 	refcount_t count;
 };
 struct per_cpu_data
 {
 	struct arch_per_cpu_data arch_data;
-	struct thread_t* run_queue;			// real run queue
-	struct thread_t* start_of_queue;	// contains just the start of the queue
-	struct thread_t* zombie_thread;
+	struct thread_t* run_queue;	   // real run queue
+	struct thread_t* zombie_threads;
 };
 
 void schedd(void* frame);

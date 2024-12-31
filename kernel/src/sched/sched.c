@@ -50,7 +50,6 @@ void arch_create_per_cpu_data()
 #if defined(__x86_64__)
 	struct per_cpu_data* hey = (struct per_cpu_data*)kmalloc(sizeof(struct per_cpu_data));
 	hey->run_queue = NULL;
-	hey->start_of_queue = NULL;
 	hey->arch_data.lapic_id = get_lapic_id();
 	hey->arch_data.kernel_stack_ptr = 0;
 	hey->arch_data.syscall_stack_ptr_tmp = 0;
@@ -96,29 +95,26 @@ void create_kentry()
 	e->kernel_stack_ptr = kstack;
 	e->arch_data.frame = hh;
 	load_ctx_into_kstack(e, hh);
-	kprintf("ran fine\n");
+	// kprintf("ran fine\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	cpu->start_of_queue = e;
+	e->back = e;
+	e->next = e;
+	cpu->run_queue = e;
+	assert(cpu->run_queue->next != NULL);
 	refcount_inc(&e->count);
 #endif
 }
 // returns the old thread
 struct thread_t* switch_queue(struct per_cpu_data* cpu)
 {
-	if (cpu->run_queue == NULL && cpu->start_of_queue == NULL)
-	{
-		return NULL;
-	}
 	if (cpu->run_queue != NULL)
 	{
 		// arch_save_ctx(frame, cpu->run_queue);
 
 		if (cpu->run_queue->next == NULL)
 		{
-			struct thread_t* tmp = cpu->run_queue;
-			cpu->run_queue = cpu->start_of_queue;
-			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
-			return tmp;
+			kprintf("warning: thread next is pointing to null !, should not happen\n");
+			return NULL;
 		}
 		else
 		{
@@ -130,8 +126,6 @@ struct thread_t* switch_queue(struct per_cpu_data* cpu)
 	}
 	else
 	{
-		cpu->run_queue = cpu->start_of_queue;
-		cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
 		return NULL;
 	}
 }
@@ -142,21 +136,29 @@ void schedd(void* frame)
 	struct thread_t* old = switch_queue(cpu);
 	if (cpu->run_queue != NULL)
 	{
+		if (old != NULL)
+		{
+			if (old->state == ZOMBIE)
+			{
+				assert(old->back != NULL);
+				old->back->next = old->next;
+				struct thread_t* ol = cpu->zombie_threads;
+				cpu->zombie_threads = old;
+				old->next = ol;
+			}
+			else
+			{
+				old->state = READY;
+			}
+		}
+		cpu->run_queue->state = RUNNING;
 		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
-#if defined(__x86_64__)
+// save and load
+#ifdef __x86_64__
 		send_eoi();
-#endif
 		do_savekstackandloadkstack(old, cpu->run_queue);
-	}
-	else
-	{
-#if defined(__x86_64__)
-
-		send_eoi();
 #endif
-		return;
 	}
-	panic("why am i here\n");
 	// arch_load_ctx(frame, cpu->run_queue);
 	//  for reading operations such as switching the pagemap
 	//  it is fine not to lock, otherwise we would have deadlocks and major slowdowns

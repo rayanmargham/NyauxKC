@@ -21,6 +21,5 @@ void init_smp()
 		cpu->goto_address = bootstrap;
 	}
 	bsp_id = smp_request.response->bsp_lapic_id;
-	create_kentry();
 	init_lapic();
 }
