@@ -50,7 +50,7 @@ typedef struct
 		} \
 		else \
 		{ \
-			kprintf("-> Function: none -- 0x0\n"); \
+			kprintf("-> Function: none -- 0x0\r\n"); \
 		} \
 \
 		base_ptr = (uint64_t*)*(uint64_t*)(base_ptr); \
@@ -78,13 +78,13 @@ extern void idt_flush(void*);
 
 void* kprintf_symbol(nyauxsymbol h)
 {
-	kprintf("-> Function: %s() -- 0x%lx\n", h.function_name, h.function_address);
+	kprintf("-> Function: %s() -- 0x%lx\r\n", h.function_name, h.function_address);
 	return 0;
 }
 
 void* uacpi_wrap_irq_fn(struct StackFrame* frame)
 {
-	kprintf("attempting to execute a uacpi irq method\n");
+	kprintf("attempting to execute a uacpi irq method\r\n");
 	if (isr_ctxt[frame->intnum] == NULL)
 	{
 		panic("Could not handle uacpi interrupt :c");
@@ -95,14 +95,14 @@ void* uacpi_wrap_irq_fn(struct StackFrame* frame)
 }
 void* division_by_zero(struct StackFrame* frame)
 {
-	kprintf("Division Error\n");
+	kprintf("Division Error\r\n");
 	if (symbolarray != NULL)
 	{
 		STACKTRACE
 	}
 	else
 	{
-		kprintf("null im afraid\n");
+		kprintf("null im afraid\r\n");
 	}
 	panic("Error of ze division :c");
 	return 0;
@@ -118,11 +118,11 @@ void* page_fault_handler(struct StackFrame* frame)
 {
 	__asm__ volatile("cli");
 
-	kprintf("Page Fault! CR2 0x%lx\n", read_cr2());
-	kprintf("RIP is 0x%lx. Error Code 0x%lx\n", frame->rip, frame->error_code);
+	kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
+	kprintf("RIP is 0x%lx. Error Code 0x%lx\r\n", frame->rip, frame->error_code);
 	if (arch_get_per_cpu_data() != NULL)
 	{
-		kprintf("Page Fault Happened in a thread.\n");
+		kprintf("Page Fault Happened in a thread.\r\n");
 	}
 	STACKTRACE
 	panic("Page Fault:c");
@@ -131,8 +131,8 @@ void* page_fault_handler(struct StackFrame* frame)
 
 void* default_handler(struct StackFrame* frame)
 {
-	kprintf("Unhandled interrupt/exception number 0x%lx\n", frame->intnum);
-	kprintf("CS:RIP is 0x%02lx:0x%lx\n", frame->cs, frame->rip);
+	kprintf("Unhandled interrupt/exception number 0x%lx\r\n", frame->intnum);
+	kprintf("CS:RIP is 0x%02lx:0x%lx\r\n", frame->cs, frame->rip);
 	STACKTRACE
 	panic("CPU halted");
 	return 0;
@@ -148,7 +148,7 @@ int AllocateIrq()
 	{
 		if (idt_handlers[i] == default_handler)
 		{
-			kprintf("AllocateIrq(): Found irq vector %d\n", i);
+			kprintf("AllocateIrq(): Found irq vector %d\r\n", i);
 			return i;
 		}
 	}

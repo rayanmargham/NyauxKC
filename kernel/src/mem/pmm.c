@@ -38,8 +38,8 @@ result pmm_init()
 	spinlock_lock(&pmmlock);
 	pnode* cur = &head;
 	result ok = {.type = ERR, .err_msg = "pmm_init() failed"};
-	kprintf("pmm_init(): entry count %lu\n", memmap_request.response->entry_count);
-	kprintf("%s(): The HHDM is 0x%lx\n", __FUNCTION__, hhdm_request.response->offset);
+	kprintf("pmm_init(): entry count %lu\r\n", memmap_request.response->entry_count);
+	kprintf("%s(): The HHDM is 0x%lx\r\n", __FUNCTION__, hhdm_request.response->offset);
 	for (uint64_t i = 0; i < memmap_request.response->entry_count; i++)
 	{
 		struct limine_memmap_entry* entry = memmap_request.response->entries[i];
@@ -56,8 +56,8 @@ result pmm_init()
 				break;
 		}
 	}
-	kprintf("pmm_init(): FreeList Created\n");
-	kprintf("pmm_init(): Free Pages %ju\n", get_free_pages());
+	kprintf("pmm_init(): FreeList Created\r\n");
+	kprintf("pmm_init(): Free Pages %ju\r\n", get_free_pages());
 	spinlock_unlock(&pmmlock);
 	result ress = init_kmalloc();
 	unwrap_or_panic(ress);
@@ -83,7 +83,7 @@ void* pmm_alloc()
 {
 	if (head.next == NULL)
 	{
-		panic("no memory\n");
+		panic("no memory\r\n");
 		return NULL;
 	}
 	pnode* him = (pnode*)head.next;
@@ -259,6 +259,6 @@ void slabfree(void* addr)
 	}
 	if (howmanynodes == guy->obj_ammount)
 	{
-		// kprintf("USELESS SLAB\n");
+		// kprintf("USELESS SLAB\r\n");
 	}
 }

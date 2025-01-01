@@ -80,7 +80,7 @@ int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi
 	int vec = AllocateIrq();
 	if (vec == -1)
 	{
-		kprintf("true\n");
+		kprintf("true\r\n");
 		return -1;
 	}
 	uacpi_irq_wrap_info* info = kmalloc(sizeof(uacpi_irq_wrap_info));
@@ -97,11 +97,11 @@ int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi
 void arch_init()
 {
 #if defined(__x86_64__)
-	kprintf("Welcome to Nyaux on x86_64!\n");
+	kprintf("Welcome to Nyaux on x86_64!\r\n");
 	init_gdt();
-	kprintf("arch_init(): gdt loaded.\n");
+	kprintf("arch_init(): gdt loaded.\r\n");
 	init_idt();
-	kprintf("arch_init(): idt loaded.\n");
+	kprintf("arch_init(): idt loaded.\r\n");
 
 #else
 	kprintf("Nyaux Cannot Run on this archiecture.");
@@ -116,7 +116,7 @@ void arch_late_init()
 	init_gdt();
 	per_cpu_init_idt();
 
-	kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\n", get_lapic_id());
+	kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\r\n", get_lapic_id());
 	init_lapic();
 #endif
 }

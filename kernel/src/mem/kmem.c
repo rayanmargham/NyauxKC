@@ -36,7 +36,7 @@ void kfree(void* addr, uint64_t size)
 	spinlock_lock(&mem_lock);
 	if (size >> 63)
 	{
-		kprintf("kfree: memory corruption detected\n");
+		kprintf("kfree: memory corruption detected\r\n");
 		spinlock_unlock(&mem_lock);
 		__builtin_trap();
 	}

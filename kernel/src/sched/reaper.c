@@ -9,13 +9,13 @@
 void reaper()
 {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	kprintf("reaper(): I am online and ready to KILL any threads that are in the zombie queue\n");
+	kprintf("reaper(): I am online and ready to KILL any threads that are in the zombie queue\r\n");
 	if (cpu->to_be_reapered)
 	{
 		struct thread_t* reaper = cpu->to_be_reapered;
 		while (reaper != NULL)
 		{
-			// kprintf("gggg : %p\r\n", (uint64_t*)reaper->kernel_stack_base);
+			// kprintf("gggg : %p\r\r\n", (uint64_t*)reaper->kernel_stack_base);
 			// kfree((uint64_t*)reaper->kernel_stack_base, KSTACKSIZE);
 			if (reaper->count == 0)
 			{
@@ -27,13 +27,13 @@ void reaper()
 					struct process_t* proc = reaper->proc;
 					if (!(proc->cur_map == &ker_map))
 					{
-						kprintf("reaper(): Freeing a PageMap is ENOSYS\r\n");
+						kprintf("reaper(): Freeing a PageMap is ENOSYS\r\r\n");
 					}
 					kfree(proc, sizeof(struct process_t));
 				}
 				struct thread_t* stay = reaper->next;
 				kfree(reaper, sizeof(struct thread_t));
-				kprintf("reaper(): thread killed\n");
+				kprintf("reaper(): thread killed\r\n");
 				reaper = stay;
 			}
 		}

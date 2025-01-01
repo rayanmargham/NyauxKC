@@ -189,10 +189,10 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap* take)
 		map(take->root, kernel_address.response->physical_base + i, kernel_address.response->virtual_base + i,
 			PRESENT | RWALLOWED);
 	}
-	kprintf("vmm(x86_64)(): mapped 0x%lx to 0x%lx : from phys 0x%lx to 0x%lx\n", kernel_address.response->virtual_base,
-			kernel_address.response->virtual_base + kernel_size, kernel_address.response->physical_base,
-			kernel_address.response->physical_base + kernel_size);
-	kprintf("vmm(x86_64)(): Kernel Mapped!\n");
+	kprintf("vmm(x86_64)(): mapped 0x%lx to 0x%lx : from phys 0x%lx to 0x%lx\r\n",
+			kernel_address.response->virtual_base, kernel_address.response->virtual_base + kernel_size,
+			kernel_address.response->physical_base, kernel_address.response->physical_base + kernel_size);
+	kprintf("vmm(x86_64)(): Kernel Mapped!\r\n");
 	uint64_t hhdm_pages = 0;
 	for (uint64_t i = 0; i < 0x100000000; i += MIB(2))
 	{
@@ -204,7 +204,7 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap* take)
 	kprintf("vmm(x86_64)(): (4 GiB region) mapping 0x%lx to %lx : phys 0x%lx to "
 			"0x%lx",
 			hhdm_request.response->offset, hhdm_request.response->offset + 0x100000000, (uint64_t)0, 0x100000000);
-	kprintf("vmm(x86_64)(): Above 4Gib Mapped! Mapping Memory Map!\n");
+	kprintf("vmm(x86_64)(): Above 4Gib Mapped! Mapping Memory Map!\r\n");
 	for (uint64_t i = 0; i != memmap_request.response->entry_count; i += 1)
 	{
 		struct limine_memmap_entry* entry = memmap_request.response->entries[i];
@@ -214,7 +214,7 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap* take)
 			{
 				uint64_t addr = entry->base;
 				uint64_t length = entry->length;
-				kprintf("vmm()(x86_64): framebuffer located at %p, length is %lu\r\n", (uint64_t*)addr, length);
+				kprintf("vmm()(x86_64): framebuffer located at %p, length is %lu\r\r\n", (uint64_t*)addr, length);
 				while (length >= PAGESIZE)
 				{
 					if (is2mibaligned(addr, MIB(2)) && length >= MIB(2))

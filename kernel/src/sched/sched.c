@@ -126,7 +126,7 @@ void create_kentry()
 	e->kernel_stack_ptr = kstack;
 	e->arch_data.frame = hh;
 	load_ctx_into_kstack(e, hh);
-	// kprintf("ran fine\n");
+	// kprintf("ran fine\r\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 
 	// we are not done tho we need to create the reaper thread
@@ -180,7 +180,7 @@ e:
 					cpu->run_queue = cpu->run_queue->next;	  // advance run queue
 					goto e;
 					break;
-				default: panic("thread is not in a valid state\n");
+				default: panic("thread is not in a valid state\r\n");
 			}
 
 			cpu->cur_thread = cpu->run_queue;
@@ -190,7 +190,7 @@ e:
 		}
 		else
 		{
-			panic("what\n");
+			panic("what\r\n");
 			return NULL;
 		}
 	}
@@ -209,14 +209,14 @@ e:
 					cpu->run_queue = cpu->run_queue->next;	  // advance run queue
 					goto e;
 					break;
-				default: panic("thread is not in a valid state\n");
+				default: panic("thread is not in a valid state\r\n");
 			}
-			// kprintf("picked thread from run queue, thread has tid refcount %d\n", cpu->run_queue->count);
+			// kprintf("picked thread from run queue, thread has tid refcount %d\r\n", cpu->run_queue->count);
 			cpu->cur_thread = cpu->run_queue;
 			cpu->cur_thread->state = RUNNING;
 			return NULL;
 		}
-		panic("wtf\n");
+		panic("wtf\r\n");
 	}
 }
 

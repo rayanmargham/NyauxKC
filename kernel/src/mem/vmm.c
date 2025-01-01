@@ -10,11 +10,11 @@
 
 void kprintf_vmmregion(VMMRegion* region)
 {
-	kprintf("\e[0;95mVMM Region {\n");
-	kprintf(" base: 0x%lx\n", region->base);
-	kprintf(" base + length: %lx\n", region->base + region->length);
-	kprintf(" next: %p\n", (void*)region->next);
-	kprintf("}\e[0;37m\n");
+	kprintf("\e[0;95mVMM Region {\r\n");
+	kprintf(" base: 0x%lx\r\n", region->base);
+	kprintf(" base + length: %lx\r\n", region->base + region->length);
+	kprintf(" next: %p\r\n", (void*)region->next);
+	kprintf("}\e[0;37m\r\n");
 }
 VMMRegion* create_region(uint64_t base, uint64_t length)
 {
@@ -57,14 +57,14 @@ void vmm_init()
 	arch_init_pagemap(&ker_map);
 	uint64_t hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
 	hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
-	kprintf("vmm(): HDDM Pages %lu\n", hhdm_pages);
+	kprintf("vmm(): HDDM Pages %lu\r\n", hhdm_pages);
 	// panic("h");
 	arch_switch_pagemap(&ker_map);
-	kprintf("vmm(): Creating Regions...\n");
+	kprintf("vmm(): Creating Regions...\r\n");
 	result res = region_setup(&ker_map, hhdm_pages);
 	unwrap_or_panic(res);
-	kprintf("vmm(): Kernel is now in its own pagemap :)\n");
-	kprintf("vmm(): Region is setup!\n");
+	kprintf("vmm(): Kernel is now in its own pagemap :)\r\n");
+	kprintf("vmm(): Region is setup!\r\n");
 }
 uint64_t kvmm_region_bytesused()
 {
@@ -127,7 +127,7 @@ void* kvmm_region_alloc(uint64_t amount, uint64_t flags)
 			continue;
 		}
 	};
-	kprintf("vmm(): No free Regions, Too Much Memory being used!!!\n");
+	kprintf("vmm(): No free Regions, Too Much Memory being used!!!\r\n");
 	panic("vmm(): Sir madamm this should never occur");
 	return NULL;
 }

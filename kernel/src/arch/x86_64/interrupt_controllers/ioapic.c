@@ -39,19 +39,19 @@ void print_ioapicflags(uint16_t flags)
 	uint8_t trigger_mode = (flags >> 7) & 1;
 	uint8_t interrupt_mask = (flags >> 8) & 1;
 	kprintf(
-		"delivery mode is %d, desination mode is %d, interrupt pin polarity is %d\nremote irr is %d, trigger mode is %d, interrupt mask is %d\n",
+		"delivery mode is %d, desination mode is %d, interrupt pin polarity is %d\r\nremote irr is %d, trigger mode is %d, interrupt mask is %d\r\n",
 		delivery_mode, desination_mode, interrupt_pin_polarity, remote_irr, trigger_mode, interrupt_mask);
 }
 void print_isoflags(uint16_t flags)
 {
 	uint8_t polarity = flags & 0b11;
 	uint8_t trigger = (flags >> 2) & 0b11;
-	kprintf("polarity is %d, trigger is %d\n", polarity, trigger);
+	kprintf("polarity is %d, trigger is %d\r\n", polarity, trigger);
 }
 int isoflagtobit(uint8_t thing)
 {
 	thing = thing & 0b11;	 // extract the 2 bits
-	kprintf("thing is %b\n", thing);
+	kprintf("thing is %b\r\n", thing);
 	if (thing == 0b10)
 	{
 		return -1;
@@ -75,7 +75,7 @@ void route_irq(uint8_t irq, uint8_t vec, uint16_t flags, uint32_t lapic_id)
 	while (i != 16)
 	{
 		checker = &isos[i];
-		kprintf("populate_ioapic(): scanning iso with source %d, looking for irq %d\n", checker->source, irq);
+		kprintf("populate_ioapic(): scanning iso with source %d, looking for irq %d\r\n", checker->source, irq);
 		if (checker->source == irq)
 		{
 			break;
@@ -86,7 +86,7 @@ void route_irq(uint8_t irq, uint8_t vec, uint16_t flags, uint32_t lapic_id)
 	if (i != 16)
 	{
 		i = 0;
-		kprintf("Found an iso for this\n");
+		kprintf("Found an iso for this\r\n");
 		int polarity = isoflagtobit(checker->flags & 0b11);
 		int trigger = isoflagtobit((checker->flags >> 2) & 0b11);
 		assert(polarity != -1);
@@ -100,7 +100,7 @@ void route_irq(uint8_t irq, uint8_t vec, uint16_t flags, uint32_t lapic_id)
 		{
 			responable = &apics[i];
 			uint64_t max_gsi = (0xFF & ((uint64_t)ioapic_read(responable, 1)) >> 16);
-			kprintf("max gsi is %lu\n", max_gsi);
+			kprintf("max gsi is %lu\r\n", max_gsi);
 			if (responable->gsi_base <= checker->gsi && (responable->gsi_base + max_gsi > checker->gsi))
 			{
 				break;
@@ -127,7 +127,7 @@ void route_irq(uint8_t irq, uint8_t vec, uint16_t flags, uint32_t lapic_id)
 			{
 				responable = &apics[i];
 				uint64_t max_gsi = 0xFF & (((uint64_t)ioapic_read(responable, 1)) >> 16);
-				kprintf("max gsi is %lu\n", max_gsi);
+				kprintf("max gsi is %lu\r\n", max_gsi);
 				if (responable->gsi_base <= irq && (responable->gsi_base + max_gsi) > irq)
 				{
 					break;
@@ -174,7 +174,7 @@ void populate_ioapic()
 	uacpi_status ret = uacpi_table_find_by_signature(ACPI_MADT_SIGNATURE, &l);
 	if (uacpi_unlikely(ret != UACPI_STATUS_OK))
 	{
-		panic("Failed to find the MADT\n");
+		panic("Failed to find the MADT\r\n");
 	}
 	struct acpi_madt* hehe = (struct acpi_madt*)l.virt_addr;
 	uint64_t length = hehe->hdr.length - sizeof(*hehe);
@@ -191,13 +191,13 @@ void populate_ioapic()
 				struct acpi_madt_interrupt_source_override* ohcool = (struct acpi_madt_interrupt_source_override*)ent;
 				assert(isocount < 16);
 				isos[isocount] = *ohcool;
-				kprintf("populate_ioapic(): isa override from isa %d to gsi %d\n", ohcool->source, ohcool->gsi);
+				kprintf("populate_ioapic(): isa override from isa %d to gsi %d\r\n", ohcool->source, ohcool->gsi);
 				break;
 			case ACPI_MADT_ENTRY_TYPE_IOAPIC:
 				struct acpi_madt_ioapic* blah = (struct acpi_madt_ioapic*)ent;
-				kprintf("populate_ioapic(): found ioapic %d, manages from gsi %d, phys address %lx\n", ioapiccount,
+				kprintf("populate_ioapic(): found ioapic %d, manages from gsi %d, phys address %lx\r\n", ioapiccount,
 						blah->gsi_base, (uint64_t)blah->address);
-				kprintf("populate_ioapic(): ioapic version is %d. max gsi is %d\n",
+				kprintf("populate_ioapic(): ioapic version is %d. max gsi is %d\r\n",
 						0xF & (24 >> (uint64_t)ioapic_read(blah, 0)), 0xFF & (((uint64_t)ioapic_read(blah, 1)) >> 16));
 				assert(ioapiccount < 20);
 				apics[ioapiccount] = *blah;

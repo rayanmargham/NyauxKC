@@ -255,7 +255,7 @@ uacpi_status uacpi_kernel_schedule_work(uacpi_work_type t, uacpi_work_handler f,
 }
 uacpi_status uacpi_kernel_wait_for_work_completion(void)
 {
-	kprintf("uacpi called wait for work completion\n");
+	kprintf("uacpi called wait for work completion\r\n");
 	return UACPI_STATUS_OK;
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
