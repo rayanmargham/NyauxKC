@@ -1,5 +1,7 @@
 #include "kmem.h"
 
+#include <stdint.h>
+
 #include "term/term.h"
 #include "utils/basic.h"
 spinlock_t mem_lock;
@@ -40,6 +42,7 @@ void kfree(void* addr, uint64_t size)
 	}
 	if (size > 1024)
 	{
+		kprintf("unmapping address from base 0x%lx to 0x%lx\r\n", (uint64_t)addr, (uint64_t)addr + size);
 		kvmm_region_dealloc(addr);
 		spinlock_unlock(&mem_lock);
 	}

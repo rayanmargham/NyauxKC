@@ -19,7 +19,9 @@ void reaper()
 			// kfree((uint64_t*)reaper->kernel_stack_base, KSTACKSIZE);
 			if (reaper->count == 0)
 			{
-				kfree((uint64_t*)reaper->kernel_stack_base, KSTACKSIZE);
+				assert(cpu->to_be_reapered->kernel_stack_base != cpu->cur_thread->kernel_stack_base);
+
+				kfree((uint64_t*)(reaper->kernel_stack_base - KSTACKSIZE), KSTACKSIZE);
 				if (reaper->proc->cnt == 0)
 				{
 					struct process_t* proc = reaper->proc;
@@ -31,6 +33,7 @@ void reaper()
 				}
 				struct thread_t* stay = reaper->next;
 				kfree(reaper, sizeof(struct thread_t));
+				kprintf("reaper(): thread killed\n");
 				reaper = stay;
 			}
 		}

@@ -12,7 +12,7 @@ void kprintf_vmmregion(VMMRegion* region)
 {
 	kprintf("\e[0;95mVMM Region {\n");
 	kprintf(" base: 0x%lx\n", region->base);
-	kprintf(" length: %lu\n", region->length);
+	kprintf(" base + length: %lx\n", region->base + region->length);
 	kprintf(" next: %p\n", (void*)region->next);
 	kprintf("}\e[0;37m\n");
 }
@@ -37,6 +37,15 @@ result region_setup(pagemap* map, uint64_t hddm_in_pages)
 	res.type = OKAY;
 	res.okay = true;
 	return res;
+}
+void kprintf_all_vmm_regions()
+{
+	VMMRegion* blah = (VMMRegion*)ker_map.head;
+	while (blah != NULL)
+	{
+		kprintf_vmmregion(blah);
+		blah = (VMMRegion*)blah->next;
+	}
 }
 pagemap ker_map = {.head = NULL, .root = NULL};
 void per_cpu_vmm_init()
