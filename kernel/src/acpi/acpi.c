@@ -8,6 +8,7 @@
 #include "uacpi/context.h"
 #include "uacpi/event.h"
 #include "uacpi/types.h"
+#include "uacpi/uacpi.h"
 
 void init_acpi_early()
 {
@@ -18,6 +19,10 @@ void init_acpi_early()
 	init_hpet();
 	populate_ioapic();
 	initecfromecdt();
+	st = uacpi_namespace_load();
+	st = uacpi_namespace_initialize();
+	ec_init();
+	st = uacpi_finalize_gpe_initialization();
 
 	kprintf("init_acpi(): now loading namespace\n");
 	if (st == UACPI_STATUS_OK)

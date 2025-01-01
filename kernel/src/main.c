@@ -200,5 +200,6 @@ void kentry()
 {
 	// change font or smthin
 	kprintf("kentry(): Hello World from a scheduled thread\n");
+	exit_thread();
 	hcf();
 }

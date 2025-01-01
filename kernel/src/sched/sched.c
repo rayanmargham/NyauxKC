@@ -7,6 +7,7 @@
 #include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "mem/vmm.h"
+#include "sched/reaper.h"
 #include "smp/smp.h"
 #include "utils/basic.h"
 // ARCH STUFF
@@ -61,6 +62,7 @@ struct process_t* create_process(pagemap* map)
 	struct process_t* him = (struct process_t*)kmalloc(sizeof(struct process_t));
 	him->cur_map = map;
 	him->lock = SPINLOCK_INITIALIZER;
+	him->cnt = 0;
 	return him;
 }
 struct thread_t* create_thread()
@@ -77,18 +79,47 @@ void load_ctx_into_kstack(struct thread_t* t, struct StackFrame usrctx)
 	*(struct StackFrame*)t->kernel_stack_ptr = usrctx;
 	t->kernel_stack_ptr -= sizeof(uint64_t*);
 	*(uint64_t*)t->kernel_stack_ptr = (uint64_t)return_from_kernel_in_new_thread;
-	t->kernel_stack_ptr -= sizeof(uint64_t) * 6;
+	t->kernel_stack_ptr -= sizeof(uint64_t) * 7;
 }
 #endif
+void exit_thread()
+{
+	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	cpu->cur_thread->state = ZOMBIE;
 
+	if (cpu->to_be_reapered == NULL)
+	{
+		cpu->to_be_reapered = cpu->cur_thread;
+		cpu->cur_thread->back->next = cpu->cur_thread->next;
+		cpu->cur_thread->next->back = cpu->cur_thread->back;
+	}
+	else
+	{
+		struct thread_t* back = cpu->to_be_reapered->back;
+		struct thread_t* front = cpu->to_be_reapered->next;
+		cpu->to_be_reapered = cpu->cur_thread;
+		cpu->to_be_reapered->back = back;
+		cpu->to_be_reapered->next = front;
+		front->back = cpu->to_be_reapered;
+		back->next = cpu->to_be_reapered;
+	}
+	refcount_dec(&cpu->to_be_reapered->proc->cnt);
+	refcount_dec(&cpu->to_be_reapered->count);
+	refcount_dec(&cpu->to_be_reapered->count);
+	cpu->cur_thread = NULL;
+	// no need to assert
+	// reaper thread is always running
+	schedd(NULL);
+}
 void create_kentry()
 {
 #if defined(__x86_64__)
 	struct process_t* h = create_process(&ker_map);
 	struct thread_t* e = create_thread();
 	e->proc = h;
+	refcount_inc(&h->cnt);
 	// 16kib kstack lol
-	uint64_t kstack = (uint64_t)(kmalloc(16384) + 16384);	 // top of stack
+	uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);	   // top of stack
 	// profiler will crash because it expects a return address
 	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack - 8);
 	e->kernel_stack_base = kstack;
@@ -97,36 +128,95 @@ void create_kentry()
 	load_ctx_into_kstack(e, hh);
 	// kprintf("ran fine\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	e->back = e;
-	e->next = e;
-	cpu->run_queue = e;
-	assert(cpu->run_queue->next != NULL);
+
+	// we are not done tho we need to create the reaper thread
+	struct process_t* reaperprocess = create_process(&ker_map);
+	struct thread_t* reaperthread = create_thread();
+	reaperthread->proc = reaperprocess;
+	uint64_t kstackforreaper = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
+	struct StackFrame reaperframe = arch_create_frame(false, (uint64_t)reaper, kstackforreaper - 8);
+	reaperthread->kernel_stack_base = kstackforreaper;
+	reaperthread->kernel_stack_ptr = kstackforreaper;
+	load_ctx_into_kstack(reaperthread, reaperframe);
+	reaperthread->back = e;
+	reaperthread->next = e;
+	e->next = reaperthread;
+	e->back = reaperthread;
+	cpu->run_queue = reaperthread;
 	refcount_inc(&e->count);
+	refcount_inc(&e->count);
+	refcount_inc(&reaperthread->count);
+	refcount_inc(&reaperthread->count);
+	// e->back = e;
+	// e->next = e;
+	// cpu->run_queue = e;
+	// assert(cpu->run_queue->next != NULL);
+	// refcount_inc(&e->count);
+
 #endif
 }
 // returns the old thread
 struct thread_t* switch_queue(struct per_cpu_data* cpu)
 {
-	if (cpu->run_queue != NULL)
+	if (cpu->cur_thread)
 	{
-		// arch_save_ctx(frame, cpu->run_queue);
-
-		if (cpu->run_queue->next == NULL)
+		if (cpu->run_queue)
 		{
-			kprintf("warning: thread next is pointing to null !, should not happen\n");
-			return NULL;
+			struct thread_t* old = cpu->cur_thread;
+			if (old->state == ZOMBIE)
+			{
+				old = NULL;	   // we dont want to save state
+			}
+			else
+			{
+				old->state = READY;
+			}
+
+e:
+			switch (cpu->run_queue->next->state)
+			{
+				case READY: cpu->run_queue = cpu->run_queue->next; break;	 // advance run queue
+				case ZOMBIE:
+					cpu->run_queue = cpu->run_queue->next;	  // advance run queue
+					goto e;
+					break;
+				default: panic("thread is not in a valid state\n");
+			}
+
+			cpu->cur_thread = cpu->run_queue;
+			cpu->cur_thread->state = RUNNING;
+
+			return old;
 		}
 		else
 		{
-			struct thread_t* tmp = cpu->run_queue;
-			cpu->run_queue = cpu->run_queue->next;
-			cpu->arch_data.kernel_stack_ptr = cpu->run_queue->kernel_stack_base;
-			return tmp;
+			panic("what\n");
+			return NULL;
 		}
 	}
 	else
 	{
-		return NULL;
+		if (cpu->run_queue)
+		{
+			switch (cpu->run_queue->next->state)
+			{
+				case READY: cpu->run_queue = cpu->run_queue->next; break;	 // advance run queue
+				case ZOMBIE:
+					if (cpu->run_queue == cpu->run_queue->next)
+					{
+						break;
+					}
+					cpu->run_queue = cpu->run_queue->next;	  // advance run queue
+					goto e;
+					break;
+				default: panic("thread is not in a valid state\n");
+			}
+			// kprintf("picked thread from run queue, thread has tid refcount %d\n", cpu->run_queue->count);
+			cpu->cur_thread = cpu->run_queue;
+			cpu->cur_thread->state = RUNNING;
+			return NULL;
+		}
+		panic("wtf\n");
 	}
 }
 
@@ -134,34 +224,11 @@ void schedd(void* frame)
 {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	struct thread_t* old = switch_queue(cpu);
-
-	if (cpu->run_queue != NULL)
-	{
-		// kprintf("old thread %p, new thread %p", old, cpu->run_queue);
-		if (old != NULL)
-		{
-			if (old->state == ZOMBIE)
-			{
-				assert(old->back != NULL);
-				old->back->next = old->next;
-				struct thread_t* ol = cpu->zombie_threads;
-				cpu->zombie_threads = old;
-				old->next = ol;
-			}
-			else
-			{
-				old->state = READY;
-			}
-		}
-		cpu->run_queue->state = RUNNING;
-		arch_switch_pagemap(cpu->run_queue->proc->cur_map);
-// save and load
-#ifdef __x86_64__
-		send_eoi();
-		do_savekstackandloadkstack(old, cpu->run_queue);
+#if defined(__x86_64__)
+	arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
+	send_eoi();
+	do_savekstackandloadkstack(old, cpu->cur_thread);
 #endif
-	}
-
 	// arch_load_ctx(frame, cpu->run_queue);
 	//  for reading operations such as switching the pagemap
 	//  it is fine not to lock, otherwise we would have deadlocks and major slowdowns

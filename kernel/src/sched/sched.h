@@ -4,10 +4,12 @@
 
 #include "arch/x86_64/instructions/instructions.h"
 #include "utils/basic.h"
+#define KSTACKSIZE 16384
 struct process_t
 {
 	pagemap* cur_map;
 	spinlock_t lock;	// lock for accessing this
+	refcount_t cnt;
 };
 enum TASKSTATE
 {
@@ -29,8 +31,10 @@ struct thread_t
 struct per_cpu_data
 {
 	struct arch_per_cpu_data arch_data;
-	struct thread_t* run_queue;	   // real run queue
-	struct thread_t* zombie_threads;
+	struct thread_t* run_queue;			// real run queue
+	struct thread_t* cur_thread;		// trl
+	struct thread_t* to_be_reapered;	// any thread with refcount zero will be thrown into here
+										// a reaper thread will kill the dead
 };
 
 void schedd(void* frame);
@@ -38,3 +42,4 @@ void arch_create_per_cpu_data();
 extern void kentry();
 void create_kentry();
 struct per_cpu_data* arch_get_per_cpu_data();
+void exit_thread();
