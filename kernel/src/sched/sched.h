@@ -25,6 +25,7 @@ struct thread_t
 	uint64_t kernel_stack_base;
 	struct thread_t* next;
 	struct thread_t* back;
+	uint64_t tid;
 	enum TASKSTATE state;
 	refcount_t count;
 };
