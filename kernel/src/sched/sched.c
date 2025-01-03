@@ -123,6 +123,17 @@ void exit_thread()
 	// reaper thread is always running
 	schedd(NULL);
 }
+void ThreadBlock(struct thread_t *whichqueue) {
+	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	cpu->cur_thread->state = BLOCKED;
+	push_into_list(&whichqueue, cpu->cur_thread);
+	schedd(NULL);
+}
+void ThreadReady(struct thread_t *thread) {
+	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	thread->state = READY;
+	push_into_list(&cpu->run_queue, thread);
+}
 void create_kentry()
 {
 #if defined(__x86_64__)
@@ -175,8 +186,8 @@ struct thread_t* switch_queue(struct per_cpu_data* cpu)
 	if (cpu->cur_thread)
 	{
 		struct thread_t *old = cpu->cur_thread;
-		if (cpu->cur_thread->state == ZOMBIE) {
-			kprintf("switch_queue(): thread is a zombie\r\n");
+		if (cpu->cur_thread->state == ZOMBIE || cpu->cur_thread->state == BLOCKED) {
+			kprintf("switch_queue(): thread is blocked or zombie\r\n");
 			cpu->cur_thread = pop_from_list(&cpu->run_queue);
 		cpu->cur_thread->state = RUNNING;
 		kprintf("switch_queue(): switching to tid %d\r\n", cpu->cur_thread->tid);

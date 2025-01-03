@@ -16,6 +16,7 @@ enum TASKSTATE
 	READY = 0,
 	RUNNING = 1,
 	ZOMBIE = 2,
+	BLOCKED = 3,
 };
 struct thread_t
 {
