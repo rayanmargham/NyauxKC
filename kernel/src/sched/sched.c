@@ -68,6 +68,7 @@ struct process_t* create_process(pagemap* map)
 struct thread_t* create_thread()
 {
 	struct thread_t* him = (struct thread_t*)kmalloc(sizeof(struct thread_t));
+	him->count = 2;
 	// him->next = NULL;
 	return him;
 }
@@ -109,12 +110,10 @@ void load_ctx_into_kstack(struct thread_t* t, struct StackFrame usrctx)
 void exit_thread()
 {
 	__asm__ volatile ("cli");
-	kprintf("exit thread is a stub\r\n");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->cur_thread->state = ZOMBIE;
 
 	push_into_list(&cpu->to_be_reapered, cpu->cur_thread);
-	kprintf("pushed into list\r\n");
 	refcount_dec(&cpu->to_be_reapered->proc->cnt);
 	refcount_dec(&cpu->to_be_reapered->count);
 	refcount_dec(&cpu->to_be_reapered->count);
@@ -127,51 +126,36 @@ void ThreadBlock(struct thread_t *whichqueue) {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->cur_thread->state = BLOCKED;
 	push_into_list(&whichqueue, cpu->cur_thread);
-	schedd(NULL);
 }
 void ThreadReady(struct thread_t *thread) {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	thread->state = READY;
+	thread->state = READYING;
+
 	push_into_list(&cpu->run_queue, thread);
+}
+void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
+	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	struct thread_t *blah = create_thread();
+	blah->proc = proc;
+	blah->tid = tid;
+	refcount_inc(&proc->cnt);
+	uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
+	struct StackFrame hh = arch_create_frame(false, entry, kstack - 8);
+	blah->kernel_stack_base = kstack;
+	blah->kernel_stack_ptr = kstack;
+	load_ctx_into_kstack(blah, hh);
+	ThreadReady(blah);
 }
 void create_kentry()
 {
 #if defined(__x86_64__)
-	struct process_t* h = create_process(&ker_map);
-	struct thread_t* e = create_thread();
-	e->proc = h;
-	refcount_inc(&h->cnt);
-	// 16kib kstack lol
-	uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);	   // top of stack
-	// profiler will crash because it expects a return address
-	struct StackFrame hh = arch_create_frame(false, (uint64_t)kentry, kstack - 8);
-	e->kernel_stack_base = kstack;
-	e->kernel_stack_ptr = kstack;
-	e->arch_data.frame = hh;
-	load_ctx_into_kstack(e, hh);
+	struct process_t* kernelprocess = create_process(&ker_map);
 	// kprintf("ran fine\r\n");
-	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	create_kthread((uint64_t)kentry, kernelprocess, 1);
+	create_kthread((uint64_t)reaper, kernelprocess, 0);
+	create_kthread((uint64_t)klocktest, kernelprocess, 2);
+	create_kthread((uint64_t)klocktest2, kernelprocess, 3);
 
-	// we are not done tho we need to create the reaper thread
-	struct process_t* reaperprocess = create_process(&ker_map);
-	struct thread_t* reaperthread = create_thread();
-	reaperthread->proc = reaperprocess;
-	uint64_t kstackforreaper = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
-	struct StackFrame reaperframe = arch_create_frame(false, (uint64_t)reaper, kstackforreaper - 8);
-	reaperthread->kernel_stack_base = kstackforreaper;
-	reaperthread->kernel_stack_ptr = kstackforreaper;
-	load_ctx_into_kstack(reaperthread, reaperframe);
-	reaperthread->back = e;
-	reaperthread->next = e;
-	reaperthread->tid = 0;
-	e->next = reaperthread;
-	e->back = reaperthread;
-	e->tid = 1;
-	cpu->run_queue = reaperthread;
-	refcount_inc(&e->count);
-	refcount_inc(&e->count);
-	refcount_inc(&reaperthread->count);
-	refcount_inc(&reaperthread->count);
 	// e->back = e;
 	// e->next = e;
 	// cpu->run_queue = e;
@@ -180,6 +164,7 @@ void create_kentry()
 
 #endif
 }
+
 // returns the old thread
 struct thread_t* switch_queue(struct per_cpu_data* cpu)
 {
@@ -187,15 +172,21 @@ struct thread_t* switch_queue(struct per_cpu_data* cpu)
 	{
 		struct thread_t *old = cpu->cur_thread;
 		if (cpu->cur_thread->state == ZOMBIE || cpu->cur_thread->state == BLOCKED) {
-			kprintf("switch_queue(): thread is blocked or zombie\r\n");
 			cpu->cur_thread = pop_from_list(&cpu->run_queue);
 		cpu->cur_thread->state = RUNNING;
-		kprintf("switch_queue(): switching to tid %d\r\n", cpu->cur_thread->tid);
 		return old;
 		} 
+		
 		cpu->cur_thread->state = READY;
 		push_into_list(&cpu->run_queue, cpu->cur_thread);
 		cpu->cur_thread = pop_from_list(&cpu->run_queue);
+		if (cpu->cur_thread->state == READYING) {
+			cpu->cur_thread->state = READY;
+			push_into_list(&cpu->run_queue, cpu->cur_thread);
+			cpu->cur_thread = pop_from_list(&cpu->run_queue);
+		cpu->cur_thread->state = RUNNING;
+			return old;
+		}
 		cpu->cur_thread->state = RUNNING;
 		return old;
 		

@@ -17,6 +17,7 @@ enum TASKSTATE
 	RUNNING = 1,
 	ZOMBIE = 2,
 	BLOCKED = 3,
+	READYING = 4,
 };
 struct thread_t
 {
@@ -42,6 +43,12 @@ struct per_cpu_data
 void schedd(void* frame);
 void arch_create_per_cpu_data();
 extern void kentry();
+extern void klocktest2();
+extern void klocktest();
 void create_kentry();
 struct per_cpu_data* arch_get_per_cpu_data();
 void exit_thread();
+void ThreadBlock(struct thread_t *whichqueue);
+struct thread_t *pop_from_list(struct thread_t** list);
+void push_into_list(struct thread_t** list, struct thread_t* whatuwannapush);
+void ThreadReady(struct thread_t *thread);

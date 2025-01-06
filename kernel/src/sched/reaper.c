@@ -9,10 +9,8 @@
 void reaper()
 {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	kprintf("reaper(): I am online and ready to KILL any threads that are in the zombie queue\r\n");
 	while (1) {
 	if (cpu->to_be_reapered) {
-		kprintf("reaper(): I have threads to kill\r\n");
 		struct thread_t* reaper = cpu->to_be_reapered;
 		while (reaper != NULL)
 		{

@@ -16,6 +16,7 @@
 #include "term/term.h"
 #include "uacpi/status.h"
 #include "utils/basic.h"
+#include <Mutexes/KMutex.h>
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -196,6 +197,22 @@ void kmain(void)
 	// 	kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
 	// }
 	hcf();	  // we js chill
+}
+struct KMutex klock;
+void klocktest() {
+	acquire_kmutex(&klock);
+	kprintf("klocktest(): I have the lock\n");
+	release_kmutex(&klock);
+	kprintf("klocktest(): I released the lock\n");
+	exit_thread();
+}
+void klocktest2() {
+	// kprintf("klocktest2(): Trying to acquire lock\n");
+	acquire_kmutex(&klock);
+	kprintf("klocktest2(): I have the lock\n");
+	release_kmutex(&klock);
+	kprintf("klocktest2(): I released the lock\n");
+	exit_thread();
 }
 void kentry()
 {
