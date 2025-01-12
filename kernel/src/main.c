@@ -4,6 +4,7 @@
 #include <limine.h>
 #include <mem/kmem.h>
 #include <mem/pmm.h>
+#include <Mutexes/KMutex.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,7 +17,6 @@
 #include "term/term.h"
 #include "uacpi/status.h"
 #include "utils/basic.h"
-#include <Mutexes/KMutex.h>
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -182,7 +182,7 @@ void kmain(void)
 	init_acpi_early();
 	kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(), total_memory() / 1048576);
 	create_kentry();
-	
+
 	init_smp();
 
 	// uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
@@ -199,15 +199,17 @@ void kmain(void)
 	hcf();	  // we js chill
 }
 struct KMutex klock;
-void klocktest() {
+void klocktest()
+{
 	acquire_kmutex(&klock);
 	kprintf("klocktest(): I have the lock\n");
 	release_kmutex(&klock);
 	kprintf("klocktest(): I released the lock\n");
 	exit_thread();
 }
-void klocktest2() {
-	// kprintf("klocktest2(): Trying to acquire lock\n");
+void klocktest2()
+{
+	kprintf("klocktest2(): Trying to acquire lock\n");
 	acquire_kmutex(&klock);
 	kprintf("klocktest2(): I have the lock\n");
 	release_kmutex(&klock);

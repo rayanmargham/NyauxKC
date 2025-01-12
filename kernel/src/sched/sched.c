@@ -7,6 +7,7 @@
 #include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "mem/vmm.h"
+#include "sched.h"
 #include "sched/reaper.h"
 #include "smp/smp.h"
 #include "utils/basic.h"
@@ -72,29 +73,33 @@ struct thread_t* create_thread()
 	// him->next = NULL;
 	return him;
 }
-void push_into_list(struct thread_t** list, struct thread_t* whatuwannapush) {
-	if (*list == NULL) {
+void push_into_list(struct thread_t** list, struct thread_t* whatuwannapush)
+{
+	if (*list == NULL)
+	{
 		(*list) = whatuwannapush;
 		(*list)->next = *list;
 		(*list)->back = *list;
 		return;
 	}
-    struct thread_t *temp = (*list);
-    struct thread_t *old = (*list);
-    while (temp->next != old) {
-        temp = temp->next;
-    }
-    temp->next = whatuwannapush;
-    whatuwannapush->back = temp;
-    whatuwannapush->next = old;
-    old->back = whatuwannapush;
+	struct thread_t* temp = (*list);
+	struct thread_t* old = (*list);
+	while (temp->next != old)
+	{
+		temp = temp->next;
+	}
+	temp->next = whatuwannapush;
+	whatuwannapush->back = temp;
+	whatuwannapush->next = old;
+	old->back = whatuwannapush;
 }
-struct thread_t *pop_from_list(struct thread_t** list) {
-    struct thread_t *old = *list;
-    *list = (*list)->next;
-    (*list)->back = old->back;
-    (*list)->back->next = *list;
-    return old;
+struct thread_t* pop_from_list(struct thread_t** list)
+{
+	struct thread_t* old = *list;
+	*list = (*list)->next;
+	(*list)->back = old->back;
+	(*list)->back->next = *list;
+	return old;
 }
 #if defined(__x86_64)
 extern void return_from_kernel_in_new_thread();
@@ -109,33 +114,40 @@ void load_ctx_into_kstack(struct thread_t* t, struct StackFrame usrctx)
 #endif
 void exit_thread()
 {
-	__asm__ volatile ("cli");
+	__asm__ volatile("cli");
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->cur_thread->state = ZOMBIE;
-
+	assert(cpu->cur_thread->proc != NULL);
 	push_into_list(&cpu->to_be_reapered, cpu->cur_thread);
+	// assert(cpu->to_be_reapered != NULL);
+	assert(cpu->to_be_reapered->proc != NULL);
 	refcount_dec(&cpu->to_be_reapered->proc->cnt);
 	refcount_dec(&cpu->to_be_reapered->count);
 	refcount_dec(&cpu->to_be_reapered->count);
+	hcf();
 	// cpu->cur_thread = NULL;
 	// no need to assert
 	// reaper thread is always running
-	schedd(NULL);
+	sched_yield();
 }
-void ThreadBlock(struct thread_t *whichqueue) {
+
+void ThreadBlock(struct thread_t* whichqueue)
+{
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	cpu->cur_thread->state = BLOCKED;
 	push_into_list(&whichqueue, cpu->cur_thread);
 }
-void ThreadReady(struct thread_t *thread) {
+void ThreadReady(struct thread_t* thread)
+{
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	thread->state = READYING;
 
 	push_into_list(&cpu->run_queue, thread);
 }
-void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
+void create_kthread(uint64_t entry, struct process_t* proc, uint64_t tid)
+{
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	struct thread_t *blah = create_thread();
+	struct thread_t* blah = create_thread();
 	blah->proc = proc;
 	blah->tid = tid;
 	refcount_inc(&proc->cnt);
@@ -144,6 +156,8 @@ void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
 	blah->kernel_stack_base = kstack;
 	blah->kernel_stack_ptr = kstack;
 	load_ctx_into_kstack(blah, hh);
+	refcount_inc(&blah->count);
+	refcount_inc(&blah->count);
 	ThreadReady(blah);
 }
 void create_kentry()
@@ -170,27 +184,30 @@ struct thread_t* switch_queue(struct per_cpu_data* cpu)
 {
 	if (cpu->cur_thread)
 	{
-		struct thread_t *old = cpu->cur_thread;
-		if (cpu->cur_thread->state == ZOMBIE || cpu->cur_thread->state == BLOCKED) {
+		struct thread_t* old = cpu->cur_thread;
+		if (cpu->cur_thread->state == ZOMBIE || cpu->cur_thread->state == BLOCKED)
+		{
 			cpu->cur_thread = pop_from_list(&cpu->run_queue);
-		cpu->cur_thread->state = RUNNING;
-		return old;
-		} 
-		
+			cpu->cur_thread->state = RUNNING;
+			return old;
+		}
+
 		cpu->cur_thread->state = READY;
 		push_into_list(&cpu->run_queue, cpu->cur_thread);
 		cpu->cur_thread = pop_from_list(&cpu->run_queue);
-		if (cpu->cur_thread->state == READYING) {
+		if (cpu->cur_thread->state == READYING)
+		{
 			cpu->cur_thread->state = READY;
 			push_into_list(&cpu->run_queue, cpu->cur_thread);
 			cpu->cur_thread = pop_from_list(&cpu->run_queue);
-		cpu->cur_thread->state = RUNNING;
+			cpu->cur_thread->state = RUNNING;
 			return old;
 		}
 		cpu->cur_thread->state = RUNNING;
 		return old;
-		
-	} else {
+	}
+	else
+	{
 		cpu->cur_thread = pop_from_list(&cpu->run_queue);
 		cpu->cur_thread->state = RUNNING;
 		return NULL;
@@ -202,7 +219,7 @@ void schedd(void* frame)
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	if (cpu->cur_thread == NULL && cpu->run_queue == NULL)
 	{
-		//kprintf("schedd(): no threads to run\r\n");
+		// kprintf("schedd(): no threads to run\r\n");
 		return;
 	}
 	struct thread_t* old = switch_queue(cpu);
