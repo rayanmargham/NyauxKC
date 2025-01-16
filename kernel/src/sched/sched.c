@@ -14,9 +14,6 @@
 // ARCH STUFF
 #include "arch/x86_64/cpu/structures.h"
 
-#ifdef __x86_64__
-extern void do_savekstackandloadkstack(struct thread_t* old, struct thread_t* new);
-#endif
 void arch_save_ctx(void* frame, struct thread_t* threadtosavectx)
 {
 #ifdef __x86_64__
@@ -102,15 +99,7 @@ struct thread_t* pop_from_list(struct thread_t** list)
 	return old;
 }
 #if defined(__x86_64)
-extern void return_from_kernel_in_new_thread();
-void load_ctx_into_kstack(struct thread_t* t, struct StackFrame usrctx)
-{
-	t->kernel_stack_ptr -= sizeof(struct StackFrame);
-	*(struct StackFrame*)t->kernel_stack_ptr = usrctx;
-	t->kernel_stack_ptr -= sizeof(uint64_t*);
-	*(uint64_t*)t->kernel_stack_ptr = (uint64_t)return_from_kernel_in_new_thread;
-	t->kernel_stack_ptr -= sizeof(uint64_t) * 7;
-}
+
 #endif
 void exit_thread()
 {
@@ -124,7 +113,7 @@ void exit_thread()
 	refcount_dec(&cpu->to_be_reapered->proc->cnt);
 	refcount_dec(&cpu->to_be_reapered->count);
 	refcount_dec(&cpu->to_be_reapered->count);
-	hcf();
+	// hcf();
 	// cpu->cur_thread = NULL;
 	// no need to assert
 	// reaper thread is always running
@@ -147,18 +136,18 @@ void ThreadReady(struct thread_t* thread)
 void create_kthread(uint64_t entry, struct process_t* proc, uint64_t tid)
 {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
-	struct thread_t* blah = create_thread();
-	blah->proc = proc;
-	blah->tid = tid;
+	struct thread_t* newthread = create_thread();
+	newthread->proc = proc;
+	newthread->tid = tid;
 	refcount_inc(&proc->cnt);
 	uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
 	struct StackFrame hh = arch_create_frame(false, entry, kstack - 8);
-	blah->kernel_stack_base = kstack;
-	blah->kernel_stack_ptr = kstack;
-	load_ctx_into_kstack(blah, hh);
-	refcount_inc(&blah->count);
-	refcount_inc(&blah->count);
-	ThreadReady(blah);
+	newthread->kernel_stack_base = kstack;
+	newthread->kernel_stack_ptr = kstack;
+	newthread->arch_data.frame = hh;
+	refcount_inc(&newthread->count);
+	refcount_inc(&newthread->count);
+	ThreadReady(newthread);
 }
 void create_kentry()
 {
@@ -213,8 +202,11 @@ struct thread_t* switch_queue(struct per_cpu_data* cpu)
 		return NULL;
 	}
 }
-
-void schedd(void* frame)
+#ifdef __x86_64__
+void load_ctx(struct StackFrame* context);
+void save_ctx(struct StackFrame* old_context, struct StackFrame* new_context);
+#endif
+void schedd(struct StackFrame* frame)
 {
 	struct per_cpu_data* cpu = arch_get_per_cpu_data();
 	if (cpu->cur_thread == NULL && cpu->run_queue == NULL)
@@ -224,9 +216,21 @@ void schedd(void* frame)
 	}
 	struct thread_t* old = switch_queue(cpu);
 #if defined(__x86_64__)
+	if (old == NULL)
+	{
+		// save_ctx(NULL, &cpu->cur_thread->arch_data.frame);
+	}
+	else
+	{
+		// kprintf("rip of new: %p\r\nrip of old: %p\n", cpu->cur_thread->arch_data.frame.rip,
+		// old->arch_data.frame.rip);
+		save_ctx(frame, &old->arch_data.frame);
+	}
+
 	arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
 	send_eoi();
-	do_savekstackandloadkstack(old, cpu->cur_thread);
+	load_ctx(&cpu->cur_thread->arch_data.frame);
+
 #endif
 	// arch_load_ctx(frame, cpu->run_queue);
 	//  for reading operations such as switching the pagemap

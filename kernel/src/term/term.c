@@ -5,7 +5,7 @@
 
 #include "utils/basic.h"
 struct flanterm_context* ft_ctx = NULL;
-spinlock_t lock;
+spinlock_t lock = 0;
 void stolen_osdevwikiserialinit();
 void init_term(struct limine_framebuffer* buf)
 {

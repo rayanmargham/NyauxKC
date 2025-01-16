@@ -2,6 +2,7 @@
 #include <arch/arch.h>
 #include <stdint.h>
 
+#include "arch/x86_64/cpu/structures.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "utils/basic.h"
 #define KSTACKSIZE 16384
@@ -40,7 +41,7 @@ struct per_cpu_data
 										// a reaper thread will kill the dead
 };
 
-void schedd(void* frame);
+void schedd(struct StackFrame* frame);
 void arch_create_per_cpu_data();
 extern void kentry();
 extern void klocktest2();
