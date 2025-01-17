@@ -31,25 +31,37 @@ load_ctx:
     add rsp, 8
     iretq
 sched_yield:
-    push rsp ; old rsp val + 8
-    push rax ; + 8
-    push qword [rsp+16] ; + 8
+    ; thanks to @48cf on github for the help in writing this
+    ; this was a PAIN to get working, check out some of @48cf's work on git!!! :)
+    push rax
+
+    ; push ss
+    xor eax, eax
     mov ax, ss
-    push ax ; + 8
-    
-    push qword [rsp + 24] ; + 8
-    pushf ; + 8
-    
+    push rax
+
+    ; push rsp
+    lea rax, [rsp+8]
+    push rax
+
+    ; push rflags
+    pushf
+
+    ; push cs
+    xor eax, eax
     mov ax, cs
-    push ax ; + 8
-    add rsp, 32
-    pop rax
-    sub rsp, 24
-    push rax ; + 8
-    push rbp ; + 8
-    add rsp, 40
-    pop rax
-    sub rsp, 32
+    push rax
+
+    ; push rip
+    mov rax, [rsp+40]
+    push rax
+
+    ; push ec
+    push 0
+
+    ; push everything else
+    push rbp
+    mov rax, [rsp+56]
     push rax
     push rbx
     push rcx
@@ -64,10 +76,9 @@ sched_yield:
     push r13
     push r14
     push r15
-    push qword 0
 
-    ; push gs                  ; Save previous state of segment registers
-    ; push fs
+    ; push intvec
+    push 0
     mov rdi, rsp
     call schedd
     ret
