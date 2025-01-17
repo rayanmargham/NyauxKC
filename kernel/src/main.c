@@ -201,25 +201,22 @@ void kmain(void)
 struct KMutex klock;
 void klocktest()
 {
-	acquire_kmutex(&klock);
-	kprintf("klocktest(): I have the lock\n");
-	release_kmutex(&klock);
-	kprintf("klocktest(): I released the lock\n");
+	kprintf("klocktest(): kmutex is broken\r\n");
 	exit_thread();
 }
 void klocktest2()
 {
-	kprintf("klocktest2(): Trying to acquire lock\n");
-	acquire_kmutex(&klock);
-	kprintf("klocktest2(): I have the lock\n");
-	release_kmutex(&klock);
-	kprintf("klocktest2(): I released the lock\n");
+	// kprintf("klocktest2(): Trying to acquire lock\n");
+	// acquire_kmutex(&klock);
+	// kprintf("klocktest2(): I have the lock\n");
+	// release_kmutex(&klock);
+	// kprintf("klocktest2(): I released the lock\n");
+	kprintf("klocktest2(): kmutex is broken\r\n");
 	exit_thread();
 }
 void kentry()
 {
 	// change font or smthin
-	kprintf("kentry(): Hello World from a scheduled thread\n");
+	kprintf("kentry(): Hello World from a scheduled thread\r\n");
 	exit_thread();
-	hcf();
 }
