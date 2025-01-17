@@ -31,12 +31,13 @@ load_ctx:
     add rsp, 8
     iretq
 sched_yield:
+    push rsp ; old rsp val + 8
     push rax ; + 8
-    lea rax, [rsp+8]
-    push rax ; + 8
+    push qword [rsp+16] ; + 8
     mov ax, ss
     push ax ; + 8
-    push rsp ; + 8
+    
+    push qword [rsp + 24] ; + 8
     pushf ; + 8
     
     mov ax, cs
@@ -46,9 +47,9 @@ sched_yield:
     sub rsp, 24
     push rax ; + 8
     push rbp ; + 8
-    add rsp, 48
+    add rsp, 40
     pop rax
-    sub rsp, 40
+    sub rsp, 32
     push rax
     push rbx
     push rcx
