@@ -223,9 +223,9 @@ void schedd(struct StackFrame* frame)
 	{
 		// kprintf("rip of new: %p\r\nrip of old: %p\n", cpu->cur_thread->arch_data.frame.rip,
 		// old->arch_data.frame.rip);
-		sprintf("old rip is %p\r\n", old->arch_data.frame.rip);
+		// sprintf("old rip is %p\r\n", old->arch_data.frame.rip);
 		save_ctx(frame, &old->arch_data.frame);
-		sprintf("new rip is %p\r\n", old->arch_data.frame.rip);
+		// sprintf("new rip is %p\r\n", old->arch_data.frame.rip);
 	}
 	arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
 	send_eoi();
