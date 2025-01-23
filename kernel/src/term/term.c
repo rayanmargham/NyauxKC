@@ -42,6 +42,7 @@ void tputc(int ch, void*)
 
 void kprintf(const char* format, ...)
 {
+	asm volatile("cli");
 	spinlock_lock(&lock);
 	va_list args;
 	va_start(args, format);
@@ -49,7 +50,9 @@ void kprintf(const char* format, ...)
 	npf_vpprintf(tputc, NULL, format, args);
 	va_end(args);
 	spinlock_unlock(&lock);
+	asm volatile("sti");
 }
+
 void sputc(int ch, void*)
 {
 #if defined(__x86_64__)
