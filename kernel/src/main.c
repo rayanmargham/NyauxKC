@@ -62,7 +62,9 @@ __attribute__((used, section(".requests_end_marker"))) static volatile LIMINE_RE
 	// DO NOT remove or rename these functions, or stuff will eventually break!
 	// They CAN be moved to a different .c file.
 
-void *memcpy(void* dest, const void* src, size_t n) {
+	void*
+	memcpy(void* dest, const void* src, size_t n)
+{
 	assert(dest);
 #ifdef __x86_64__
 	void* tmptmp = dest;
@@ -200,19 +202,24 @@ void kmain(void)
 struct KMutex klock;
 void klocktest()
 {
-	kprintf("klocktest(): kmutex is broken\r\n");
+	kprintf("klocktest(): Trying to acquire lock\n");
+	acquire_kmutex(&klock);
+	kprintf("klocktest(): I have the lock\n");
+	release_kmutex(&klock);
+	kprintf("klocktest(): I released the lock\n");
+	// kprintf("klocktest(): kmutex is broken\r\n");
 	exit_thread();
 }
-static int xxxxxx = 1;
+
 void klocktest2()
 {
-	// kprintf("klocktest2(): Trying to acquire lock\n");
-	// acquire_kmutex(&klock);
-	// kprintf("klocktest2(): I have the lock\n");
-	// release_kmutex(&klock);
-	// kprintf("klocktest2(): I released the lock\n");
-	kprintf("klocktest2(): %i\r\n", xxxxxx++);
-	kprintf("klocktest2(): kmutex is broken\r\n");
+	kprintf("klocktest2(): Trying to acquire lock\n");
+	acquire_kmutex(&klock);
+	kprintf("klocktest2(): I have the lock\n");
+	release_kmutex(&klock);
+	kprintf("klocktest2(): I released the lock\n");
+	// kprintf("klocktest2(): %i\r\n", xxxxxx++);
+	// kprintf("klocktest2(): kmutex is broken\r\n");
 	exit_thread();
 }
 void kentry()
