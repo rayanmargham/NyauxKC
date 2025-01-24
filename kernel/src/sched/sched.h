@@ -26,8 +26,7 @@ struct thread_t
 	struct arch_thread_t arch_data;
 	uint64_t kernel_stack_ptr;
 	uint64_t kernel_stack_base;
-	struct thread_t* next;
-	struct thread_t* back;
+	struct thread_t *next, *back;
 	uint64_t tid;
 	enum TASKSTATE state;
 	refcount_t count;

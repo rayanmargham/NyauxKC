@@ -3,13 +3,12 @@ extern schedd
 global load_ctx
 global save_ctx
 extern memcpy
+
 save_ctx: ; (old frame in rdi, new frame in rsi)
-    test rsi, rsi
-    je .escape
     mov rdx, 176
     jmp memcpy
-    .escape:
     ret
+
 load_ctx:
     mov rsp, rdi
     add rsp, 8
@@ -30,6 +29,7 @@ load_ctx:
     pop rbp
     add rsp, 8
     iretq
+
 sched_yield:
     ; thanks to @48cf on github for the help in writing this
     ; this was a PAIN to get working, check out some of @48cf's work on git!!! :)
