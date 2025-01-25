@@ -6,6 +6,7 @@
 #include "mem/pmm.h"
 #include "pci/pci.h"
 #include "timers/hpet.h"
+#include "uacpi/kernel_api.h"
 #include "uacpi/status.h"
 #include "uacpi/types.h"
 #include "utils/basic.h"
@@ -51,25 +52,46 @@ uacpi_status uacpi_kernel_raw_io_write(uacpi_io_addr address, uacpi_u8 byte_widt
 	arch_raw_io_write(address, in_value, byte_width);
 	return UACPI_STATUS_OK;
 }
+
 void uacpi_kernel_pci_device_close(uacpi_handle dev)
 {
 	kfree((void*)(uint64_t)dev, sizeof(uacpi_pci_address));
 }
-uacpi_status uacpi_kernel_pci_read(uacpi_handle device, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64* value)
+#warning When u want to port other archiectures, ADD ECAM for pci, dont know what that is? look at the osdev.wiki about it
+uacpi_status uacpi_kernel_pci_read8(uacpi_handle device, uacpi_size offset, uacpi_u8* value)
 {
 	uacpi_pci_address* address = (uacpi_pci_address*)device;
-#warning When u want to port other archiectures, ADD ECAM for pci, dont know what that is? look at the osdev.wiki about it
-	if (address->segment != 0)
-	{
-		return UACPI_STATUS_INVALID_ARGUMENT;
-	}
-	switch (byte_width)
-	{
-		case 1: *value = pciconfigreadbyte(address->bus, address->device, address->function, offset); break;
-		case 2: *value = pciconfigreadword(address->bus, address->device, address->function, offset); break;
-		case 4: *value = pciconfigread32(address->bus, address->device, address->function, offset); break;
-		default: return UACPI_STATUS_INVALID_ARGUMENT;
-	}
+	*value = pciconfigreadbyte(address->bus, address->device, address->function, offset);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_pci_read16(uacpi_handle device, uacpi_size offset, uacpi_u16* value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
+	*value = pciconfigreadword(address->bus, address->device, address->function, offset);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_pci_read32(uacpi_handle device, uacpi_size offset, uacpi_u32* value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
+	*value = pciconfigread32(address->bus, address->device, address->function, offset);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_pci_write8(uacpi_handle device, uacpi_size offset, uacpi_u8 value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
+	pciconfigwritebyte(address->bus, address->device, address->function, offset, (uint8_t)value);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_pci_write16(uacpi_handle device, uacpi_size offset, uacpi_u16 value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
+	pciconfigwriteword(address->bus, address->device, address->function, offset, (uint8_t)value);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_pci_write32(uacpi_handle device, uacpi_size offset, uacpi_u32 value)
+{
+	uacpi_pci_address* address = (uacpi_pci_address*)device;
+	pciconfigwrite32(address->bus, address->device, address->function, offset, (uint8_t)value);
 	return UACPI_STATUS_OK;
 }
 uacpi_status uacpi_kernel_pci_device_open(uacpi_pci_address address, uacpi_handle* out_handle)
@@ -79,22 +101,7 @@ uacpi_status uacpi_kernel_pci_device_open(uacpi_pci_address address, uacpi_handl
 	*out_handle = (uacpi_handle)(uint64_t)ptr;
 	return UACPI_STATUS_OK;
 }
-uacpi_status uacpi_kernel_pci_write(uacpi_handle device, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value)
-{
-	uacpi_pci_address* address = (uacpi_pci_address*)device;
-	if (address->segment != 0)
-	{
-		return UACPI_STATUS_INVALID_ARGUMENT;
-	}
-	switch (byte_width)
-	{
-		case 1: pciconfigwritebyte(address->bus, address->device, address->function, offset, (uint8_t)value); break;
-		case 2: pciconfigwriteword(address->bus, address->device, address->function, offset, (uint16_t)value); break;
-		case 4: pciconfigwrite32(address->bus, address->device, address->function, offset, (uint32_t)value); break;
-		default: return UACPI_STATUS_INVALID_ARGUMENT;
-	}
-	return UACPI_STATUS_OK;
-}
+
 struct io_range
 {
 	uacpi_io_addr base;
@@ -112,24 +119,7 @@ void uacpi_kernel_io_unmap(uacpi_handle handle)
 {
 	kfree((void*)(struct io_range*)handle, sizeof(struct io_range));
 }
-uacpi_status uacpi_kernel_io_read(uacpi_handle hnd, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64* value)
-{
-	struct io_range* rng = (struct io_range*)hnd;
-	if (offset >= rng->len)
-	{
-		return UACPI_STATUS_INVALID_ARGUMENT;
-	}
-	return uacpi_kernel_raw_io_read(rng->base + offset, byte_width, value);
-}
-uacpi_status uacpi_kernel_io_write(uacpi_handle hnd, uacpi_size offset, uacpi_u8 byte_width, uacpi_u64 value)
-{
-	struct io_range* rng = (struct io_range*)hnd;
-	if (offset >= rng->len)
-	{
-		return UACPI_STATUS_INVALID_ARGUMENT;
-	}
-	return uacpi_kernel_raw_io_write(rng->base + offset, byte_width, value);
-}
+
 void* uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 {
 	return (void*)((uint64_t)addr + hhdm_request.response->offset);
@@ -137,6 +127,66 @@ void* uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 void uacpi_kernel_unmap(void* addr, uacpi_size len)
 {
 	// nothing
+}
+uacpi_status uacpi_kernel_io_read8(uacpi_handle io_range, uacpi_size offset, uacpi_u8* out_value)
+{
+	struct io_range* rng = (struct io_range*)io_range;
+	if (offset >= rng->len)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	*out_value = (uint8_t)arch_raw_io_in(rng->base + offset, 1);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_io_write8(uacpi_handle io_range, uacpi_size offset, uacpi_u8 in_value)
+{
+	struct io_range* rng = (struct io_range*)io_range;
+	if (offset >= rng->len)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	arch_raw_io_write(rng->base + offset, in_value, 1);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_io_write16(uacpi_handle io_range, uacpi_size offset, uacpi_u16 in_value)
+{
+	struct io_range* rng = (struct io_range*)io_range;
+	if (offset >= rng->len)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	arch_raw_io_write(rng->base + offset, in_value, 2);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_io_write32(uacpi_handle io_range, uacpi_size offset, uacpi_u32 in_value)
+{
+	struct io_range* rng = (struct io_range*)io_range;
+	if (offset >= rng->len)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	arch_raw_io_write(rng->base + offset, in_value, 4);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_io_read16(uacpi_handle io_range, uacpi_size offset, uacpi_u16* out_value)
+{
+	struct io_range* rng = (struct io_range*)io_range;
+	if (offset >= rng->len)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	*out_value = (uint16_t)arch_raw_io_in(rng->base + offset, 2);
+	return UACPI_STATUS_OK;
+}
+uacpi_status uacpi_kernel_io_read32(uacpi_handle io_range, uacpi_size offset, uacpi_u32* out_value)
+{
+	struct io_range* rng = (struct io_range*)io_range;
+	if (offset >= rng->len)
+	{
+		return UACPI_STATUS_INVALID_ARGUMENT;
+	}
+	*out_value = (uint32_t)arch_raw_io_in(rng->base + offset, 4);
+	return UACPI_STATUS_OK;
 }
 void* uacpi_kernel_alloc(uacpi_size size)
 {

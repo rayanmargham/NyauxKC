@@ -4,7 +4,7 @@ global load_ctx
 global save_ctx
 extern memcpy
 
-save_ctx: ; (old frame in rdi, new frame in rsi)
+save_ctx:
     mov rdx, 176
     jmp memcpy
     ret

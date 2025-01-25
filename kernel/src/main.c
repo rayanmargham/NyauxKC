@@ -199,32 +199,11 @@ void kmain(void)
 	kprintf("kmain(): we are chilling ig\n");
 	hcf();	  // we js chill
 }
-struct KMutex klock;
-void klocktest()
-{
-	kprintf("klocktest(): Trying to acquire lock\n");
-	acquire_kmutex(&klock);
-	kprintf("klocktest(): I have the lock\n");
-	release_kmutex(&klock);
-	kprintf("klocktest(): I released the lock\n");
-	// kprintf("klocktest(): kmutex is broken\r\n");
-	exit_thread();
-}
 
-void klocktest2()
-{
-	kprintf("klocktest2(): Trying to acquire lock\n");
-	acquire_kmutex(&klock);
-	kprintf("klocktest2(): I have the lock\n");
-	release_kmutex(&klock);
-	kprintf("klocktest2(): I released the lock\n");
-	// kprintf("klocktest2(): %i\r\n", xxxxxx++);
-	// kprintf("klocktest2(): kmutex is broken\r\n");
-	exit_thread();
-}
 void kentry()
 {
-	// change font or smthin
+	// init vfs, load font from initramfs, change font or smthin for flanterm or use a custom made terminal idk, lots of
+	// things to do
 	kprintf("kentry(): Hello World from a scheduled thread\r\n");
 	exit_thread();
 }

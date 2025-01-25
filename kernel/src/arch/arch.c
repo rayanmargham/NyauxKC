@@ -66,7 +66,7 @@ uint64_t arch_raw_io_in(uint64_t address, uint8_t byte_width)
 			break;
 		case 4:
 #if defined(__x86_64__)
-			return (uint64_t)ind((uint16_t)address);
+			return (uint64_t)ind((uint32_t)address);
 #endif
 			break;
 		default: panic("raw_io_in(): not a valid byte width"); break;
