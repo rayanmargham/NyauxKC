@@ -142,8 +142,8 @@ void create_kentry()
 
 	create_kthread((uint64_t)kentry, kernelprocess, 1);
 	create_kthread((uint64_t)reaper, kernelprocess, 0);
-	create_kthread((uint64_t)klocktest, kernelprocess, 2);
-	create_kthread((uint64_t)klocktest2, kernelprocess, 3);
+	// create_kthread((uint64_t)klocktest, kernelprocess, 2);
+	// create_kthread((uint64_t)klocktest2, kernelprocess, 3);
 #endif
 }
 
@@ -195,7 +195,8 @@ void schedd(struct StackFrame* frame)
 	}
 	struct thread_t* old = switch_queue(cpu);
 #if defined(__x86_64__)
-	if (old != NULL) save_ctx(&old->arch_data.frame, frame);
+	if (old != NULL)
+		save_ctx(&old->arch_data.frame, frame);
 	arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
 	send_eoi();
 	load_ctx(&cpu->cur_thread->arch_data.frame);
