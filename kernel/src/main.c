@@ -17,6 +17,7 @@
 #include "term/term.h"
 #include "uacpi/status.h"
 #include "utils/basic.h"
+#include "vfs/vfs.h"
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -205,5 +206,6 @@ void kentry()
 	// init vfs, load font from initramfs, change font or smthin for flanterm or use a custom made terminal idk, lots of
 	// things to do
 	kprintf("kentry(): Hello World from a scheduled thread\r\n");
+	vfs_init();
 	exit_thread();
 }
