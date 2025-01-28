@@ -1,6 +1,7 @@
 #include <acpi/acpi.h>
 #include <arch/arch.h>
 #include <elf/symbols/symbols.h>
+#include <fs/vfs/vfs.h>
 #include <limine.h>
 #include <mem/kmem.h>
 #include <mem/pmm.h>
@@ -12,13 +13,13 @@
 
 #include "arch/x86_64/cmos/cmos.h"
 #include "elf/symbols/symbols.h"
+#include "fs/vfs/vfs.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
 #include "smp/smp.h"
 #include "term/term.h"
 #include "uacpi/status.h"
 #include "utils/basic.h"
-#include "vfs/vfs.h"
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.

@@ -19,8 +19,8 @@ struct vnode
 };
 struct vnodeops
 {
-	int (*lookup)(struct vnode* curvnode, const char* name, struct vnode** res);
-	int (*create)(struct vnode* curvnode, const char* name, struct vnode** res);
+	int (*lookup)(struct vnode* curvnode, char* name, struct vnode** res);
+	int (*create)(struct vnode* curvnode, char* name, struct vnode** res);
 };
 struct vfs_ops
 {
