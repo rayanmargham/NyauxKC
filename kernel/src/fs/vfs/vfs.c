@@ -1,16 +1,35 @@
 #include "vfs.h"
 
+#include <mem/kmem.h>
+
+#include "fs/tmpfs/tmpfs.h"
 #include "utils/basic.h"
+
 #define DOTDOT 1472
 #define DOT	   46
-struct vfs root = {.vfs_next = NULL, .vfs_ops = NULL, .cur_vnode = NULL};
+struct vfs* vfs_list = NULL;
+int vfs_mount(struct vfs_ops ops, char* path, void* data)
+{
+	struct vfs* o = kmalloc(sizeof(struct vfs));
+	o->vfs_ops = &ops;
+	o->vfs_ops->mount(o, path, data);
+	if (vfs_list == NULL)
+	{
+		vfs_list = o;
+		return 0;
+	}
+	else
+	{
+		return -1;	  // TODO, IMPL THIS
+	}
+}
 struct vnode* vfs_lookup(struct vnode* start, char* path)
 {
 	struct vnode* starter = start;
 	if (path[0] == '/')
 	{
 		// assume root
-		starter = root.cur_vnode;
+		starter = vfs_list->cur_vnode;
 	}
 	char* token;
 	token = strtok(path, "/");
@@ -30,12 +49,12 @@ struct vnode* vfs_lookup(struct vnode* start, char* path)
 			case DOT: break;
 			default:
 				struct vnode* res = NULL;
-
 				int ress = starter->ops->lookup(starter, token, &res);
 				if (ress != 0)
 				{
 					return NULL;
 				}
+
 				starter = res;
 				break;
 		}
@@ -45,5 +64,10 @@ struct vnode* vfs_lookup(struct vnode* start, char* path)
 }
 void vfs_init()
 {
-	vfs_lookup(NULL, "/meow/.././");
+	vfs_mount(tmpfs_vfsops, NULL, NULL);
+	struct vnode* fein;
+	vfs_list->cur_vnode->ops->create(vfs_list->cur_vnode, "meow", VDIR, &fein);
+	vfs_lookup(NULL, "/meow");
+
+	// vfs_lookup(NULL, "/meow/.././");
 }
