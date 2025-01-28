@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <timers/hpet.h>
 
+#include "arch/x86_64/cmos/cmos.h"
 #include "elf/symbols/symbols.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
@@ -207,5 +208,6 @@ void kentry()
 	// things to do
 	kprintf("kentry(): Hello World from a scheduled thread\r\n");
 	vfs_init();
+	get_time();
 	exit_thread();
 }
