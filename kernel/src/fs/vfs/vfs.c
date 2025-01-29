@@ -4,6 +4,7 @@
 
 #include "fs/tmpfs/tmpfs.h"
 #include "fs/ustar/ustar.h"
+#include "term/term.h"
 #include "utils/basic.h"
 
 #define DOTDOT 1472
@@ -51,9 +52,13 @@ struct vnode* vfs_lookup(struct vnode* start, char* path)
 			default:
 				struct vnode* res = NULL;
 				int ress = starter->ops->lookup(starter, token, &res);
-				if (ress != 0)
+				if (ress != 0 && res == NULL)
 				{
 					return NULL;
+				}
+				else if (ress != 0)
+				{
+					return res;
 				}
 				if (res->v_type == VSYMLINK)
 				{
@@ -66,6 +71,41 @@ struct vnode* vfs_lookup(struct vnode* start, char* path)
 	}
 	return starter;
 }
+void vfs_create_from_tar(char* path, enum vtype type, size_t filesize, void* buf)
+{
+	struct vnode* node = vfs_list->cur_vnode;
+	struct vnode* starter = node;
+	char* token;
+
+	token = strtok(path, "/");
+	while (token != NULL)
+	{
+		struct vnode* epic = NULL;
+		int res = starter->ops->lookup(starter, token, &epic);
+		if (res != 0)
+		{
+			kprintf("vfs(): i need to create the thing %s\r\n", token);
+			starter->ops->create(starter, token, type, &epic);
+			starter = epic;
+
+			if (type == VREG && buf != NULL && filesize != 0)
+			{
+				if (starter->v_type == VDIR)
+				{
+					kprintf("WTF\r\n");
+				}
+				kprintf("vfs(): writing to file\r\n");
+				starter->ops->rw(starter, 0, filesize, buf, 1);
+			}
+		}
+		else
+		{
+			kprintf("vfs(): i found something\r\n");
+			starter = epic;
+		}
+		token = strtok(NULL, "/");
+	}
+}
 void vfs_init()
 {
 	vfs_mount(tmpfs_vfsops, NULL, NULL);
@@ -73,5 +113,8 @@ void vfs_init()
 	vfs_list->cur_vnode->ops->create(vfs_list->cur_vnode, "meow", VDIR, &fein);
 	vfs_lookup(NULL, "/meow");
 	populate_tmpfs_from_tar();
-	// vfs_lookup(NULL, "/meow/.././");
+	struct vnode* res = vfs_lookup(NULL, "/idk/hi/hi/test");
+	char buffer[256];
+	res->ops->rw(res, 0, 256, buffer, 0);
+	kprintf("%s", buffer);
 }

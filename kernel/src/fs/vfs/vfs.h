@@ -34,3 +34,4 @@ struct vfs
 	struct vfs_ops* vfs_ops;
 	struct vnode* cur_vnode;
 };
+void vfs_create_from_tar(char* path, enum vtype type, size_t filesize, void* buf);

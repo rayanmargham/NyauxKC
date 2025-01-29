@@ -64,7 +64,14 @@ int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** r
 			newnode->data = file;
 			file->name = name;
 			file->size = 0;
-			prev->next = file;
+			if (prev == NULL)
+			{
+				entry->siblings = file;
+			}
+			else
+			{
+				prev->next = file;
+			}
 			file->node = newnode;
 			*res = newnode;
 			return 0;
@@ -90,13 +97,12 @@ int lookup(struct vnode* curvnode, char* name, struct vnode** res)
 		{
 			if (strcmp(node->name, name) == 0)
 			{
-				kprintf("found file/directory with name %s\r\n", node->name);
 				*res = node->node;
 				return 0;
 			}
 			node = node->next;
 		}
-		kprintf("tmpfs(): nothing found\r\n");
+		// kprintf("tmpfs(): nothing found\r\n");
 	}
 	return -1;
 }

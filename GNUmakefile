@@ -9,7 +9,7 @@ override USER_VARIABLE = $(if $(filter $(origin $(1)),default undefined),$(eval 
 $(call USER_VARIABLE,KARCH,x86_64)
 
 # Default user QEMU flags. These are appended to the QEMU command calls.
-$(call USER_VARIABLE,QEMUFLAGS,-serial stdio -no-shutdown -no-reboot -smp 1)
+$(call USER_VARIABLE,QEMUFLAGS,-serial stdio -no-shutdown -no-reboot -smp 10)
 
 override IMAGE_NAME := NyauxKC-$(KARCH)
 
@@ -171,6 +171,7 @@ $(IMAGE_NAME).iso: limine/limine kernel
 	cp -v kernel/bin-$(KARCH)/NyauxKC iso_root/boot/
 	mkdir -p iso_root/boot/limine
 	cp -v limine.conf iso_root/boot/limine/
+	cp -v test.tar iso_root/boot/test.tar
 	mkdir -p iso_root/EFI/BOOT
 ifeq ($(KARCH),x86_64)
 	cp -v limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root/boot/limine/

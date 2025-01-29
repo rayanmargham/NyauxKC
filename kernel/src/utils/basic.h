@@ -32,7 +32,7 @@ extern volatile struct limine_hhdm_request hhdm_request;
 __attribute__((noreturn)) static inline void panic(char* msg)
 {
 	__asm__ volatile("cli");
-	kprintf("NYAUX Panic! Reason: %s\noopsie uwu :3\n", msg);
+	kprintf("NYAUX Panic! Reason: \n%s\noopsie uwu :3\n", msg);
 	hcf();
 }
 #define is_aligned(value, align) (((value) & ((align) - 1)) == 0)
@@ -40,15 +40,11 @@ __attribute__((noreturn)) static inline void panic(char* msg)
 
 typedef int spinlock_t;
 typedef int refcount_t;
-extern void*
-	memcpy(void* dest, const void* src, size_t n);
+extern void* memcpy(void* dest, const void* src, size_t n);
 // stolen from mr gpt
-static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
-	__asm__ __volatile__ (
-        "cpuid"
-        : "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
-        : "a" (leaf), "c" (subleaf)
-    );
+static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t* eax, uint32_t* ebx, uint32_t* ecx, uint32_t* edx)
+{
+	__asm__ __volatile__("cpuid" : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx) : "a"(leaf), "c"(subleaf));
 }
 
 static inline void refcount_inc(refcount_t* ref)
