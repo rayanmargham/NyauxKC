@@ -7,7 +7,8 @@ void vfs_init();
 enum vtype
 {
 	VREG,
-	VDIR
+	VDIR,
+	VSYMLINK	// symlink
 };
 
 struct vnode

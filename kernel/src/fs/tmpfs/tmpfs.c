@@ -98,6 +98,7 @@ int lookup(struct vnode* curvnode, char* name, struct vnode** res)
 		}
 		kprintf("tmpfs(): nothing found\r\n");
 	}
+	return -1;
 }
 int mount(struct vfs* curvfs, char* path, void* data)
 {
@@ -115,6 +116,7 @@ int mount(struct vfs* curvfs, char* path, void* data)
 	newnode->vfs = curvfs;
 	curvfs->cur_vnode = newnode;
 	kprintf("tmpfs(): created and mounted\r\n");
+	return 0;
 }
 size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw)
 {

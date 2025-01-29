@@ -54,7 +54,10 @@ struct vnode* vfs_lookup(struct vnode* start, char* path)
 				{
 					return NULL;
 				}
-
+				if (res->v_type == VSYMLINK)
+				{
+					return vfs_lookup(starter, res->data);
+				}
 				starter = res;
 				break;
 		}
