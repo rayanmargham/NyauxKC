@@ -3,6 +3,7 @@
 #include <mem/kmem.h>
 
 #include "fs/tmpfs/tmpfs.h"
+#include "fs/ustar/ustar.h"
 #include "utils/basic.h"
 
 #define DOTDOT 1472
@@ -71,6 +72,6 @@ void vfs_init()
 	struct vnode* fein;
 	vfs_list->cur_vnode->ops->create(vfs_list->cur_vnode, "meow", VDIR, &fein);
 	vfs_lookup(NULL, "/meow");
-
+	populate_tmpfs_from_tar();
 	// vfs_lookup(NULL, "/meow/.././");
 }

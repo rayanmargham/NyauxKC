@@ -57,6 +57,9 @@ __attribute__((used, section(".requests"))) volatile struct limine_rsdp_request 
 __attribute__((used, section(".requests"))) volatile struct limine_executable_file_request kernelfile = {
 	.id = LIMINE_EXECUTABLE_FILE_REQUEST,
 	.revision = 2};
+__attribute__((used, section(".requests"))) volatile struct limine_module_request modules = {.id =
+																								 LIMINE_MODULE_REQUEST,
+																							 .revision = 2};
 __attribute__((used, section(".requests_end_marker"))) static volatile LIMINE_REQUESTS_END_MARKER
 
 	// GCC and Clang reserve the right to generate calls to the following
