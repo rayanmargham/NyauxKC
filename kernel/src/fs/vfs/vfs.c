@@ -2,6 +2,7 @@
 
 #include <mem/kmem.h>
 
+#include "fs/devfs/devfs.h"
 #include "fs/tmpfs/tmpfs.h"
 #include "fs/ustar/ustar.h"
 #include "term/term.h"
@@ -117,4 +118,5 @@ void vfs_init()
 	char buffer[256];
 	res->ops->rw(res, 0, 256, buffer, 0);
 	kprintf("%s", buffer);
+	devfs_init(vfs_list);
 }

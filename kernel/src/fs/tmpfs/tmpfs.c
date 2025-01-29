@@ -3,13 +3,13 @@
 #include <fs/vfs/vfs.h>
 #include <mem/kmem.h>
 
-int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res);
-int lookup(struct vnode* curvnode, char* name, struct vnode** res);
-size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw);
-int mount(struct vfs* curvfs, char* path, void* data);
+static int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res);
+static int lookup(struct vnode* curvnode, char* name, struct vnode** res);
+static size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw);
+static int mount(struct vfs* curvfs, char* path, void* data);
 struct vnodeops tmpfs_ops = {lookup, create, rw};
 struct vfs_ops tmpfs_vfsops = {mount};
-int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res)
+static int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res)
 {
 	// kprintf("tmpfs(): attempting to create file/dir with name %s\r\n", name);
 	if (curvnode->v_type == VDIR)
@@ -81,7 +81,7 @@ int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** r
 	return -1;
 }
 
-int lookup(struct vnode* curvnode, char* name, struct vnode** res)
+static int lookup(struct vnode* curvnode, char* name, struct vnode** res)
 {
 	struct tmpfsnode* node = (struct tmpfsnode*)curvnode->data;
 	if (curvnode->v_type == VREG)
@@ -106,7 +106,7 @@ int lookup(struct vnode* curvnode, char* name, struct vnode** res)
 	}
 	return -1;
 }
-int mount(struct vfs* curvfs, char* path, void* data)
+static int mount(struct vfs* curvfs, char* path, void* data)
 {
 	struct tmpfsnode* dir = (struct tmpfsnode*)kmalloc(sizeof(struct tmpfsnode));
 	struct direntry* direntry = (struct direntry*)kmalloc(sizeof(struct direntry));
@@ -124,7 +124,7 @@ int mount(struct vfs* curvfs, char* path, void* data)
 	kprintf("tmpfs(): created and mounted\r\n");
 	return 0;
 }
-size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw)
+static size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw)
 {
 	struct tmpfsnode* bro = curvnode->data;
 	if (rw == 0)
