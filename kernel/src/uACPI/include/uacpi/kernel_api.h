@@ -33,6 +33,30 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address);
 /*
  * Open a PCI device at 'address' for reading & writing.
  *
+ * Note that this must be able to open any arbitrary PCI device, not just those
+ * detected during kernel PCI enumeration, since the following pattern is
+ * relatively common in AML firmware:
+ *    Device (THC0)
+ *    {
+ *        // Device at 00:10.06
+ *        Name (_ADR, 0x00100006)  // _ADR: Address
+ *
+ *        OperationRegion (THCR, PCI_Config, Zero, 0x0100)
+ *        Field (THCR, ByteAcc, NoLock, Preserve)
+ *        {
+ *            // Vendor ID field in the PCI configuration space
+ *            VDID,   32
+ *        }
+ *
+ *        // Check if the device at 00:10.06 actually exists, that is reading
+ *        // from its configuration space returns something other than 0xFFs.
+ *        If ((VDID != 0xFFFFFFFF))
+ *        {
+ *            // Actually create the rest of the device's body if it's present
+ *            // in the system, otherwise skip it.
+ *        }
+ *    }
+ *
  * The handle returned via 'out_handle' is used to perform IO on the
  * configuration space of the device.
  */
@@ -67,6 +91,9 @@ uacpi_status uacpi_kernel_pci_write32(
 /*
  * Map a SystemIO address at [base, base + len) and return a kernel-implemented
  * handle that can be used for reading and writing the IO range.
+ *
+ * NOTE: The x86 architecture uses the in/out family of instructions
+ *       to access the SystemIO address space.
  */
 uacpi_status uacpi_kernel_io_map(
     uacpi_io_addr base, uacpi_size len, uacpi_handle *out_handle
@@ -78,6 +105,9 @@ void uacpi_kernel_io_unmap(uacpi_handle handle);
  * at a 0-based 'offset' within the range.
  *
  * NOTE:
+ * The x86 architecture uses the in/out family of instructions
+ * to access the SystemIO address space.
+ *
  * You are NOT allowed to break e.g. a 4-byte access into four 1-byte accesses.
  * Hardware ALWAYS expects accesses to be of the exact width.
  */

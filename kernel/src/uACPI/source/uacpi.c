@@ -27,10 +27,17 @@ void uacpi_context_set_log_level(uacpi_log_level lvl)
 
 void uacpi_logger_initialize(void)
 {
-    if (g_uacpi_rt_ctx.log_level != 0)
-        return;
+    if (g_uacpi_rt_ctx.log_level == 0)
+        uacpi_context_set_log_level(UACPI_DEFAULT_LOG_LEVEL);
 
-    uacpi_context_set_log_level(UACPI_DEFAULT_LOG_LEVEL);
+    static uacpi_bool version_printed = UACPI_FALSE;
+    if (!version_printed) {
+        version_printed = UACPI_TRUE;
+        uacpi_info(
+            "starting uACPI, version %d.%d.%d\n",
+            UACPI_MAJOR, UACPI_MINOR, UACPI_PATCH
+        );
+    }
 }
 
 void uacpi_context_set_loop_timeout(uacpi_u32 seconds)
@@ -264,12 +271,16 @@ void uacpi_state_reset(void)
     uacpi_deinitialize_events();
     uacpi_deinitialize_notify();
     uacpi_deinitialize_opregion();
-    uacpi_deininitialize_registers();
     uacpi_deinitialize_tables();
 
 #ifndef UACPI_REDUCED_HARDWARE
     if (g_uacpi_rt_ctx.was_in_legacy_mode)
         uacpi_leave_acpi_mode();
+#endif
+
+    uacpi_deinitialize_registers();
+
+#ifndef UACPI_REDUCED_HARDWARE
     if (g_uacpi_rt_ctx.global_lock_event)
         uacpi_kernel_free_event(g_uacpi_rt_ctx.global_lock_event);
     if (g_uacpi_rt_ctx.global_lock_spinlock)
@@ -379,6 +390,32 @@ static uacpi_u64 elapsed_ms(uacpi_u64 begin_ns, uacpi_u64 end_ns)
     return (end_ns - begin_ns) / (1000ull * 1000ull);
 }
 
+static uacpi_bool warn_on_bad_timesource(uacpi_u64 begin_ts, uacpi_u64 end_ts)
+{
+    const uacpi_char *reason;
+
+    if (uacpi_unlikely(begin_ts == 0 && end_ts == 0)) {
+        reason = "uacpi_kernel_get_nanoseconds_since_boot() appears to be a stub";
+        goto out_bad_timesource;
+    }
+
+    if (uacpi_unlikely(begin_ts == end_ts)) {
+        reason = "poor time source precision detected";
+        goto out_bad_timesource;
+    }
+
+    if (uacpi_unlikely(end_ts < begin_ts)) {
+        reason = "time source backwards drift detected";
+        goto out_bad_timesource;
+    }
+
+    return UACPI_FALSE;
+
+out_bad_timesource:
+    uacpi_warn("%s, this may cause problems\n", reason);
+    return UACPI_TRUE;
+}
+
 uacpi_status uacpi_namespace_load(void)
 {
     struct uacpi_table tbl;
@@ -430,20 +467,19 @@ uacpi_status uacpi_namespace_load(void)
     }
 
     end_ts = uacpi_kernel_get_nanoseconds_since_boot();
+    g_uacpi_rt_ctx.bad_timesource = warn_on_bad_timesource(begin_ts, end_ts);
 
-    if (uacpi_unlikely(st.failure_counter != 0)) {
+    if (uacpi_unlikely(st.failure_counter != 0 || g_uacpi_rt_ctx.bad_timesource)) {
         uacpi_info(
-            "loaded %u AML blob%s in %"UACPI_PRIu64"ms (%u error%s)\n",
-            st.load_counter, st.load_counter > 1 ? "s" : "",
-            UACPI_FMT64(elapsed_ms(begin_ts, end_ts)), st.failure_counter,
-            st.failure_counter > 1 ? "s" : ""
+            "loaded %u AML blob%s (%u error%s)\n",
+            st.load_counter, st.load_counter > 1 ? "s" : "", st.failure_counter,
+            st.failure_counter == 1 ? "" : "s"
         );
     } else {
         uacpi_u64 ops = g_uacpi_rt_ctx.opcodes_executed;
         uacpi_u64 ops_per_sec = ops * UACPI_NANOSECONDS_PER_SEC;
 
-        if (uacpi_likely(end_ts > begin_ts))
-            ops_per_sec /= end_ts - begin_ts;
+        ops_per_sec /= end_ts - begin_ts;
 
         uacpi_info(
             "successfully loaded %u AML blob%s, %"UACPI_PRIu64" ops in "
@@ -622,12 +658,19 @@ uacpi_status uacpi_namespace_initialize(void)
 
     end_ts = uacpi_kernel_get_nanoseconds_since_boot();
 
-    uacpi_info(
-        "namespace initialization done in %"UACPI_PRIu64"ms: "
-        "%zu devices, %zu thermal zones\n",
-        UACPI_FMT64(elapsed_ms(begin_ts, end_ts)),
-        ctx.devices, ctx.thermal_zones
-    );
+    if (uacpi_likely(!g_uacpi_rt_ctx.bad_timesource)) {
+        uacpi_info(
+            "namespace initialization done in %"UACPI_PRIu64"ms: "
+            "%zu devices, %zu thermal zones\n",
+            UACPI_FMT64(elapsed_ms(begin_ts, end_ts)),
+            ctx.devices, ctx.thermal_zones
+        );
+    } else {
+        uacpi_info(
+            "namespace initialization done: %zu devices, %zu thermal zones\n",
+            ctx.devices, ctx.thermal_zones
+        );
+    }
 
     uacpi_trace(
         "_STA calls: %zu (%zu errors), _INI calls: %zu (%zu errors)\n",

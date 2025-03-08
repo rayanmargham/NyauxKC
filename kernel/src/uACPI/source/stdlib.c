@@ -2,6 +2,8 @@
 #include <uacpi/internal/utilities.h>
 #include <uacpi/platform/config.h>
 
+#ifdef UACPI_USE_BUILTIN_STRING
+
 #ifndef uacpi_memcpy
 void *uacpi_memcpy(void *dest, const void *src, uacpi_size count)
 {
@@ -64,6 +66,8 @@ uacpi_i32 uacpi_memcmp(const void *lhs, const void *rhs, uacpi_size count)
     return 0;
 }
 #endif
+
+#endif // ifdef UACPI_USE_BUILTIN_STRING
 
 #ifndef uacpi_strlen
 uacpi_size uacpi_strlen(const uacpi_char *str)
@@ -591,7 +595,7 @@ void uacpi_memcpy_zerout(void *dst, const void *src,
 
 uacpi_u8 uacpi_bit_scan_forward(uacpi_u64 value)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
     unsigned char ret;
     unsigned long index;
 
@@ -621,7 +625,7 @@ uacpi_u8 uacpi_bit_scan_forward(uacpi_u64 value)
 
 uacpi_u8 uacpi_bit_scan_backward(uacpi_u64 value)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
     unsigned char ret;
     unsigned long index;
 

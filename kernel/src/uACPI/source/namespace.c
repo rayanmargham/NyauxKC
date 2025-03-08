@@ -886,7 +886,7 @@ uacpi_status uacpi_namespace_do_for_each_child(
 
             decision = cb(user, node, depth);
             if (decision == UACPI_ITERATION_DECISION_BREAK)
-                goto out;
+                return ret;
 
             if (should_lock == UACPI_SHOULD_LOCK_YES) {
                 ret = uacpi_namespace_read_lock();
@@ -952,6 +952,61 @@ uacpi_status uacpi_namespace_for_each_child(
     return uacpi_namespace_do_for_each_child(
         parent, descending_callback, ascending_callback, type_mask, max_depth,
         UACPI_SHOULD_LOCK_YES, UACPI_PERMANENT_ONLY_YES, user
+    );
+}
+
+uacpi_status uacpi_namespace_node_next_typed(
+    uacpi_namespace_node *parent, uacpi_namespace_node **iter,
+    uacpi_object_type_bits type_mask
+)
+{
+    uacpi_status ret;
+    uacpi_bool is_one_of;
+    uacpi_namespace_node *node;
+
+    UACPI_ENSURE_INIT_LEVEL_AT_LEAST(UACPI_INIT_LEVEL_SUBSYSTEM_INITIALIZED);
+
+    if (uacpi_unlikely(parent == UACPI_NULL && *iter == UACPI_NULL))
+        return UACPI_STATUS_INVALID_ARGUMENT;
+
+    ret = uacpi_namespace_read_lock();
+    if (uacpi_unlikely_error(ret))
+        return ret;
+
+    node = *iter;
+    if (node == UACPI_NULL)
+        node = parent->child;
+    else
+        node = node->next;
+
+    for (; node != UACPI_NULL; node = node->next) {
+        if (uacpi_namespace_node_is_temporary(node))
+            continue;
+
+        ret = uacpi_namespace_node_is_one_of_unlocked(
+            node, type_mask, &is_one_of
+        );
+        if (uacpi_unlikely_error(ret))
+            break;
+        if (is_one_of)
+            break;
+    }
+
+    uacpi_namespace_read_unlock();
+    if (node == UACPI_NULL)
+        return UACPI_STATUS_NOT_FOUND;
+
+    if (uacpi_likely_success(ret))
+        *iter = node;
+    return ret;
+}
+
+uacpi_status uacpi_namespace_node_next(
+    uacpi_namespace_node *parent, uacpi_namespace_node **iter
+)
+{
+    return uacpi_namespace_node_next_typed(
+        parent, iter, UACPI_OBJECT_ANY_BIT
     );
 }
 

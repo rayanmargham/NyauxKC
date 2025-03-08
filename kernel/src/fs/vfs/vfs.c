@@ -86,7 +86,7 @@ void vfs_create_from_tar(char* path, enum vtype type, size_t filesize, void* buf
 		if (res != 0)
 		{
 			kprintf("vfs(): i need to create the thing %s\r\n", token);
-			starter->ops->create(starter, token, type, &epic);
+			starter->ops->create(starter, token, type, &epic, NULL);
 			starter = epic;
 
 			if (type == VREG && buf != NULL && filesize != 0)
@@ -111,7 +111,7 @@ void vfs_init()
 {
 	vfs_mount(tmpfs_vfsops, NULL, NULL);
 	struct vnode* fein;
-	vfs_list->cur_vnode->ops->create(vfs_list->cur_vnode, "meow", VDIR, &fein);
+	vfs_list->cur_vnode->ops->create(vfs_list->cur_vnode, "meow", VDIR, &fein, NULL);
 	vfs_lookup(NULL, "/meow");
 	populate_tmpfs_from_tar();
 	struct vnode* res = vfs_lookup(NULL, "/idk/hi/hi/test");

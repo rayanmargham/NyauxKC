@@ -213,5 +213,6 @@ void kentry()
 	kprintf("kentry(): Hello World from a scheduled thread\r\n");
 	vfs_init();
 	get_time();
+
 	exit_thread();
 }
