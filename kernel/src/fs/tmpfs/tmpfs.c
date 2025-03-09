@@ -7,8 +7,41 @@ static int create(struct vnode* curvnode, char* name, enum vtype type, struct vn
 static int lookup(struct vnode* curvnode, char* name, struct vnode** res);
 static size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw);
 static int mount(struct vfs* curvfs, char* path, void* data);
-struct vnodeops tmpfs_ops = {lookup, create, rw};
+static int readdir(struct vnode* curvnode, int offset, char** name);
+struct vnodeops tmpfs_ops = {lookup, create, rw, readdir};
 struct vfs_ops tmpfs_vfsops = {mount};
+static int readdir(struct vnode* curvnode, int offset, char** name)
+{
+	if (curvnode->v_type == VDIR)
+	{
+		struct tmpfsnode* node = (struct tmpfsnode*)curvnode->data;
+		struct direntry* entry = (struct direntry*)node->data;
+		node = entry->siblings;
+		if (node != NULL)
+		{
+			while (offset != 0)
+			{
+				if (node->next == NULL)
+				{
+					return -1;
+				}
+				offset -= 1;
+
+				node = node->next;
+			}
+			*name = node->name;
+			return 0;
+		}
+		else
+		{
+			return -1;
+		}
+	}
+	else
+	{
+		return -1;
+	}
+}
 static int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res, void* data)
 {
 	// kprintf("tmpfs(): attempting to create file/dir with name %s\r\n", name);

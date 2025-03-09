@@ -3,16 +3,19 @@
 #include <fs/tmpfs/tmpfs.h>
 #include <utils/libc.h>
 
+#include "dev/null/null.h"
 #include "fs/vfs/vfs.h"
 
 static int create(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res, void* data);
 static int lookup(struct vnode* curvnode, char* name, struct vnode** res);
 static size_t rw(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw);
+static int readdir(struct vnode* curvnode, int offset, char** name);
 static int mount(struct vfs* curvfs, char* path, void* data);
-struct vnodeops vnode_devops = {.lookup = lookup, .create = create, .rw = rw};
+struct vnodeops vnode_devops = {.lookup = lookup, .create = create, .rw = rw, readdir};
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs* curvfs, char* path, void* data)
 {
+	devnull_init(curvfs);
 	return 0;
 }
 void devfs_init(struct vfs* curvfs)
@@ -162,5 +165,9 @@ static int lookup(struct vnode* curvnode, char* name, struct vnode** res)
 		}
 		// kprintf("tmpfs(): nothing found\r\n");
 	}
+	return -1;
+}
+static int readdir(struct vnode* curvnode, int offset, char** name)
+{
 	return -1;
 }

@@ -1,5 +1,6 @@
 #include "kdb.h"
 
+#include "fs/vfs/vfs.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
 #include "term/term.h"
@@ -39,6 +40,10 @@ void rsh()
 							case 0: goto t; break;
 							case 1:
 								kprintf_all_vmm_regions();
+								goto r;
+								break;
+							case 2:
+								vfs_scan();
 								goto r;
 								break;
 							default:

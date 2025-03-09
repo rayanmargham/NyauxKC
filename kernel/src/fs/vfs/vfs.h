@@ -23,6 +23,7 @@ struct vnodeops
 	int (*lookup)(struct vnode* curvnode, char* name, struct vnode** res);
 	int (*create)(struct vnode* curvnode, char* name, enum vtype type, struct vnode** res, void* data);
 	size_t (*rw)(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw);
+	int (*readdir)(struct vnode* curvnode, int offset, char** out);
 };
 struct vfs_ops
 {
@@ -35,3 +36,4 @@ struct vfs
 	struct vnode* cur_vnode;
 };
 void vfs_create_from_tar(char* path, enum vtype type, size_t filesize, void* buf);
+void vfs_scan();

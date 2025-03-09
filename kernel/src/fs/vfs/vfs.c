@@ -107,6 +107,32 @@ void vfs_create_from_tar(char* path, enum vtype type, size_t filesize, void* buf
 		token = strtok(NULL, "/");
 	}
 }
+void vf_scan(struct vnode* curvnode)
+{
+	struct vnode* fein = curvnode;
+	int offset = 0;
+	int res = 0;
+	while (res == 0)
+	{
+		if (fein->v_type == VDIR)
+		{
+			char* name;
+
+			int res = fein->ops->readdir(fein, offset, &name);
+			if (res != 0)
+			{
+				break;
+			}
+			kprintf("->%s\r\n", name);
+			offset += 1;
+		}
+	}
+}
+void vfs_scan()
+{
+	struct vnode* fein = vfs_list->cur_vnode;
+	vf_scan(fein);
+}
 void vfs_init()
 {
 	vfs_mount(tmpfs_vfsops, NULL, NULL);
@@ -114,9 +140,9 @@ void vfs_init()
 	vfs_list->cur_vnode->ops->create(vfs_list->cur_vnode, "meow", VDIR, &fein, NULL);
 	vfs_lookup(NULL, "/meow");
 	populate_tmpfs_from_tar();
-	struct vnode* res = vfs_lookup(NULL, "/idk/hi/hi/test");
-	char buffer[256];
-	res->ops->rw(res, 0, 256, buffer, 0);
-	kprintf("%s", buffer);
+	struct vnode* res = vfs_lookup(NULL, "/idk");
+	char* buffer;
+	res->ops->readdir(res, 1, &buffer);
+	kprintf("found %s\r\n", buffer);
 	devfs_init(vfs_list);
 }
