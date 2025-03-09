@@ -18,6 +18,7 @@ int is_transmit_empty()
 {
 	return inb(0x3F8 + 5) & 0x20;
 }
+
 void tputc(int ch, void*)
 {
 	if (ft_ctx == NULL)
