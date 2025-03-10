@@ -16,15 +16,15 @@ extern "C"
 
 	struct hashmap* hashmap_new(size_t elsize, size_t cap, uint64_t seed0, uint64_t seed1,
 								uint64_t (*hash)(const void* item, uint64_t seed0, uint64_t seed1),
-								int (*compare)(const void* a, const void* b, void* udata), void (*elfree)(void* item),
-								void* udata);
+								int (*compare)(const void* a, const void* b, void* udata),
+								void (*elfree)(void* item, uint64_t size), void* udata);
 
 	struct hashmap* hashmap_new_with_allocator(void* (*malloc)(size_t), void* (*realloc)(void*, size_t),
-											   void (*free)(void*), size_t elsize, size_t cap, uint64_t seed0,
+											   void (*free)(void*, uint64_t), size_t elsize, size_t cap, uint64_t seed0,
 											   uint64_t seed1,
 											   uint64_t (*hash)(const void* item, uint64_t seed0, uint64_t seed1),
 											   int (*compare)(const void* a, const void* b, void* udata),
-											   void (*elfree)(void* item), void* udata);
+											   void (*elfree)(void* item, uint64_t), void* udata);
 
 	void hashmap_free(struct hashmap* map);
 	void hashmap_clear(struct hashmap* map, bool update_cap);
@@ -50,7 +50,7 @@ extern "C"
 	extern void* memset(void* s, int c, size_t n);
 	extern void* memcpy(void* dest, const void* src, size_t n);
 	// DEPRECATED: use `hashmap_new_with_allocator`
-	void hashmap_set_allocator(void* (*malloc)(size_t), void (*free)(void*));
+	void hashmap_set_allocator(void* (*malloc)(size_t), void (*free)(void*, uint64_t));
 
 #if defined(__cplusplus)
 }

@@ -1,5 +1,7 @@
 #include "hashmap.h"
 
+#include <stdint.h>
+
 #include "mem/sanitizers/UBsan/ubsan.h"
 
 #define GROW_AT	  (fixedpt_xdiv(fixedpt_fromint(60), fixedpt_fromint(100))) /* 60% */
@@ -13,12 +15,12 @@
 
 static void* (*__malloc)(size_t) = NULL;
 static void* (*__realloc)(void*, size_t) = NULL;
-static void (*__free)(void*) = NULL;
+static void (*__free)(void*, uint64_t) = NULL;
 
 // hashmap_set_allocator allows for configuring a custom allocator for
 // all hashmap library operations. This function, if needed, should be called
 // only once at startup and a prior to calling hashmap_new().
-void hashmap_set_allocator(void* (*malloc)(size_t), void (*free)(void*))
+void hashmap_set_allocator(void* (*malloc)(size_t), void (*free)(void*, uint64_t))
 {
 	__malloc = malloc;
 	__free = free;
@@ -35,14 +37,14 @@ struct hashmap
 {
 	void* (*malloc)(size_t);
 	void* (*realloc)(void*, size_t);
-	void (*free)(void*);
+	void (*free)(void*, uint64_t);
 	size_t elsize;
 	size_t cap;
 	uint64_t seed0;
 	uint64_t seed1;
 	uint64_t (*hash)(const void* item, uint64_t seed0, uint64_t seed1);
 	int (*compare)(const void* a, const void* b, void* udata);
-	void (*elfree)(void* item);
+	void (*elfree)(void* item, uint64_t);
 	void* udata;
 	size_t bucketsz;
 	size_t nbuckets;
@@ -112,11 +114,11 @@ static uint64_t get_hash(struct hashmap* map, const void* key)
 // hashmap_new_with_allocator returns a new hash map using a custom allocator.
 // See hashmap_new for more information information
 struct hashmap* hashmap_new_with_allocator(void* (*_malloc)(size_t), void* (*_realloc)(void*, size_t),
-										   void (*_free)(void*), size_t elsize, size_t cap, uint64_t seed0,
+										   void (*_free)(void*, uint64_t), size_t elsize, size_t cap, uint64_t seed0,
 										   uint64_t seed1,
 										   uint64_t (*hash)(const void* item, uint64_t seed0, uint64_t seed1),
 										   int (*compare)(const void* a, const void* b, void* udata),
-										   void (*elfree)(void* item), void* udata)
+										   void (*elfree)(void* item, uint64_t), void* udata)
 {
 	_malloc = _malloc ? _malloc : __malloc ? __malloc : NULL;
 	_realloc = _realloc ? _realloc : __realloc ? __realloc : NULL;
@@ -163,7 +165,7 @@ struct hashmap* hashmap_new_with_allocator(void* (*_malloc)(size_t), void* (*_re
 	map->buckets = _malloc(map->bucketsz * map->nbuckets);
 	if (!map->buckets)
 	{
-		_free(map);
+		_free(map, map->elsize);
 		return NULL;
 	}
 	memset(map->buckets, 0, map->bucketsz * map->nbuckets);
@@ -197,8 +199,8 @@ struct hashmap* hashmap_new_with_allocator(void* (*_malloc)(size_t), void* (*_re
 // unless you're storing some kind of reference data in the hash.
 struct hashmap* hashmap_new(size_t elsize, size_t cap, uint64_t seed0, uint64_t seed1,
 							uint64_t (*hash)(const void* item, uint64_t seed0, uint64_t seed1),
-							int (*compare)(const void* a, const void* b, void* udata), void (*elfree)(void* item),
-							void* udata)
+							int (*compare)(const void* a, const void* b, void* udata),
+							void (*elfree)(void* item, uint64_t), void* udata)
 {
 	return hashmap_new_with_allocator(NULL, NULL, NULL, elsize, cap, seed0, seed1, hash, compare, elfree, udata);
 }
@@ -211,7 +213,7 @@ static void free_elements(struct hashmap* map)
 		{
 			struct bucket* bucket = bucket_at(map, i);
 			if (bucket->dib)
-				map->elfree(bucket_item(bucket));
+				map->elfree(bucket_item(bucket), map->elsize);
 		}
 	}
 }
@@ -235,7 +237,7 @@ void hashmap_clear(struct hashmap* map, bool update_cap)
 		void* new_buckets = map->malloc(map->bucketsz * map->cap);
 		if (new_buckets)
 		{
-			map->free(map->buckets);
+			map->free(map->buckets, map->bucketsz * map->cap);
 			map->buckets = new_buckets;
 		}
 		map->nbuckets = map->cap;
@@ -280,13 +282,13 @@ static bool resize0(struct hashmap* map, size_t new_cap)
 			entry->dib += 1;
 		}
 	}
-	map->free(map->buckets);
+	map->free(map->buckets, map->bucketsz * map->nbuckets);
 	map->buckets = map2->buckets;
 	map->nbuckets = map2->nbuckets;
 	map->mask = map2->mask;
 	map->growat = map2->growat;
 	map->shrinkat = map2->shrinkat;
-	map->free(map2);
+	map->free(map2, map2->elsize);
 	return true;
 }
 
@@ -469,8 +471,8 @@ void hashmap_free(struct hashmap* map)
 	if (!map)
 		return;
 	free_elements(map);
-	map->free(map->buckets);
-	map->free(map);
+	map->free(map->buckets, map->bucketsz);
+	map->free(map, map->elsize);
 }
 
 // hashmap_oom returns true if the last hashmap_set() call failed due to the

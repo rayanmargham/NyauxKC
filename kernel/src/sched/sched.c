@@ -6,6 +6,7 @@
 #include "arch/arch.h"
 #include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/instructions/instructions.h"
+#include "fs/vfs/fd.h"
 #include "mem/vmm.h"
 #include "sched.h"
 #include "sched/reaper.h"
@@ -46,6 +47,7 @@ struct process_t* create_process(pagemap* map)
 	him->cur_map = map;
 	him->lock = SPINLOCK_INITIALIZER;
 	him->cnt = 0;
+	him->fds = hashmap_new(sizeof(struct FileDescriptionHandle), 0, 0, 0, fd_hash, fd_compare, NULL, NULL);
 	return him;
 }
 struct thread_t* create_thread()
@@ -137,6 +139,7 @@ void create_kthread(uint64_t entry, struct process_t* proc, uint64_t tid)
 }
 void create_kentry()
 {
+	hashmap_set_allocator(kmalloc, kfree);
 #if defined(__x86_64__)
 	struct process_t* kernelprocess = create_process(&ker_map);
 
@@ -201,4 +204,14 @@ void schedd(struct StackFrame* frame)
 	send_eoi();
 	load_ctx(&cpu->cur_thread->arch_data.frame);
 #endif
+}
+struct process_t* get_process_start()
+{
+	struct per_cpu_data* cpu = arch_get_per_cpu_data();
+	spinlock_lock(&cpu->cur_thread->proc->lock);
+	return cpu->cur_thread->proc;
+}
+struct process_t* get_process_finish(struct process_t* proc)
+{
+	spinlock_unlock(&proc->lock);
 }

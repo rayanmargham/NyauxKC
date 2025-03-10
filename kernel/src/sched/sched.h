@@ -5,12 +5,16 @@
 #include "arch/x86_64/cpu/structures.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "utils/basic.h"
+#include "utils/hashmap.h"
 #define KSTACKSIZE 16384
 struct process_t
 {
 	pagemap* cur_map;
 	spinlock_t lock;	// lock for accessing this
+
 	refcount_t cnt;
+	struct hashmap* fds;
+	int fdalloc[255];
 };
 enum TASKSTATE
 {
@@ -55,3 +59,5 @@ void ThreadReady(struct thread_t* thread);
 #ifdef __x86_64__
 extern void sched_yield();
 #endif
+struct process_t* get_process_start();
+struct process_t* get_process_finish(struct process_t* proc);
