@@ -41,12 +41,10 @@ void populate_tmpfs_from_tar() {
       } else {
         npf_snprintf(name, sizeof(name), "%s", ptr->name);
       }
-      kprintf("name %s, %c\r\n", name, ptr->type[0]);
       switch (ptr->type[0]) {
       case '5':
         // kprintf("found directory with path: %s\r\n", ptr->name);
         vfs_create_from_tar(name, VDIR, 0, NULL);
-        vfs_scan();
         ptr = (void *)ptr + 512 +
               align_up(oct2bin((unsigned char *)ptr->filesize_octal,
                                strlen(ptr->filesize_octal)),

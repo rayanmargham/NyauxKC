@@ -7,6 +7,7 @@
 #include "fs/ustar/ustar.h"
 #include "term/term.h"
 #include "utils/basic.h"
+#include "utils/libc.h"
 
 #define DOTDOT 1472
 #define DOT 46
@@ -62,34 +63,35 @@ struct vnode *vfs_lookup(struct vnode *start, char *path) {
 }
 void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
                          void *buf) {
-  struct vnode *node = vfs_list->cur_vnode;
-  struct vnode *starter = node;
-  char *token;
-  kprintf("path %s\r\n", path);
-  token = strtok(path, "/");
-  while (token != NULL) {
-    struct vnode *epic = NULL;
-    int res = starter->ops->lookup(starter, token, &epic);
-    if (res != 0) {
-      kprintf("vfs(): i need to create the thing %s\r\n", token);
-      if (starter->v_type != VDIR) {
-        // panic("w");
-      }
-      starter->ops->create(starter, token, type, &epic, NULL);
-      starter = epic;
 
-      if (type == VREG && buf != NULL && filesize != 0) {
-        if (starter->v_type == VDIR) {
-          kprintf("WTF\r\n");
-        }
-        // kprintf("vfs(): writing to file\r\n");
-        starter->ops->rw(starter, 0, filesize, buf, 1);
-      }
-    } else {
-      kprintf("vfs(): i found something %s\r\n", token);
-      starter = epic;
+  struct vnode *node = vfs_list->cur_vnode;
+  assert(node->v_type == VDIR);
+
+  char *token = strtok(path, "/");
+  struct vnode *current_node = node;
+  while (token != NULL) {
+    char *next_token = strtok(NULL, "/");
+
+    struct vnode *next_node = NULL;
+    int res = current_node->ops->lookup(current_node, token, &next_node);
+
+    if (next_token == NULL) {
+      assert(res != 0);
+      assert(current_node->ops->create(current_node, strdup(token), type,
+                                       &next_node, NULL) == 0);
+
+      if (type == VREG && buf != NULL && filesize != 0)
+        assert(next_node->ops->rw(next_node, 0, filesize, buf, 1) == filesize);
+      return;
     }
-    token = strtok(NULL, "/");
+
+    if (res != 0)
+      assert(current_node->ops->create(current_node, token, VDIR, &next_node,
+                                       NULL) == 0);
+    assert(next_node->v_type == VDIR);
+
+    current_node = next_node;
+    token = next_token;
   }
 }
 void vf_scan(struct vnode *curvnode) {

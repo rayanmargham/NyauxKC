@@ -37,7 +37,6 @@ static int readdir(struct vnode *curvnode, int offset, char **name) {
 }
 static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnode **res, void *data) {
-  kprintf("tmpfs(): attempting to create file/dir with name %s\r\n", name);
   if (curvnode->v_type == VDIR) {
     struct tmpfsnode *node = (struct tmpfsnode *)curvnode->data;
     struct direntry *entry = (struct direntry *)node->data;
@@ -47,7 +46,6 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       if (node->next == NULL) {
         prev = node;
       }
-      kprintf("found %s in directory entry\r\n", node->name);
       node = node->next;
     }
     if (type == VDIR) {
@@ -109,6 +107,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
     node = entry->siblings;
     while (node != NULL) {
       if (strcmp(node->name, name) == 0) {
+
         *res = node->node;
         return 0;
       }
