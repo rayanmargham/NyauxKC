@@ -1,0 +1,28 @@
+#! /bin/sh
+
+name=cairo
+version=1.18.2
+revision=1
+tarball_url="https://cairographics.org/releases/cairo-${version}.tar.xz"
+tarball_blake2b="6046ebc96bf79ef4fcff476d998cee756b0132198c129b049101ab7a70fe420b37f0f0b3ff90c51188005a19b87cb9dabe451bd97679d75ef397f0b3feb2af14"
+imagedeps="meson ninja-build binutils"
+hostdeps="gcc pkg-config"
+deps="core-libs fontconfig freetype2 glib libpng libx11 libxcb libxext libxrender pixman zlib"
+
+configure() {
+    meson_configure \
+        -Dxlib-xcb=enabled \
+        -Dzlib=enabled \
+        -Dtee=enabled \
+        -Dtests=disabled
+}
+
+build() {
+    ninja -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" ninja install
+
+    post_package_strip
+}

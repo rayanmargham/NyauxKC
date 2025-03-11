@@ -1,0 +1,31 @@
+#! /bin/sh
+
+name=gawk
+version=5.3.1
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/gawk/gawk-${version}.tar.xz"
+tarball_blake2b="be9132324344c0b052e954e004a942ff7c6b14b86b73cda491d7a33485f60341be4d8da1a06d1d7a27445b9b39a528bcce3eee9c2a3f8756de21bdc57a33f54d"
+source_hostdeps="automake autoconf libtool pkg-config"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs mpfr gmp readline"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    cp -rp "${source_dir}"/. ./
+
+        configure_script_path=./configure \
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}

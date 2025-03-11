@@ -1,0 +1,34 @@
+#! /bin/sh
+
+name=v
+version=e613211560d5d956715eb49ac9f75096d6740185
+revision=1
+tarball_url="https://github.com/vlang/v/archive/${version}.tar.gz"
+tarball_blake2b="0eaf5417d496256cffd0141d87d427989dd8e933e82f138c1649eca9d692497c325a4738fb3a469aeb9c5fdba2f436324de897e490435275860ecf8857b86da3"
+source_allow_network="yes"
+hostdeps="gcc"
+deps="core-libs"
+
+prepare() {
+    curl -o v.c https://raw.githubusercontent.com/vlang/vc/b6bf3a4403ec2587fc4913ac26d7f7ddda37c053/v.c
+    patch -p0 <"${base_dir}"/build-support/v/v.c.patch
+}
+
+build() {
+    cp -r ${source_dir}/. ./
+
+    set -x
+    ${OS_TRIPLET}-gcc $TARGET_CFLAGS $TARGET_CPPFLAGS -w -std=gnu99 $TARGET_LDFLAGS v.c -o v
+    set +x
+}
+
+package() {
+    rm -rf "${dest_dir}${prefix}"/v
+    mkdir -p "${dest_dir}${prefix}"/v
+    cp -r . "${dest_dir}${prefix}"/v/
+
+    mkdir -p "${dest_dir}${prefix}"/bin
+    ln -sf ../v/v "${dest_dir}${prefix}"/bin/v
+
+    post_package_strip
+}

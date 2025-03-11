@@ -9,13 +9,16 @@ override USER_VARIABLE = $(if $(filter $(origin $(1)),default undefined),$(eval 
 $(call USER_VARIABLE,KARCH,x86_64)
 
 # Default user QEMU flags. These are appended to the QEMU command calls.
-$(call USER_VARIABLE,QEMUFLAGS,-serial stdio -no-shutdown -no-reboot -smp 10)
+$(call USER_VARIABLE,QEMUFLAGS,-serial stdio -no-shutdown -no-reboot -m 2G -smp 10)
 
-override IMAGE_NAME := NyauxKC-$(KARCH)
+override IMAGE_NAME := nyaux
 
 .PHONY: all
-all: $(IMAGE_NAME).iso
+all: jinx $(IMAGE_NAME).iso
 
+jinx:
+	curl -Lo jinx https://github.com/mintsuki/jinx/raw/7a101a39eb061713f9c50ceafa1d713f35f17a3b/jinx
+	chmod +x jinx
 .PHONY: all-hdd
 all-hdd: $(IMAGE_NAME).hdd
 
@@ -166,52 +169,7 @@ kernel: kernel-deps
 	$(MAKE) -C kernel
 
 $(IMAGE_NAME).iso: limine/limine kernel
-	rm -rf iso_root
-	mkdir -p iso_root/boot
-	cp -v kernel/bin-$(KARCH)/NyauxKC iso_root/boot/
-	mkdir -p iso_root/boot/limine
-	cp -v limine.conf iso_root/boot/limine/
-	cp -v test.tar iso_root/boot/test.tar
-	mkdir -p iso_root/EFI/BOOT
-ifeq ($(KARCH),x86_64)
-	cp -v limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root/boot/limine/
-	cp -v limine/BOOTX64.EFI iso_root/EFI/BOOT/
-	cp -v limine/BOOTIA32.EFI iso_root/EFI/BOOT/
-	xorriso -as mkisofs -R -r -J -b boot/limine/limine-bios-cd.bin \
-		-no-emul-boot -boot-load-size 4 -boot-info-table -hfsplus \
-		-apm-block-size 2048 --efi-boot boot/limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		iso_root -o $(IMAGE_NAME).iso
-	./limine/limine bios-install $(IMAGE_NAME).iso
-endif
-ifeq ($(KARCH),aarch64)
-	cp -v limine/limine-uefi-cd.bin iso_root/boot/limine/
-	cp -v limine/BOOTAA64.EFI iso_root/EFI/BOOT/
-	xorriso -as mkisofs -R -r -J \
-		-hfsplus -apm-block-size 2048 \
-		--efi-boot boot/limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		iso_root -o $(IMAGE_NAME).iso
-endif
-ifeq ($(KARCH),riscv64)
-	cp -v limine/limine-uefi-cd.bin iso_root/boot/limine/
-	cp -v limine/BOOTRISCV64.EFI iso_root/EFI/BOOT/
-	xorriso -as mkisofs -R -r -J \
-		-hfsplus -apm-block-size 2048 \
-		--efi-boot boot/limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		iso_root -o $(IMAGE_NAME).iso
-endif
-ifeq ($(KARCH),loongarch64)
-	cp -v limine/limine-uefi-cd.bin iso_root/boot/limine/
-	cp -v limine/BOOTLOONGARCH64.EFI iso_root/EFI/BOOT/
-	xorriso -as mkisofs -R -r -J \
-		-hfsplus -apm-block-size 2048 \
-		--efi-boot boot/limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		iso_root -o $(IMAGE_NAME).iso
-endif
-	rm -rf iso_root
+	./build-support/makeiso.sh $(KARCH)
 
 $(IMAGE_NAME).hdd: limine/limine kernel
 	rm -f $(IMAGE_NAME).hdd
@@ -248,3 +206,4 @@ clean:
 distclean:
 	$(MAKE) -C kernel distclean
 	rm -rf iso_root *.iso *.hdd kernel-deps limine ovmf
+	rm -rf .jinx-cache jinx builds host-builds host-pkgs pkgs sources ovmf

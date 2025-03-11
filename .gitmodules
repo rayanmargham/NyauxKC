@@ -1,6 +1,0 @@
-[submodule "kernel/flanterm"]
-	path = kernel/src/flanterm
-	url = https://github.com/mintsuki/flanterm
-[submodule "kernel/uACPI"]
-	path = kernel/src/uACPI
-	url = https://github.com/UltraOS/uACPI.git

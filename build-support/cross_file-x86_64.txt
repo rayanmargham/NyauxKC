@@ -1,0 +1,14 @@
+[binaries]
+c = 'x86_64-nyaux-mlibc-gcc'
+cpp = 'x86_64-nyaux-mlibc-g++'
+ar = 'x86_64-nyaux-mlibc-ar'
+nm = 'x86_64-nyaux-mlibc-nm'
+strip = 'x86_64-nyaux-mlibc-strip'
+pkg-config = 'x86_64-nyaux-mlibc-pkg-config'
+llvm-config = '/base_dir/build-support/cross-llvm-config'
+
+[host_machine]
+system = 'nyaux'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'

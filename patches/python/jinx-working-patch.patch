@@ -1,0 +1,64 @@
+diff --git python-clean/configure.ac python-workdir/configure.ac
+index d0d5405..ab4df08 100644
+--- python-clean/configure.ac
++++ python-workdir/configure.ac
+@@ -559,6 +559,9 @@ then
+ 	*-*-wasi)
+ 	    ac_sys_system=WASI
+ 	    ;;
++	*-*-vinix*)
++	    ac_sys_system=Vinix
++	    ;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"
+@@ -619,6 +622,9 @@ if test "$cross_compiling" = yes; then
+ 	wasm32-*-* | wasm64-*-*)
+ 		_host_cpu=$host_cpu
+ 		;;
++	*-*-vinix*)
++		_host_cpu=$host_cpu
++		;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"
+@@ -1514,7 +1520,7 @@ if test $enable_shared = "yes"; then
+ 	      PY3LIBRARY=libpython3.so
+ 	  fi
+           ;;
+-    Linux*|GNU*|NetBSD*|FreeBSD*|DragonFly*|OpenBSD*|VxWorks*)
++    Linux*|Vinix*|GNU*|NetBSD*|FreeBSD*|DragonFly*|OpenBSD*|VxWorks*)
+ 	  LDLIBRARY='libpython$(LDVERSION).so'
+ 	  BLDLIBRARY='-L. -lpython$(LDVERSION)'
+ 	  RUNSHARED=LD_LIBRARY_PATH=`pwd`${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+@@ -3407,6 +3413,10 @@ then
+ 	CYGWIN*)
+ 		LDSHARED="gcc -shared -Wl,--enable-auto-image-base"
+ 		LDCXXSHARED="g++ -shared -Wl,--enable-auto-image-base";;
++	Vinix*)
++		LDSHARED='$(CC) -shared'
++		LDCXXSHARED='$(CXX) -shared'
++		;;
+ 	*)	LDSHARED="ld";;
+ 	esac
+ fi
+@@ -3460,6 +3470,10 @@ then
+ 		fi;;
+ 	VxWorks*)
+ 		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic"
++		;;
++	Vinix*)
++		CCSHARED="-fPIC"
++		;;
+ 	esac
+ fi
+ AC_MSG_RESULT([$CCSHARED])
+@@ -3529,6 +3543,8 @@ then
+ 		LINKFORSHARED='-Wl,-E -N 2048K';;
+ 	VxWorks*)
+ 		LINKFORSHARED='-Wl,-export-dynamic';;
++	Vinix*)
++		LINKFORSHARED="-export-dynamic";;
+ 	esac
+ fi
+ AC_MSG_RESULT([$LINKFORSHARED])

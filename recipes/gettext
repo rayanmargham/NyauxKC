@@ -1,0 +1,45 @@
+#! /bin/sh
+
+name=gettext
+version=0.23.1
+revision=1
+tarball_url="https://ftp.gnu.org/gnu/gettext/gettext-${version}.tar.xz"
+tarball_blake2b="08d10340f3d855a87a96594c6f2dcf72925394f02e86235090f8d272e0a27ce32e57a0fbaed61aaf61d7328ff30be076dccaecaa13832d8db3ec0a51786780b9"
+source_hostdeps="automake autoconf libtool pkg-config"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs"
+
+prepare() {
+    ( cd gettext-runtime/libasprintf && autoreconf -fvi )
+    ( cd gettext-runtime/intl && autoreconf -fvi )
+    ( cd gettext-runtime && autoreconf -fvi )
+    ( cd gettext-tools && autoreconf -fvi )
+    ( cd libtextstyle && autoreconf -fvi )
+    autoreconf -fvi
+}
+
+configure() {
+    cp -rp ${source_dir}/. ./
+
+        ACLOCAL=true \
+        AUTOCONF=true \
+        AUTOMAKE=true \
+        AUTOHEADER=true \
+        configure_script_path=./configure \
+    autotools_configure
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    # Remove conflicting libintl files
+    rm -f "${dest_dir}${prefix}"/include/libintl.h
+    rm -f "${dest_dir}${prefix}"/lib/libintl.so*
+    rm -f "${dest_dir}${prefix}"/share/locale/locale.alias
+
+    post_package_strip
+}

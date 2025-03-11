@@ -1,0 +1,31 @@
+#! /bin/sh
+
+name=sqlite
+version=3.46.0
+revision=1
+tarball_url="https://sqlite.org/2024/sqlite-autoconf-3460000.tar.gz"
+tarball_blake2b="2f484823b84ab758e21960ac6b730cefa62c26f7ccf5344299a26e6f559d0e02cfd4cff5f5921effdee6e2e49d2ab36b1f91cffdd8599bc2189efab44bf4b197"
+source_hostdeps="automake autoconf libtool pkg-config"
+hostdeps="gcc autoconf automake libtool pkg-config"
+deps="core-libs readline zlib"
+
+prepare() {
+    autotools_recursive_regen
+}
+
+configure() {
+    autotools_configure \
+        CFLAGS="$TARGET_CFLAGS -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_FTS4=1 -DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY=1 -DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_SECURE_DELETE=1 -DSQLITE_ENABLE_FTS3_TOKENIZER=1" \
+        --enable-readline \
+        --enable-fts5
+}
+
+build() {
+    make -j${parallelism}
+}
+
+package() {
+    DESTDIR="${dest_dir}" make install
+
+    post_package_strip
+}
