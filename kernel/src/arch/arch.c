@@ -114,6 +114,7 @@ void arch_late_init() {
   arch_create_per_cpu_data();
   init_gdt();
   per_cpu_init_idt();
+  fpu_init();
 
   kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\r\n",
           get_lapic_id());
