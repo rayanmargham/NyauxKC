@@ -122,5 +122,7 @@ void vfs_init() {
   vfs_scan();
 
   populate_tmpfs_from_tar();
+  struct vnode *node = vfs_lookup(fein, "/usr/bin/bash");
+  kprintf("size of bash in bytes %lu\r\n", node->stat.size);
   devfs_init(vfs_list);
 }

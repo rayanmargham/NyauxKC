@@ -83,6 +83,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       newnode->data = file;
       file->name = name;
       file->size = 0;
+      newnode->stat.size = 0;
       if (prev == NULL) {
         entry->siblings = file;
       } else {
@@ -157,6 +158,7 @@ static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
       }
       bro->data = new_buf;
       bro->size = offset + size;
+      bro->node->stat.size = offset + size;
     }
     memcpy((void *)(bro->data + offset), buffer, size);
     return size;

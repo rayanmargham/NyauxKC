@@ -51,7 +51,7 @@ override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep 'clang' >/d
 override CFLAGS += \
     -Wall \
     -Wextra \
-    -std=gnu2x \
+    -std=gnu23 \
     -nostdinc \
     -ffreestanding \
     -fno-stack-protector \
