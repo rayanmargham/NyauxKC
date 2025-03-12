@@ -12,12 +12,12 @@ void stolen_osdevwikiserialinit();
 
 void *flanterm_fb_alloc(size_t size)
 {
-	kmalloc(size);
+	return kmalloc(size);
 }
 
 void flanterm_fb_free(void *ptr)
 {
-	kfree(ptr, 0);
+	kfree(ptr, 8);
 }
 
 void init_term(struct limine_framebuffer* buf)

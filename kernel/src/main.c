@@ -172,6 +172,10 @@ void kmain(void)
 	// Fetch the first framebuffer.
 	struct limine_framebuffer* framebuffer = framebuffer_request.response->framebuffers[0];
 
+	arch_init();
+	// We're done, just hang...
+
+	result r = pmm_init();
 	init_term(framebuffer);
 
 	kprintf("kmain(): Hello World ITS THE BEST NYAUX REWRITE EVER HERE\nDEF NOT "
@@ -179,10 +183,6 @@ void kmain(void)
 			"LAST WORDS HERES FUNNY NUMBER TO SHOW WE USING NANOPRINTF %d\n",
 			69420);
 
-	arch_init();
-	// We're done, just hang...
-
-	result r = pmm_init();
 	unwrap_or_panic(r);
 	vmm_init();
 	get_symbols();
