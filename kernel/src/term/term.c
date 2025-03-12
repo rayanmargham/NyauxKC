@@ -3,13 +3,26 @@
 #include <arch/x86_64/instructions/instructions.h>
 #include <stdint.h>
 
+#include "mem/kmem.h"
 #include "utils/basic.h"
+
 struct flanterm_context* ft_ctx = NULL;
 spinlock_t lock = 0;
 void stolen_osdevwikiserialinit();
+
+void *flanterm_fb_alloc(size_t size)
+{
+	kmalloc(size);
+}
+
+void flanterm_fb_free(void *ptr)
+{
+	kfree(ptr, 0);
+}
+
 void init_term(struct limine_framebuffer* buf)
 {
-	ft_ctx = flanterm_fb_init(NULL, NULL, buf->address, buf->width, buf->height, buf->pitch, buf->blue_mask_size,
+	ft_ctx = flanterm_fb_init(buf->address, buf->width, buf->height, buf->pitch, buf->blue_mask_size,
 							  buf->red_mask_shift, buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
 							  buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
 	stolen_osdevwikiserialinit();
