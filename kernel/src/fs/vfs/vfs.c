@@ -107,6 +107,7 @@ void vf_scan(struct vnode *curvnode) {
         break;
       }
       kprintf("->%s\r\n", name);
+
       offset += 1;
     }
   }
