@@ -37,21 +37,7 @@ typedef int spinlock_t;
 typedef int refcount_t;
 extern void *memcpy(void *dest, const void *src, size_t n);
 // stolen from mr gpt
-static inline bool cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *eax,
-                         uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
-  uint32_t cpuid_max;
-  asm volatile("cpuid"
-               : "=a"(cpuid_max)
-               : "a"(leaf & 0x80000000)
-               : "rbx", "rcx", "rdx");
-  if (leaf > cpuid_max) {
-    return false;
-  }
-  asm volatile("cpuid"
-               : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
-               : "a"(leaf), "c"(subleaf));
-  return true;
-}
+
 static inline void refcount_inc(refcount_t *ref) {
   __atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST);
 }
