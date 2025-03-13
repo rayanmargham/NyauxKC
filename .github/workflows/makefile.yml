@@ -20,6 +20,4 @@ jobs:
     - name: get deps
       run: cd kernel && ./get-deps && cd ..
     - name: Setup
-      run: make
-    - name: Run OS
-      run: make run
+      run: cd kernel && make && cd ..
