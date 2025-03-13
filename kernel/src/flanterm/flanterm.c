@@ -1,4 +1,4 @@
-/* Copyright (C) 2022-2024 mintsuki and contributors.
+/* Copyright (C) 2022-2025 mintsuki and contributors.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -23,9 +23,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __cplusplus
+#error "Please do not compile Flanterm as C++ code! Flanterm should be compiled as C99 or newer."
+#endif
+
+#ifndef __STDC_VERSION__
+#error "Flanterm must be compiled as C99 or newer."
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+#define FLANTERM_IN_FLANTERM
 
 #include "flanterm.h"
 #include "sixel/sixel.h"
@@ -102,8 +112,6 @@ void flanterm_context_reinit(struct flanterm_context *ctx) {
     ctx->oob_output = FLANTERM_OOB_OUTPUT_ONLCR;
 }
 
-static void flanterm_putchar(struct flanterm_context *ctx, uint8_t c);
-
 static bool is_sixel(const char *buf, size_t count, size_t *end) {
     if (count < 3 || buf[0] != 0x1b || buf[1] != 'P') {
         return false;
@@ -136,6 +144,8 @@ found:
     *end = 0;
     return false;
 }
+
+static void flanterm_putchar(struct flanterm_context *ctx, uint8_t c);
 
 void flanterm_write(struct flanterm_context *ctx, const char *buf, size_t count) {
     size_t sixel_end = 0;
@@ -517,12 +527,11 @@ static void osc_parse(struct flanterm_context *ctx, uint8_t c) {
     switch (c) {
         case 0x1b:
             ctx->osc_escape = true;
-            break;
+            return;
         case '\a':
-            goto cleanup;
+        default:
+            break;
     }
-
-    return;
 
 cleanup:
     ctx->osc_escape = false;
@@ -1399,4 +1408,37 @@ unicode_error:
     } else {
         ctx->raw_putchar(ctx, 0xfe);
     }
+}
+
+void flanterm_flush(struct flanterm_context *ctx) {
+    ctx->double_buffer_flush(ctx);
+}
+
+void flanterm_full_refresh(struct flanterm_context *ctx) {
+    ctx->full_refresh(ctx);
+}
+
+void flanterm_deinit(struct flanterm_context *ctx) {
+    ctx->deinit(ctx);
+}
+
+void flanterm_get_dimensions(struct flanterm_context *ctx, size_t *cols, size_t *rows) {
+    *cols = ctx->cols;
+    *rows = ctx->rows;
+}
+
+void flanterm_set_autoflush(struct flanterm_context *ctx, bool state) {
+    ctx->autoflush = state;
+}
+
+void flanterm_set_callback(struct flanterm_context *ctx, void (*callback)(struct flanterm_context *, uint64_t, uint64_t, uint64_t, uint64_t)) {
+    ctx->callback = callback;
+}
+
+uint64_t flanterm_get_oob_output(struct flanterm_context *ctx) {
+    return ctx->oob_output;
+}
+
+void flanterm_set_oob_output(struct flanterm_context *ctx, uint64_t oob_output) {
+    ctx->oob_output = oob_output;
 }
