@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Setup Dependencies
+      run: cd kernel && ./get-deps && cd ..
     - name: Setup
       run: make
     - name: Run OS
