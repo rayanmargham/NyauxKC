@@ -204,15 +204,17 @@ void kmain(void) {
   kprintf("kmain(): we are chilling ig\n");
   hcf(); // we js chill
 }
-#include "nyaux.h"
 void kentry() {
   // init vfs, load font from initramfs, change font or smthin for flanterm or
   // use a custom made terminal idk, lots of things to do
   kprintf("kentry(): Hello World from a scheduled thread\r\n");
   vfs_init();
   get_time();
+  struct vnode *node = vfs_lookup(NULL, "/root/nyaux.sixel");
+  char *sexial = kmalloc(node->stat.size);
+  node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0);
 
-  flanterm_write(get_fctx(), (const char *)nyaux, sizeof(nyaux));
+  flanterm_write(get_fctx(), (const char *)sexial, node->stat.size);
   rsh();
   exit_thread();
 }

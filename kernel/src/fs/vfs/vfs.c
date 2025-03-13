@@ -47,6 +47,7 @@ struct vnode *vfs_lookup(struct vnode *start, char *path) {
       struct vnode *res = NULL;
       int ress = starter->ops->lookup(starter, token, &res);
       if (ress != 0 && res == NULL) {
+        kprintf("vfs(): file not found\r\n");
         return NULL;
       } else if (ress != 0) {
         return res;
@@ -61,6 +62,7 @@ struct vnode *vfs_lookup(struct vnode *start, char *path) {
   }
   return starter;
 }
+
 void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
                          void *buf) {
 
