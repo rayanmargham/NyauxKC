@@ -15,6 +15,8 @@ jobs:
     - uses: actions/checkout@v4
     - name: Cleanup
       run: make clean
+    - name: get deps
+      run: cd kernel && ./get-deps && cd ..
     - name: Setup
       run: make
     - name: Run OS
