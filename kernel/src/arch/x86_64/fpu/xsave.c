@@ -1,6 +1,5 @@
 #include "xsave.h"
 #include <stdint.h>
-
 void (*fpu_save)(void *area);
 void (*fpu_store)(void *area);
 uint64_t fpu_storage_size;
