@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: get deps fr
+      run: sudo apt install nasm
     - name: Cleanup
       run: cd kernel && rm -rf cc-runtim* && cd ..
     - name: get deps
