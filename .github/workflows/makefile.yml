@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Cleanup
-      run: make clean
+      run: cd kernel && rm -rf cc-runtim* && cd ..
     - name: get deps
       run: cd kernel && ./get-deps && cd ..
     - name: Setup
