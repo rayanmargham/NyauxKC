@@ -13,6 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
+    - name: Setup
+      run: make
     - name: Run OS
       run: make run
