@@ -1,4 +1,4 @@
-/* Copyright (C) 2022-2024 mintsuki and contributors.
+/* Copyright (C) 2022-2025 mintsuki and contributors.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -23,18 +23,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __cplusplus
+#error "Please do not compile Flanterm as C++ code! Flanterm should be compiled as C99 or newer."
+#endif
+
+#ifndef __STDC_VERSION__
+#error "Flanterm must be compiled as C99 or newer."
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 
+#define FLANTERM_IN_FLANTERM
+
 #include "../flanterm.h"
 #include "fb.h"
-
-__attribute__((weak))
-void *flanterm_fb_alloc(size_t size);
-
-__attribute__((weak))
-void flanterm_fb_free(void *ptr);
 
 void *memset(void *, int, size_t);
 void *memcpy(void *, const void *, size_t);
@@ -53,6 +57,19 @@ static uint8_t bump_alloc_pool[FLANTERM_FB_BUMP_ALLOC_POOL_SIZE];
 static size_t bump_alloc_ptr = 0;
 
 static void *bump_alloc(size_t s) {
+    static bool base_offset_added = false;
+    if (!base_offset_added) {
+        if ((uintptr_t)bump_alloc_pool & 0xf) {
+            bump_alloc_ptr += 0x10 - ((uintptr_t)bump_alloc_pool & 0xf);
+        }
+        base_offset_added = true;
+    }
+
+    if ((s & 0xf) != 0) {
+        s += 0x10;
+        s &= ~(size_t)0xf;
+    }
+
     size_t next_ptr = bump_alloc_ptr + s;
     if (next_ptr > FLANTERM_FB_BUMP_ALLOC_POOL_SIZE) {
         return NULL;
@@ -66,10 +83,13 @@ static bool bump_allocated_instance = false;
 
 #endif
 
-static void *flanterm_fb_alloc_internal(size_t size)
+static void *(*flanterm_alloc_ptr)(size_t) = NULL;
+static void (*flanterm_free_ptr)(void *) = NULL;
+
+static void *flanterm_alloc(size_t size)
 {
-    if (flanterm_fb_alloc) {
-        return flanterm_fb_alloc(size);
+    if (flanterm_alloc_ptr) {
+        return flanterm_alloc_ptr(size);
     }
 #ifndef FLANTERM_FB_DISABLE_BUMP_ALLOC
     return bump_alloc(size);
@@ -77,19 +97,19 @@ static void *flanterm_fb_alloc_internal(size_t size)
     return NULL;
 }
 
-static void flanterm_fb_free_internal(void *ptr)
+static void flanterm_free(void *ptr)
 {
-    if (flanterm_fb_free) {
-        flanterm_fb_free(ptr);
+    if (flanterm_free_ptr) {
+        flanterm_free_ptr(ptr);
     }
 }
 
 void *sixel_malloc(size_t size) {
-    return flanterm_fb_alloc_internal(size);
+    return flanterm_alloc(size);
 }
 
 void sixel_free(void *ptr) {
-    flanterm_fb_free_internal(ptr);
+    flanterm_free(ptr);
 }
 
 void *sixel_memset(void *dest, int ch, size_t count) {
@@ -99,7 +119,6 @@ void *sixel_memset(void *dest, int ch, size_t count) {
 void *sixel_memcpy(void *dest, const void *src, size_t count) {
     return memcpy(dest, src, count);
 }
-
 
 // Builtin font originally taken from:
 // https://github.com/viler-int10h/vga-text-mode-fonts/raw/master/FONTS/PC-OTHER/TOSH-SAT.F16
@@ -862,7 +881,6 @@ static void draw_cursor(struct flanterm_context *_ctx) {
         ctx->map[i] = NULL;
     }
 }
-
 #define DIV_ROUNDUP(VALUE, DIV) ({ \
     __auto_type DIV_ROUNDUP_value = VALUE; \
     __auto_type DIV_ROUNDUP_div = DIV; \
@@ -1018,36 +1036,25 @@ static void flanterm_fb_full_refresh(struct flanterm_context *_ctx) {
     }
 }
 
-static void flanterm_fb_deinit(struct flanterm_context *_ctx, void (*_free)(void *, size_t)) {
+static void flanterm_fb_deinit(struct flanterm_context *_ctx) {
     struct flanterm_fb_context *ctx = (void *)_ctx;
 
-    if (_free == NULL) {
-#ifndef FLANTERM_FB_DISABLE_BUMP_ALLOC
-        if (bump_allocated_instance == true) {
-            bump_alloc_ptr = 0;
-            bump_allocated_instance = false;
-        }
-#endif
-        return;
-    }
-
-    _free(ctx->font_bits, ctx->font_bits_size);
-    _free(ctx->font_bool, ctx->font_bool_size);
-    _free(ctx->grid, ctx->grid_size);
-    _free(ctx->queue, ctx->queue_size);
-    _free(ctx->map, ctx->map_size);
+    flanterm_free(ctx->font_bits);
+    flanterm_free(ctx->font_bool);
+    flanterm_free(ctx->grid);
+    flanterm_free(ctx->queue);
+    flanterm_free(ctx->map);
 
     if (ctx->canvas != NULL) {
-        _free(ctx->canvas, ctx->canvas_size);
-    }
-    if (ctx->sixel_canvas != NULL) {
-        _free(ctx->sixel_canvas, ctx->canvas_size);
+        flanterm_free(ctx->canvas);
     }
 
-    _free(ctx, sizeof(struct flanterm_fb_context));
+    flanterm_free(ctx);
 }
 
 struct flanterm_context *flanterm_fb_init(
+    void *(*_malloc)(size_t),
+    void (*_free)(void *),
     uint32_t *framebuffer, size_t width, size_t height, size_t pitch,
     uint8_t red_mask_size, uint8_t red_mask_shift,
     uint8_t green_mask_size, uint8_t green_mask_shift,
@@ -1078,12 +1085,20 @@ struct flanterm_context *flanterm_fb_init(
     }
 
     bool sixel_supported = true;
+#ifndef FLANTERM_FB_DISABLE_BUMP_ALLOC
+    bool using_bump = false;
+#endif
 
-    if (flanterm_fb_alloc == NULL) {
+    flanterm_alloc_ptr = _malloc;
+    flanterm_free_ptr = _free;
+
+    if (_malloc == NULL) {
 #ifndef FLANTERM_FB_DISABLE_BUMP_ALLOC
         if (bump_allocated_instance == true) {
             return NULL;
         }
+        using_bump = true;
+
         // Limit terminal size if needed
         if (width > FLANTERM_FB_WIDTH_LIMIT || height > FLANTERM_FB_HEIGHT_LIMIT) {
             size_t width_limit = width > FLANTERM_FB_WIDTH_LIMIT ? FLANTERM_FB_WIDTH_LIMIT : width;
@@ -1104,7 +1119,7 @@ struct flanterm_context *flanterm_fb_init(
     }
 
     struct flanterm_fb_context *ctx = NULL;
-    ctx = flanterm_fb_alloc_internal(sizeof(struct flanterm_fb_context));
+    ctx = flanterm_alloc(sizeof(struct flanterm_fb_context));
     if (ctx == NULL) {
         goto fail;
     }
@@ -1187,7 +1202,7 @@ struct flanterm_context *flanterm_fb_init(
         ctx->font_width = font_width;
         ctx->font_height = font_height;
         ctx->font_bits_size = FONT_BYTES;
-        ctx->font_bits = flanterm_fb_alloc_internal(ctx->font_bits_size);
+        ctx->font_bits = flanterm_alloc(ctx->font_bits_size);
         if (ctx->font_bits == NULL) {
             goto fail;
         }
@@ -1197,7 +1212,7 @@ struct flanterm_context *flanterm_fb_init(
         ctx->font_height = font_height = 16;
         ctx->font_bits_size = FONT_BYTES;
         font_spacing = 1;
-        ctx->font_bits = flanterm_fb_alloc_internal(ctx->font_bits_size);
+        ctx->font_bits = flanterm_alloc(ctx->font_bits_size);
         if (ctx->font_bits == NULL) {
             goto fail;
         }
@@ -1209,7 +1224,7 @@ struct flanterm_context *flanterm_fb_init(
     ctx->font_width += font_spacing;
 
     ctx->font_bool_size = FLANTERM_FB_FONT_GLYPHS * font_height * ctx->font_width * sizeof(bool);
-    ctx->font_bool = flanterm_fb_alloc_internal(ctx->font_bool_size);
+    ctx->font_bool = flanterm_alloc(ctx->font_bool_size);
     if (ctx->font_bool == NULL) {
         goto fail;
     }
@@ -1256,7 +1271,7 @@ struct flanterm_context *flanterm_fb_init(
     ctx->offset_y = margin + ((ctx->height - margin * 2) % ctx->glyph_height) / 2;
 
     ctx->grid_size = _ctx->rows * _ctx->cols * sizeof(struct flanterm_fb_char);
-    ctx->grid = flanterm_fb_alloc_internal(ctx->grid_size);
+    ctx->grid = flanterm_alloc(ctx->grid_size);
     if (ctx->grid == NULL) {
         goto fail;
     }
@@ -1267,7 +1282,7 @@ struct flanterm_context *flanterm_fb_init(
     }
 
     ctx->queue_size = _ctx->rows * _ctx->cols * sizeof(struct flanterm_fb_queue_item);
-    ctx->queue = flanterm_fb_alloc_internal(ctx->queue_size);
+    ctx->queue = flanterm_alloc(ctx->queue_size);
     if (ctx->queue == NULL) {
         goto fail;
     }
@@ -1275,7 +1290,7 @@ struct flanterm_context *flanterm_fb_init(
     memset(ctx->queue, 0, ctx->queue_size);
 
     ctx->map_size = _ctx->rows * _ctx->cols * sizeof(struct flanterm_fb_queue_item *);
-    ctx->map = flanterm_fb_alloc_internal(ctx->map_size);
+    ctx->map = flanterm_alloc(ctx->map_size);
     if (ctx->map == NULL) {
         goto fail;
     }
@@ -1283,7 +1298,7 @@ struct flanterm_context *flanterm_fb_init(
 
     ctx->canvas_size = ctx->width * ctx->height * sizeof(uint32_t);
     if (canvas != NULL) {
-        ctx->canvas = flanterm_fb_alloc_internal(ctx->canvas_size);
+        ctx->canvas = flanterm_alloc(ctx->canvas_size);
         if (ctx->canvas == NULL) {
             goto fail;
         }
@@ -1294,7 +1309,7 @@ struct flanterm_context *flanterm_fb_init(
 
     _ctx->sixel_supported = sixel_supported;
     if (sixel_supported) {
-        ctx->sixel_canvas = flanterm_fb_alloc_internal(ctx->canvas_size);
+        ctx->sixel_canvas = flanterm_alloc(ctx->canvas_size);
         if (ctx->sixel_canvas == NULL) {
             goto fail;
         }
@@ -1350,7 +1365,7 @@ struct flanterm_context *flanterm_fb_init(
     flanterm_fb_full_refresh(_ctx);
 
 #ifndef FLANTERM_FB_DISABLE_BUMP_ALLOC
-    if (flanterm_fb_alloc == bump_alloc) {
+    if (using_bump) {
         bump_allocated_instance = true;
     }
 #endif
@@ -1363,32 +1378,39 @@ fail:
     }
 
 #ifndef FLANTERM_FB_DISABLE_BUMP_ALLOC
-    if (flanterm_fb_alloc == bump_alloc) {
+    if (using_bump) {
         bump_alloc_ptr = 0;
         return NULL;
     }
 #endif
 
+    if (_free == NULL) {
+        return NULL;
+    }
+
     if (ctx->canvas != NULL) {
-        flanterm_fb_free_internal(ctx->canvas);
+        _free(ctx->canvas);
+    }
+    if (ctx->sixel_canvas != NULL) {
+        _free(ctx->sixel_canvas);
     }
     if (ctx->map != NULL) {
-        flanterm_fb_free_internal(ctx->map);
+        _free(ctx->map);
     }
     if (ctx->queue != NULL) {
-        flanterm_fb_free_internal(ctx->queue);
+        _free(ctx->queue);
     }
     if (ctx->grid != NULL) {
-        flanterm_fb_free_internal(ctx->grid);
+        _free(ctx->grid);
     }
     if (ctx->font_bool != NULL) {
-        flanterm_fb_free_internal(ctx->font_bool);
+        _free(ctx->font_bool);
     }
     if (ctx->font_bits != NULL) {
-        flanterm_fb_free_internal(ctx->font_bits);
+        _free(ctx->font_bits);
     }
     if (ctx != NULL) {
-        flanterm_fb_free_internal(ctx);
+        _free(ctx);
     }
 
     return NULL;
