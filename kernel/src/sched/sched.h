@@ -59,3 +59,4 @@ extern void sched_yield();
 #endif
 struct process_t *get_process_start();
 struct process_t *get_process_finish(struct process_t *proc);
+void arch_create_bsp_per_cpu_data();

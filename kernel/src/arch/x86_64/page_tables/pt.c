@@ -20,7 +20,7 @@ uint64_t *find_pte_and_allocate(uint64_t *pt, uint64_t virt) {
     if (!(page_table[idx] & PRESENT)) {
       uint64_t *guy =
           (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
-      page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED;
+      page_table[idx] = (uint64_t)guy | PRESENT | RWALLOWED | USERMODE;
       pt = guy;
     } else if (page_table[idx] & PAGE2MB) {
       uint64_t *guy = (uint64_t *)((uint64_t)pmm_alloc());

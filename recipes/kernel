@@ -7,6 +7,7 @@ source_dir="kernel"
 source_imagedeps="git"
 source_allow_network="yes"
 hostdeps="gcc"
+imagedeps="nasm"
 deps="core-libs"
 
 prepare() {

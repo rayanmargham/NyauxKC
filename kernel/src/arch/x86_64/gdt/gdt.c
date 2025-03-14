@@ -22,8 +22,8 @@ void init_gdt() {
   gdt[4] = 0x00cf93000000ffff;
   gdt[5] = 0x00af9b000000ffff;
   gdt[6] = 0x00af93000000ffff;
-  gdt[7] = 0x00affb000000ffff;
-  gdt[8] = 0x00aff3000000ffff;
+  gdt[7] = 0x00aff3000000ffff;
+  gdt[8] = 0x00affb000000ffff;
   struct per_cpu_data *wtv = arch_get_per_cpu_data();
   // wtv->arch_data.tss.IOPB = sizeof(struct TSS);
   uint64_t tssaddress = (uint64_t) & (wtv->arch_data.tss);

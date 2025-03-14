@@ -3,7 +3,7 @@
 #include "utils/basic.h"
 #include <stdint.h>
 
-void syscall_exit() { panic("unimpl'd"); }
+void syscall_exit() { kprintf("hi FROM syscall_exit()\r\n"); }
 void syscall_debug(char *string, size_t length) { panic("unimpl'd"); }
 extern void syscall_entry();
 
@@ -13,6 +13,7 @@ void syscall_init() {
   if (edx & (1 << 11)) {
     uint64_t IA_32_STAR = 0;
     IA_32_STAR |= ((uint64_t)0x28 << 32);
+    IA_32_STAR |= ((uint64_t)0x30 << 48);
     wrmsr(0xC0000081, IA_32_STAR);
     wrmsr(0xC0000082, (uint64_t)syscall_entry);
     wrmsr(0xC0000084, (1 << 9));

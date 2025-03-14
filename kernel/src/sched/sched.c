@@ -22,14 +22,11 @@ struct per_cpu_data bsp = {.run_queue = NULL};
 #endif
 struct per_cpu_data *arch_get_per_cpu_data() {
 #if defined(__x86_64__)
-  if (get_lapic_id() == bsp_id) {
-    assert(&bsp != NULL);
-    return &bsp;
-  }
   struct per_cpu_data *hi = (struct per_cpu_data *)rdmsr(0xC0000101);
   return hi;
 #endif
 }
+void arch_create_bsp_per_cpu_data() { wrmsr(0xC0000101, (uint64_t)&bsp); }
 void arch_create_per_cpu_data() {
 #if defined(__x86_64__)
   struct per_cpu_data *hey =
@@ -138,6 +135,7 @@ void create_uthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   struct StackFrame hh = arch_create_frame(true, entry, kstack - 8);
   newthread->kernel_stack_base = kstack;
   newthread->kernel_stack_ptr = kstack;
+
   newthread->arch_data.frame = hh;
   refcount_inc(&newthread->count);
   refcount_inc(&newthread->count);
@@ -210,12 +208,14 @@ void schedd(struct StackFrame *frame) {
 #if defined(__x86_64__)
   if (old != NULL)
     save_ctx(&old->arch_data.frame, frame);
+  cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
   send_eoi();
   if (cpu->cur_thread->arch_data.frame.cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
     // fpu_store(cpu->cur_thread->fpu_state);
     change_rsp0(cpu->cur_thread->kernel_stack_base);
+    __asm__ volatile("swapgs");
 #endif
   }
   load_ctx(&cpu->cur_thread->arch_data.frame);

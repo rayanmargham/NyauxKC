@@ -26,7 +26,7 @@ syscall_entry:
     push r15
 
 
-    mov rcx, r10
+    mov rcx, r8
     mov rax, [syscallarray + rax * 8]
     call rax
     pop r15
@@ -42,6 +42,7 @@ syscall_entry:
     pop rbp
     pop rdx
     pop rcx
+    
     mov rsp, [gs:0]
     swapgs
     o64 sysret

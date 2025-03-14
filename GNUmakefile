@@ -2,7 +2,7 @@
 # Code is governed by the GPL-2.0 license.
 # Copyright (C) 2021-2024 The nyaux authors.
 
-QEMUFLAGS ?= -M q35,smm=off -m 2G -cdrom nyaux.iso -serial stdio -smp 4
+QEMUFLAGS ?= -M q35,smm=off -m 2G -cdrom nyaux.iso -serial stdio -smp 4 
 
 .PHONY: all
 all:
@@ -56,6 +56,9 @@ run-lingemu: nyaux.iso
 .PHONY: run
 run: nyaux.iso
 	qemu-system-x86_64 $(QEMUFLAGS)
+.PHONY: run-debug
+run-debug: nyaux.iso
+	qemu-system-x86_64 $(QEMUFLAGS) -s -S -d int -M smm=off
 
 .PHONY: clean
 clean:
