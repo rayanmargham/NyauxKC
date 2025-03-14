@@ -1,7 +1,9 @@
 [
   {
     "arguments": [
-      "/usr/bin/cc",
+      "/usr/bin/clang",
+      "-target",
+      "x86_64-unknown-none",
       "-g",
       "-O2",
       "-pipe",
@@ -10,14 +12,17 @@
       "-DUACPI_SIZED_FREES",
       "-Wall",
       "-Wextra",
-      "-std=gnu11",
+      "-std=gnu23",
       "-nostdinc",
       "-ffreestanding",
       "-fno-stack-protector",
+      "-fno-omit-frame-pointer",
       "-fno-stack-check",
       "-fno-PIC",
       "-ffunction-sections",
       "-fdata-sections",
+      "-fsanitize=undefined",
+      "-Wstrict-prototypes",
       "-m64",
       "-march=x86-64",
       "-mno-80387",
@@ -33,11 +38,11 @@
       "-DLIMINE_API_REVISION=2",
       "-c",
       "-o",
-      "obj-x86_64/elf/elf.c.o",
-      "src/elf/elf.c"
+      "obj-x86_64/arch/x86_64/syscalls/syscall.c.o",
+      "src/arch/x86_64/syscalls/syscall.c"
     ],
-    "directory": "/home/rayan/NyauxKC/kernel",
-    "file": "/home/rayan/NyauxKC/kernel/src/elf/elf.c",
-    "output": "/home/rayan/NyauxKC/kernel/obj-x86_64/elf/elf.c.o"
+    "directory": "/home/rayan/build/jinx/kernel",
+    "file": "/home/rayan/build/jinx/kernel/src/arch/x86_64/syscalls/syscall.c",
+    "output": "/home/rayan/build/jinx/kernel/obj-x86_64/arch/x86_64/syscalls/syscall.c.o"
   }
 ]

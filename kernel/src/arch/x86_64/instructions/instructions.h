@@ -1,8 +1,8 @@
 #pragma once
+#include "limine.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include "limine.h"
 extern volatile struct limine_hhdm_request hhdm_request;
 extern void outb(uint16_t port, uint8_t data);
 extern void outw(uint16_t port, uint16_t data);

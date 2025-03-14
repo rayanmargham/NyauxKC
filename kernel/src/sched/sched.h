@@ -31,7 +31,7 @@ struct thread_t {
   uint64_t tid;
   enum TASKSTATE state;
   refcount_t count;
-  void *fpu_state
+  void *fpu_state;
 };
 struct per_cpu_data {
   struct arch_per_cpu_data arch_data;

@@ -9,22 +9,26 @@
 #if defined(__x86_64__)
 #include "x86_64/cpu/structures.h"
 #endif
-void arch_raw_io_write(volatile uint64_t address, volatile uint64_t data, volatile uint8_t byte_width);
+void arch_raw_io_write(volatile uint64_t address, volatile uint64_t data,
+                       volatile uint8_t byte_width);
 uint64_t arch_raw_io_in(volatile uint64_t address, volatile uint8_t byte_width);
-int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler, uacpi_handle ctx,
-						   uacpi_handle* out_irq_handle);
+int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler,
+                           uacpi_handle ctx, uacpi_handle *out_irq_handle);
 void arch_init();
 void arch_late_init();
-uint64_t arch_mapkernelhhdmandmemorymap(pagemap* take);
-void arch_map_vmm_region(pagemap* take, uint64_t base, uint64_t length_in_bytes);
-void arch_unmap_vmm_region(pagemap* take, uint64_t base, uint64_t length_in_bytes);
-void arch_init_pagemap(pagemap* take);
-void arch_destroy_pagemap(pagemap* take);
-void arch_switch_pagemap(pagemap* take);
+uint64_t arch_mapkernelhhdmandmemorymap(pagemap *take);
+void arch_map_vmm_region(pagemap *take, uint64_t base, uint64_t length_in_bytes,
+                         bool user);
+void arch_unmap_vmm_region(pagemap *take, uint64_t base,
+                           uint64_t length_in_bytes);
+void arch_init_pagemap(pagemap *take);
+void arch_destroy_pagemap(pagemap *take);
+void arch_switch_pagemap(pagemap *take);
 void arch_init_interruptcontrollers();
 void arch_enable_interrupts();
 void arch_disable_interrupts();
 #ifdef __x86_64__
 #define ARCH_CHECK_SPACE(amount) (align_up((amount), 4096) + 0x1000)
-struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func, uint64_t stack);
+struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func,
+                                    uint64_t stack);
 #endif

@@ -5,6 +5,7 @@
 
 #include "arch/arch.h"
 #include "arch/x86_64/cpu/lapic.h"
+#include "arch/x86_64/gdt/gdt.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "fs/vfs/fd.h"
 #include "mem/vmm.h"
@@ -127,6 +128,22 @@ void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   refcount_inc(&newthread->count);
   ThreadReady(newthread);
 }
+void create_uthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  struct thread_t *newthread = create_thread();
+  newthread->proc = proc;
+  newthread->tid = tid;
+  refcount_inc(&proc->cnt);
+  uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
+  struct StackFrame hh = arch_create_frame(true, entry, kstack - 8);
+  newthread->kernel_stack_base = kstack;
+  newthread->kernel_stack_ptr = kstack;
+  newthread->arch_data.frame = hh;
+  refcount_inc(&newthread->count);
+  refcount_inc(&newthread->count);
+  ThreadReady(newthread);
+}
+extern void shitfuck();
 void create_kentry() {
   hashmap_set_allocator(kmalloc, kfree);
 #if defined(__x86_64__)
@@ -134,6 +151,9 @@ void create_kentry() {
 
   create_kthread((uint64_t)kentry, kernelprocess, 1);
   create_kthread((uint64_t)reaper, kernelprocess, 0);
+  void *fucking_program = uvmm_region_alloc(0x1000, 0);
+  memcpy(fucking_program, shitfuck, 30);
+  create_uthread((uint64_t)fucking_program, kernelprocess, 2);
   // create_kthread((uint64_t)klocktest, kernelprocess, 2);
   // create_kthread((uint64_t)klocktest2, kernelprocess, 3);
 #endif
@@ -181,9 +201,9 @@ void schedd(struct StackFrame *frame) {
     // kprintf("schedd(): no threads to run\r\n");
     return;
   }
-  if (frame->cs == 0x3B) /* if usermode */ {
+  if (frame->cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
-    fpu_save(cpu->cur_thread->fpu_state);
+    // fpu_save(cpu->cur_thread->fpu_state);
 #endif
   }
   struct thread_t *old = switch_queue(cpu);
@@ -192,9 +212,10 @@ void schedd(struct StackFrame *frame) {
     save_ctx(&old->arch_data.frame, frame);
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
   send_eoi();
-  if (cpu->cur_thread->arch_data.frame.cs == 0x3B) /* if usermode */ {
+  if (cpu->cur_thread->arch_data.frame.cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
-    fpu_store(cpu->cur_thread->fpu_state);
+    // fpu_store(cpu->cur_thread->fpu_state);
+    change_rsp0(cpu->cur_thread->kernel_stack_base);
 #endif
   }
   load_ctx(&cpu->cur_thread->arch_data.frame);

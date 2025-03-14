@@ -3,3 +3,4 @@
 /src/limine.h
 /bin-*
 /obj-*
+/.cache

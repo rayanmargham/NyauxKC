@@ -12,6 +12,7 @@
 #include "arch/x86_64/instructions/instructions.h"
 #include "arch/x86_64/interrupt_controllers/ioapic.h"
 #include "arch/x86_64/page_tables/pt.h"
+#include "arch/x86_64/syscalls/syscall.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
 #include "term/term.h"
@@ -102,6 +103,7 @@ void arch_init() {
   init_idt();
   kprintf("arch_init(): idt loaded.\r\n");
   fpu_init();
+  syscall_init();
 
 #else
   kprintf("Nyaux Cannot Run on this archiecture.");
@@ -115,6 +117,7 @@ void arch_late_init() {
   init_gdt();
   per_cpu_init_idt();
   fpu_init();
+  syscall_init();
 
   kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\r\n",
           get_lapic_id());
@@ -136,10 +139,12 @@ uint64_t arch_mapkernelhhdmandmemorymap(pagemap *take) {
   return x86_64_map_kernelhhdmandmemorymap(take);
 #endif
 }
-void arch_map_vmm_region(pagemap *take, uint64_t base,
-                         uint64_t length_in_bytes) {
+void arch_map_vmm_region(pagemap *take, uint64_t base, uint64_t length_in_bytes,
+                         bool user) {
 #if defined(__x86_64__)
-  return x86_64_map_vmm_region(take, base, length_in_bytes);
+  if (!user)
+    return x86_64_map_vmm_region(take, base, length_in_bytes);
+  return x86_64_map_vmm_region_user(take, base, length_in_bytes);
 #endif
 }
 void arch_unmap_vmm_region(pagemap *take, uint64_t base,
@@ -169,8 +174,8 @@ struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func,
   if (usermode) {
     struct StackFrame meow = {.rip = entry_func,
                               .rsp = stack,
-                              .cs = 0x40 | (3), // USER CODE
-                              .ss = 0x38 | (3), // USER DATA
+                              .cs = 0x38 | (3), // USER CODE
+                              .ss = 0x40 | (3), // USER DATA
                               .rbp = 0,
                               .rflags = 0x202};
     return meow;
