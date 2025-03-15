@@ -63,7 +63,7 @@ struct vnode *vfs_lookup(struct vnode *start, char *path) {
 
 void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
                          void *buf) {
-
+  // kprintf("creating path %s\r\n", path);
   struct vnode *node = vfs_list->cur_vnode;
   assert(node->v_type == VDIR);
 
@@ -134,12 +134,17 @@ void vfs_init() {
   if (node->v_type == VSYMLINK) {
     panic("yes");
   }
+
   char *r;
   node->ops->readdir(node, 3, &r);
+
   struct vnode *test;
   node->ops->lookup(node, ".", &test);
+
   char *y;
   test->ops->readdir(test, 0, &y);
+  // while (true)
+  //   ;
   kprintf("%s\r\n", y);
   kprintf("size of .keep in bytes %lu\r\n", node->stat.size);
   devfs_init(vfs_list);

@@ -16,16 +16,18 @@ void flanterm_fb_free(void *ptr) { kfree(ptr, 8); }
 
 void init_term(struct limine_framebuffer *buf) {
   ft_ctx = flanterm_fb_init(
-      flanterm_fb_alloc, flanterm_fb_free,
-      buf->address, buf->width, buf->height, buf->pitch, buf->blue_mask_size,
-      buf->red_mask_shift, buf->green_mask_size, buf->green_mask_shift,
-      buf->blue_mask_size, buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
+      flanterm_fb_alloc, flanterm_fb_free, buf->address, buf->width,
+      buf->height, buf->pitch, buf->blue_mask_size, buf->red_mask_shift,
+      buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
+      buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0,
+      0, 1, 0, 0, 0);
   stolen_osdevwikiserialinit();
 }
 int is_transmit_empty() { return inb(0x3F8 + 5) & 0x20; }
-
+static char buffer[128];
+static size_t idx = 0;
 void tputc(int ch, void *ctx) {
+
   if (ft_ctx == NULL) {
     char c = ch;
     while (is_transmit_empty() == 0)
@@ -33,9 +35,17 @@ void tputc(int ch, void *ctx) {
     outb(0x3F8, (uint8_t)c);
     return;
   }
-
   char c = ch;
-  flanterm_write(ft_ctx, &c, 1);
+  if (idx == sizeof(buffer)) {
+    flanterm_write(ctx, buffer, idx);
+    idx = 0;
+  }
+  buffer[idx] = c;
+  idx++;
+  if (c == '\n') {
+    flanterm_write(ft_ctx, buffer, idx);
+    idx = 0;
+  }
 
 #if defined(__x86_64__)
   // THIS IS SO FUCKING HACKY SKULL EMOJI
@@ -52,6 +62,10 @@ void kprintf(const char *format, ...) {
   va_start(args, format);
 
   npf_vpprintf(tputc, NULL, format, args);
+  if (idx != 0) {
+    flanterm_write(ft_ctx, buffer, idx);
+    idx = 0;
+  }
   va_end(args);
   spinlock_unlock(&lock);
   asm volatile("sti");

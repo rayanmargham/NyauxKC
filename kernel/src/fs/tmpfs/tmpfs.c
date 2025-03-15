@@ -1,8 +1,18 @@
 #include "tmpfs.h"
+#include "utils/hashmap.h"
 
 #include <fs/vfs/vfs.h>
 #include <mem/kmem.h>
-
+#include <stddef.h>
+uint64_t node_hash(const void *item, uint64_t seed0, uint64_t seed1) {
+  const struct tmpfsnode *user = item;
+  return hashmap_sip(user->name, strlen(user->name), seed0, seed1);
+}
+int node_compare(const void *a, const void *b, void *udata) {
+  const struct tmpfsnode *ua = a;
+  const struct tmpfsnode *ub = b;
+  return strcmp(ua->name, ub->name);
+}
 static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnode **res, void *data);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
@@ -16,23 +26,28 @@ static int readdir(struct vnode *curvnode, int offset, char **name) {
   if (curvnode->v_type == VDIR) {
     struct tmpfsnode *node = (struct tmpfsnode *)curvnode->data;
     struct direntry *entry = (struct direntry *)node->data;
-    node = entry->siblings;
-    if (node != NULL) {
-      while (offset != 0) {
-        if (node->next == NULL) {
-          return -1;
-        }
-        offset -= 1;
-
-        node = node->next;
-      }
-      *name = node->name;
-      return 0;
-    } else {
+    if ((size_t)offset >= entry->cnt) {
       return -1;
     }
+    *name = entry->nodes[offset]->name;
+    return 0;
+  }
+  return -1;
+}
+static void insert_into_list(struct tmpfsnode *dir, struct direntry *entry) {
+  if (entry->cnt == 0) {
+    entry->nodes = kmalloc(sizeof(struct tmpfsnode *) * 1);
+    entry->cnt = 1;
+    entry->nodes[0] = dir;
   } else {
-    return -1;
+    struct tmpfsnode **oldnodes = entry->nodes;
+    struct tmpfsnode **newnodes =
+        kmalloc(sizeof(struct tmpfsnode *) * (entry->cnt + 1));
+    memcpy(newnodes, oldnodes, entry->cnt * sizeof(struct tmpfsnode *));
+    newnodes[entry->cnt] = dir;
+    entry->nodes = newnodes;
+    kfree(oldnodes, entry->cnt * sizeof(struct tmpfsnode *));
+    entry->cnt += 1;
   }
 }
 static int create(struct vnode *curvnode, char *name, enum vtype type,
@@ -40,14 +55,6 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
   if (curvnode->v_type == VDIR) {
     struct tmpfsnode *node = (struct tmpfsnode *)curvnode->data;
     struct direntry *entry = (struct direntry *)node->data;
-    node = entry->siblings;
-    struct tmpfsnode *prev = NULL;
-    while (node != NULL) {
-      if (node->next == NULL) {
-        prev = node;
-      }
-      node = node->next;
-    }
     if (type == VDIR) {
       struct tmpfsnode *dir =
           (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
@@ -59,19 +66,17 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
           (struct direntry *)kmalloc(sizeof(struct direntry));
       dir->data = direntry;
       dir->name = name;
-      dir->next = NULL;
       dir->size = 0;
-      dir->next = dot;
-
-      dot->data = dir;
+      direntry->nodes = kmalloc(sizeof(struct tmpfsnode *) * 2);
+      direntry->cnt = 2;
       dot->name = ".";
       dot->size = 0;
-      dot->next = dotdot;
-      dot->data = dir;
+      dot->data = direntry;
 
-      dotdot->data = node;
       dotdot->name = "..";
       dotdot->node = curvnode;
+      dotdot->data = entry;
+
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
       newnode->data = dir;
       newnode->v_type = VDIR;
@@ -79,12 +84,9 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       newnode->vfs = curvnode->vfs;
       dot->node = newnode;
       dir->node = newnode;
-
-      if (prev == NULL) {
-        entry->siblings = dir;
-      } else {
-        prev->next = dir;
-      }
+      direntry->nodes[0] = dot;
+      direntry->nodes[1] = dotdot;
+      insert_into_list(dir, entry);
       *res = newnode;
       // kprintf("tmpfs(): created\r\n");
       return 0;
@@ -100,11 +102,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       file->name = name;
       file->size = 0;
       newnode->stat.size = 0;
-      if (prev == NULL) {
-        entry->siblings = file;
-      } else {
-        prev->next = file;
-      }
+      insert_into_list(file, entry);
       file->node = newnode;
       *res = newnode;
       return 0;
@@ -120,17 +118,22 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
     return -1;
   } else if (curvnode->v_type == VDIR) {
     struct direntry *entry = (struct direntry *)node->data;
-
-    node = entry->siblings;
-    while (node != NULL) {
-      if (strcmp(node->name, name) == 0) {
-
-        *res = node->node;
+    bool doit = false;
+    if (strcmp(name, "..") == 0) {
+      doit = true;
+    }
+    for (size_t i = 0; i < entry->cnt; i++) {
+      if (doit) {
+        kprintf("name: %s\r\n", entry->nodes[i]->name);
+      }
+      if (strcmp(entry->nodes[i]->name, name) == 0) {
+        // kprintf("found %s\r\n", name);
+        *res = entry->nodes[i]->node;
         return 0;
       }
-      node = node->next;
     }
     // kprintf("tmpfs(): nothing found\r\n");
+    return -1;
   }
   return -1;
 }
@@ -139,10 +142,10 @@ static int mount(struct vfs *curvfs, char *path, void *data) {
   struct direntry *direntry =
       (struct direntry *)kmalloc(sizeof(struct direntry));
   dir->data = direntry;
+  direntry->nodes = NULL;
+  direntry->cnt = 0;
   dir->name = "root";
-  dir->next = NULL;
   dir->size = 0;
-  dir->next = NULL;
   struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
   newnode->ops = &tmpfs_ops;
   newnode->data = dir;

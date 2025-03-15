@@ -187,8 +187,9 @@ void kmain(void) {
   kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
           total_memory() / 1048576);
   create_kentry();
-
-  init_smp();
+  hashmap_set_allocator(kmalloc, kfree);
+  vfs_init();
+  // init_smp();
 
   // uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
   // if (uacpi_unlikely_error(ret))
@@ -202,13 +203,14 @@ void kmain(void) {
   // 	kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
   // }
   kprintf("kmain(): we are chilling ig\n");
+
   hcf(); // we js chill
 }
 void kentry() {
   // init vfs, load font from initramfs, change font or smthin for flanterm or
   // use a custom made terminal idk, lots of things to do
   kprintf("kentry(): Hello World from a scheduled thread\r\n");
-  vfs_init();
+
   get_time();
   struct vnode *node = vfs_lookup(NULL, "/root/nyaux.sixel");
   char *sexial = kmalloc(node->stat.size);
