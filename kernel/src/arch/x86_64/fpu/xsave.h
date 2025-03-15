@@ -6,3 +6,4 @@
 void fpu_init();
 extern void (*fpu_save)(void *area);
 extern void (*fpu_store)(void *area);
+uint64_t get_fpu_storage_size();

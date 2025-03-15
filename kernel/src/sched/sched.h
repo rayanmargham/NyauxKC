@@ -41,7 +41,14 @@ struct per_cpu_data {
       *to_be_reapered; // any thread with refcount zero will be thrown into here
                        // a reaper thread will kill the dead
 };
-
+struct fpu_state {
+  uint16_t fcw;
+  uint32_t rev0;
+  uint16_t rev;
+  uint64_t rev2;
+  uint64_t rev3;
+  uint32_t mxcsr;
+} __attribute__((packed));
 void schedd(struct StackFrame *frame);
 void arch_create_per_cpu_data();
 extern void kentry();

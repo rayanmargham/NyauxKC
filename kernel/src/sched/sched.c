@@ -125,17 +125,24 @@ void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   refcount_inc(&newthread->count);
   ThreadReady(newthread);
 }
+void build_fpu_state(void *area) {
+  struct fpu_state *state = area;
+  state->fcw |= 0x33F;
+  state->mxcsr |= 0x1F80;
+}
 void create_uthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
   newthread->tid = tid;
+  newthread->fpu_state = kmalloc(get_fpu_storage_size());
+  build_fpu_state(newthread->fpu_state);
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
   struct StackFrame hh = arch_create_frame(true, entry, kstack - 8);
   newthread->kernel_stack_base = kstack;
   newthread->kernel_stack_ptr = kstack;
-
+  build_fpu_state(newthread->fpu_state);
   newthread->arch_data.frame = hh;
   refcount_inc(&newthread->count);
   refcount_inc(&newthread->count);

@@ -188,7 +188,7 @@ void kmain(void) {
           total_memory() / 1048576);
   create_kentry();
   hashmap_set_allocator(kmalloc, kfree);
-  vfs_init();
+
   init_smp();
 
   // uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
@@ -210,7 +210,7 @@ void kentry() {
   // init vfs, load font from initramfs, change font or smthin for flanterm or
   // use a custom made terminal idk, lots of things to do
   kprintf("kentry(): Hello World from a scheduled thread\r\n");
-
+  vfs_init();
   get_time();
   struct vnode *node;
   int res = vfs_lookup(NULL, "/root/nyaux.sixel", &node);

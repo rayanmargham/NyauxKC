@@ -24,6 +24,7 @@ static inline void fxsave(void *area) {
 static inline void fxrstor(void *area) {
   asm volatile("fxrstor (%0)" : : "r"(area) : "memory");
 }
+uint64_t get_fpu_storage_size() { return fpu_storage_size; }
 // on cpu init
 void cpu_fpu_init(bool xsave) {
   uint64_t cr4 = cr4_read();
