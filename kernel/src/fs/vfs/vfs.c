@@ -21,6 +21,7 @@ int vfs_mount(struct vfs_ops ops, char *path, void *data) {
     return -1; // TODO, IMPL THIS
   }
 }
+// Lookup Function by iretq
 int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   struct vnode *starter = start;
   if (path[0] == '/') {
@@ -45,7 +46,7 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     if (len == 0) {
       continue;
     }
-    kprintf("%s %d %d\r\n", start, len, starter->v_type);
+    // kprintf("%s %d %d\r\n", start, len, starter->v_type);
     char *name = kmalloc(len + 1);
     memcpy(name, start, len);
     name[len] = 0;
