@@ -32,32 +32,30 @@ struct vnode *vfs_lookup(struct vnode *start, char *path) {
   char *token;
   token = strtok(path, "/");
   while (token != NULL) {
-    kprintf("vfs(): %s -> %lu\r\n", token, str_hash(token));
     if (starter == NULL || starter->ops == NULL) {
       kprintf("vfs(): cannot resolve path as vnode operations are NULL\r\n");
       return NULL;
     }
-    switch (str_hash(token)) {
-    case DOTDOT:
-      // TODO
-      break;
-    case DOT:
-      break;
-    default:
-      struct vnode *res = NULL;
-      int ress = starter->ops->lookup(starter, token, &res);
-      if (ress != 0 && res == NULL) {
-        kprintf("vfs(): file not found\r\n");
-        return NULL;
-      } else if (ress != 0) {
-        return res;
-      }
-      if (res->v_type == VSYMLINK) {
-        return vfs_lookup(starter, res->data);
-      }
-      starter = res;
-      break;
+    struct vnode *res = NULL;
+    kprintf("vfs(): trying to find %s\r\n", token);
+    int ress = starter->ops->lookup(starter, token, &res);
+    if (ress != 0 && res == NULL) {
+      kprintf("vfs(): file not found\r\n");
+      return NULL;
+    } else if (ress != 0) {
+
+      return res;
     }
+    if (res->v_type == VSYMLINK) {
+      kprintf("found symlink with %s\r\n", (char *)res->data);
+      struct vnode *result = vfs_lookup(starter, res->data);
+      if (!result) {
+        return NULL;
+      }
+      res = result;
+    }
+
+    starter = res;
     token = strtok(NULL, "/");
   }
   return starter;
@@ -82,8 +80,16 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
       assert(current_node->ops->create(current_node, strdup(token), type,
                                        &next_node, NULL) == 0);
 
-      if (type == VREG && buf != NULL && filesize != 0)
-        assert(next_node->ops->rw(next_node, 0, filesize, buf, 1) == filesize);
+      if ((type == VREG || type == VSYMLINK) && buf != NULL && filesize != 0) {
+        if (type == VSYMLINK) {
+          void *buffer = kmalloc(filesize + 1);
+          memcpy(buffer, buf, filesize + 1);
+          next_node->data = buffer;
+        } else {
+          assert(next_node->ops->rw(next_node, 0, filesize, buf, 1) ==
+                 filesize);
+        }
+      }
       return;
     }
 
@@ -124,7 +130,17 @@ void vfs_init() {
   vfs_scan();
 
   populate_tmpfs_from_tar();
-  struct vnode *node = vfs_lookup(fein, "/usr/bin/bash");
-  kprintf("size of bash in bytes %lu\r\n", node->stat.size);
+  struct vnode *node = vfs_lookup(NULL, "/var/..");
+  if (node->v_type == VSYMLINK) {
+    panic("yes");
+  }
+  char *r;
+  node->ops->readdir(node, 3, &r);
+  struct vnode *test;
+  node->ops->lookup(node, ".", &test);
+  char *y;
+  test->ops->readdir(test, 0, &y);
+  kprintf("%s\r\n", y);
+  kprintf("size of .keep in bytes %lu\r\n", node->stat.size);
   devfs_init(vfs_list);
 }

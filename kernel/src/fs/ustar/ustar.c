@@ -68,8 +68,8 @@ void populate_tmpfs_from_tar() {
                        512);
         break;
       case '2':
-        // kprintf("found symlink with path: %s to -> %s\r\n", ptr->name,
-        //         ptr->name_linked_file);
+        vfs_create_from_tar(name, VSYMLINK, strlen(ptr->name_linked_file),
+                            (unsigned char *)ptr->name_linked_file);
         ptr = (void *)ptr + 512 +
               align_up(oct2bin((unsigned char *)ptr->filesize_octal,
                                strlen(ptr->filesize_octal)),

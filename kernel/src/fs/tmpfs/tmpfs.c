@@ -51,18 +51,33 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
     if (type == VDIR) {
       struct tmpfsnode *dir =
           (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
+      struct tmpfsnode *dot =
+          (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
+      struct tmpfsnode *dotdot =
+          (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
       struct direntry *direntry =
           (struct direntry *)kmalloc(sizeof(struct direntry));
       dir->data = direntry;
       dir->name = name;
       dir->next = NULL;
       dir->size = 0;
-      dir->next = NULL;
+      dir->next = dot;
+
+      dot->data = dir;
+      dot->name = ".";
+      dot->size = 0;
+      dot->next = dotdot;
+      dot->data = dir;
+
+      dotdot->data = node;
+      dotdot->name = "..";
+      dotdot->node = curvnode;
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
       newnode->data = dir;
       newnode->v_type = VDIR;
       newnode->ops = &tmpfs_ops;
       newnode->vfs = curvnode->vfs;
+      dot->node = newnode;
       dir->node = newnode;
 
       if (prev == NULL) {
@@ -77,7 +92,8 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       struct tmpfsnode *file =
           (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
-      newnode->v_type = VREG;
+
+      newnode->v_type = type;
       newnode->ops = &tmpfs_ops;
       newnode->vfs = curvnode->vfs;
       newnode->data = file;

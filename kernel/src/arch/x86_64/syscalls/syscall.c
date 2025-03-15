@@ -1,10 +1,17 @@
 #include "syscall.h"
 #include "../instructions/instructions.h"
+#include "elf/symbols/symbols.h"
+#include "term/term.h"
 #include "utils/basic.h"
 #include <stdint.h>
 
 void syscall_exit() { kprintf("hi FROM syscall_exit()\r\n"); }
-void syscall_debug(char *string, size_t length) { panic("unimpl'd"); }
+void syscall_debug(char *string, size_t length) {
+  char *buffer = kmalloc(1024);
+  memcpy(buffer, string, length);
+  buffer[length] = '\0';
+  kprintf("userland: %s", buffer);
+}
 extern void syscall_entry();
 
 void syscall_init() {

@@ -26,7 +26,9 @@ syscall_entry:
     push r15
 
 
-    mov rcx, r8
+    mov rcx, r8 ; move argument #4 from r8 to rcx
+    mov r8, r9  ; move argument #5 from r9 to r8
+    mov r9, r10 ; move argument #6 from r10 to r9
     mov rax, [syscallarray + rax * 8]
     call rax
     pop r15
