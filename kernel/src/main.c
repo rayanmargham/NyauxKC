@@ -189,7 +189,7 @@ void kmain(void) {
   create_kentry();
   hashmap_set_allocator(kmalloc, kfree);
   vfs_init();
-  // init_smp();
+  init_smp();
 
   // uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
   // if (uacpi_unlikely_error(ret))
@@ -212,7 +212,8 @@ void kentry() {
   kprintf("kentry(): Hello World from a scheduled thread\r\n");
 
   get_time();
-  struct vnode *node = vfs_lookup(NULL, "/root/nyaux.sixel");
+  struct vnode *node;
+  int res = vfs_lookup(NULL, "/root/nyaux.sixel", &node);
   char *sexial = kmalloc(node->stat.size);
   node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0);
 

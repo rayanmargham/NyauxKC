@@ -38,4 +38,4 @@ struct vfs {
 void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
                          void *buf);
 void vfs_scan();
-struct vnode *vfs_lookup(struct vnode *start, char *path);
+int vfs_lookup(struct vnode *start, const char *path, struct vnode **node);

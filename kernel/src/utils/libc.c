@@ -119,7 +119,7 @@ char *strtok(char *restrict s, const char *restrict sep) {
     p = 0;
   return s;
 }
-char *strdup(char *str) {
+char *strdup(const char *str) {
   size_t length = strlen(str);
   char *new_string = kmalloc(length + 1);
   memcpy(new_string, str, length);

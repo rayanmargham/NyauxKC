@@ -9,8 +9,6 @@
 #include "utils/basic.h"
 #include "utils/libc.h"
 
-#define DOTDOT 1472
-#define DOT 46
 struct vfs *vfs_list = NULL;
 int vfs_mount(struct vfs_ops ops, char *path, void *data) {
   struct vfs *o = kmalloc(sizeof(struct vfs));
@@ -23,42 +21,52 @@ int vfs_mount(struct vfs_ops ops, char *path, void *data) {
     return -1; // TODO, IMPL THIS
   }
 }
-struct vnode *vfs_lookup(struct vnode *start, char *path) {
+int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   struct vnode *starter = start;
   if (path[0] == '/') {
     // assume root
     starter = vfs_list->cur_vnode;
+    path += 1;
   }
-  char *token;
-  token = strtok(path, "/");
-  while (token != NULL) {
-    if (starter == NULL || starter->ops == NULL) {
-      kprintf("vfs(): cannot resolve path as vnode operations are NULL\r\n");
-      return NULL;
+  while (*path) {
+    if (starter->v_type != VDIR) {
+      kprintf("vfs(): starter is NOT a dir!!! %d\r\n", starter->v_type);
+      return -1;
     }
+    if (*path == '/') {
+      path += 1;
+      continue;
+    }
+    const char *start = path;
+    while (*path && *path != '/') {
+      path += 1;
+    }
+    size_t len = path - start;
+    if (len == 0) {
+      continue;
+    }
+    kprintf("%s %d %d\r\n", start, len, starter->v_type);
+    char *name = kmalloc(len + 1);
+    memcpy(name, start, len);
+    name[len] = 0;
     struct vnode *res = NULL;
-    kprintf("vfs(): trying to find %s\r\n", token);
-    int ress = starter->ops->lookup(starter, token, &res);
-    if (ress != 0 && res == NULL) {
+    int ress = starter->ops->lookup(starter, name, &res);
+    kfree(name, len + 1);
+    if (ress != 0) {
       kprintf("vfs(): file not found\r\n");
-      return NULL;
-    } else if (ress != 0) {
-
-      return res;
+      return ress;
     }
     if (res->v_type == VSYMLINK) {
-      kprintf("found symlink with %s\r\n", (char *)res->data);
-      struct vnode *result = vfs_lookup(starter, res->data);
-      if (!result) {
-        return NULL;
+      ress = vfs_lookup(starter, res->data, &res);
+      if (ress != 0) {
+        kprintf("vfs(): symlink not found\r\n");
+        return ress;
       }
-      res = result;
     }
-
     starter = res;
-    token = strtok(NULL, "/");
   }
-  return starter;
+  *node = starter;
+  return 0;
 }
 
 void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
@@ -130,22 +138,11 @@ void vfs_init() {
   vfs_scan();
 
   populate_tmpfs_from_tar();
-  struct vnode *node = vfs_lookup(NULL, "/var/..");
-  if (node->v_type == VSYMLINK) {
+  struct vnode *node;
+  int res = vfs_lookup(NULL, "/var/run/.keep", &node);
+  if (res != 0) {
     panic("yes");
   }
-
-  char *r;
-  node->ops->readdir(node, 3, &r);
-
-  struct vnode *test;
-  node->ops->lookup(node, ".", &test);
-
-  char *y;
-  test->ops->readdir(test, 0, &y);
-  // while (true)
-  //   ;
-  kprintf("%s\r\n", y);
   kprintf("size of .keep in bytes %lu\r\n", node->stat.size);
   devfs_init(vfs_list);
 }
