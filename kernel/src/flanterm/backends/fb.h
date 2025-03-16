@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 struct flanterm_context *flanterm_fb_init(
-    /* _malloc and _free can NOT be NULL */
+    /* If _malloc and _free are NULL, sixel support is disabled */
     void *(*_malloc)(size_t),
     void (*_free)(void *),
     uint32_t *framebuffer, size_t width, size_t height, size_t pitch,
