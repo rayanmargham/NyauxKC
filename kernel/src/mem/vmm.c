@@ -151,7 +151,7 @@ void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
   VMMRegion *cur = (VMMRegion *)map->head;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
-    if (cur->base > size && (prev->base + prev->length) < virt) {
+    if (cur->base > (virt + size) && (prev->base + prev->length) < virt) {
       VMMRegion *new =
           create_region((prev->base + prev->length), align_up(size, 4096));
       prev->next = (struct VMMRegion *)new;
