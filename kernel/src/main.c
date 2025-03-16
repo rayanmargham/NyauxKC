@@ -218,7 +218,7 @@ void kentry() {
   node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0);
 
   flanterm_write(get_fctx(), (const char *)sexial, node->stat.size);
-
+  test_elf();
   rsh();
   exit_thread();
 }

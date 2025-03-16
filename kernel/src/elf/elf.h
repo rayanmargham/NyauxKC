@@ -64,3 +64,4 @@ typedef struct {
 extern volatile struct limine_executable_file_request kernelfile;
 Elf64_Ehdr *get_kernel_elfheader();
 uint64_t get_kerneL_address();
+void test_elf();

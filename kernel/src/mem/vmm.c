@@ -145,21 +145,28 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
 }
 void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
                               bool force) {
-  if (virt == 0) {
-    return NULL;
-  }
+  kprintf("hi\r\n");
+
   VMMRegion *cur = (VMMRegion *)map->head;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
-    if (cur->base > (virt + size) && (prev->base + prev->length) < virt) {
+    if (prev == NULL) {
+      prev = cur;
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+    if (cur->base >= (virt + size + 0x1000) &&
+        (prev->base + prev->length) <= virt) {
+      kprintf("sound\r\n");
       VMMRegion *new =
           create_region((prev->base + prev->length), align_up(size, 4096));
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
       arch_map_vmm_region(map, virt, size, true);
+      return (void *)virt;
     }
-    if (force && (prev->base + prev->length) < virt) {
-      if (cur->base < size) {
+    if (force && (prev->base + prev->length) <= virt) {
+      if (cur->base <= (virt + size)) {
         VMMRegion *tmp = (VMMRegion *)cur->next;
         arch_unmap_vmm_region(map, cur->base, cur->length);
 
