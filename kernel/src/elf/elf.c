@@ -11,10 +11,11 @@ Elf64_Ehdr *get_kernel_elfheader() {
 uint64_t get_kerneL_address() {
   return (uint64_t)kernelfile.response->executable_file->address;
 }
+#define FIXEDOFFSET 0x10000
 // function that loads virtual address into memroy from pt_load
-void load_pt_loadseg(pagemap *usrmap, uint64_t elfbase, Elf64_Phdr *phdr) {
-  void *data =
-      uvmm_region_alloc_fixed(usrmap, phdr->p_vaddr, phdr->p_memsz, true);
+void load_pt_loadsegpie(pagemap *usrmap, uint64_t elfbase, Elf64_Phdr *phdr) {
+  void *data = uvmm_region_alloc_fixed(usrmap, phdr->p_vaddr + FIXEDOFFSET,
+                                       phdr->p_memsz, true);
   if (data == NULL) {
     panic("could not allocate elf\r\n");
   }
@@ -37,7 +38,7 @@ void load_elf_static(pagemap *usrmap, char *path) {
     switch (phdr->p_type) {
     case 1:
 
-      load_pt_loadseg(usrmap, (uint64_t)buffer, phdr);
+      load_pt_loadsegpie(usrmap, (uint64_t)buffer, phdr);
       kprintf("loaded segment of elf\r\n");
       break;
     default:

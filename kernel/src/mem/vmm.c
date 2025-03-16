@@ -145,8 +145,10 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
 }
 void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
                               bool force) {
+  if (virt == 0) {
+    return NULL;
+  }
   kprintf("hi\r\n");
-
   VMMRegion *cur = (VMMRegion *)map->head;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
