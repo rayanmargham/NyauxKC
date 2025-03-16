@@ -87,10 +87,10 @@ uint64_t kvmm_region_bytesused() {
   return bytes;
 }
 
-void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
+void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
   assert(ker_map.head != NULL);
   assert(ker_map.root != NULL);
-  VMMRegion *cur = (VMMRegion *)ker_map.head;
+  VMMRegion *cur = (VMMRegion *)map->head;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (prev == NULL) {
@@ -115,10 +115,10 @@ void *kvmm_region_alloc(uint64_t amount, uint64_t flags) {
   panic("vmm(): Sir madamm this should never occur");
   return NULL;
 }
-void *uvmm_region_alloc(uint64_t amount, uint64_t flags) {
+void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
   assert(ker_map.userhead != NULL);
   assert(ker_map.root != NULL);
-  VMMRegion *cur = (VMMRegion *)ker_map.userhead;
+  VMMRegion *cur = (VMMRegion *)map->userhead;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (prev == NULL) {
@@ -143,11 +143,20 @@ void *uvmm_region_alloc(uint64_t amount, uint64_t flags) {
   panic("vmm(): Sir madamm this should never occur");
   return NULL;
 }
-void kvmm_region_dealloc(void *addr) {
+void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size) {
+  if (virt == 0) {
+    return NULL;
+  }
+  VMMRegion *cur = (VMMRegion *)map->head;
+  VMMRegion *prev = NULL;
+  while (cur != NULL) {
+  }
+}
+void kvmm_region_dealloc(pagemap *map, void *addr) {
   if (addr == NULL) {
     return;
   }
-  VMMRegion *cur = (VMMRegion *)ker_map.head;
+  VMMRegion *cur = (VMMRegion *)map->head;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (cur->base == (uint64_t)addr) {

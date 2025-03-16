@@ -7,9 +7,7 @@ extern volatile struct limine_hhdm_request hhdm_request;
 extern char THE_REAL[];
 extern volatile struct limine_executable_address_request kernel_address;
 void vmm_init();
-void *kvmm_region_alloc(uint64_t amount, uint64_t flags);
-void kvmm_region_dealloc(void *addr);
-void *uvmm_region_alloc(uint64_t amount, uint64_t flags);
+
 uint64_t kvmm_region_bytesused();
 #define EXECUTEDISABLE (1ul << 63)
 #define PRESENT (1ul)
@@ -35,4 +33,7 @@ typedef struct {
   uint64_t length;
   struct VMMRegion *next;
 } VMMRegion;
+void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags);
+void kvmm_region_dealloc(pagemap *map, void *addr);
+void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags);
 void kprintf_all_vmm_regions();

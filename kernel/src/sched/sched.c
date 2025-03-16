@@ -156,7 +156,7 @@ void create_kentry() {
 
   create_kthread((uint64_t)kentry, kernelprocess, 1);
   create_kthread((uint64_t)reaper, kernelprocess, 0);
-  void *fucking_program = uvmm_region_alloc(0x1000, 0);
+  void *fucking_program = uvmm_region_alloc(&ker_map, 0x1000, 0);
   memcpy(fucking_program, shitfuck, 30);
   create_uthread((uint64_t)fucking_program, kernelprocess, 3);
   // create_kthread((uint64_t)klocktest, kernelprocess, 2);
