@@ -143,14 +143,34 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
   panic("vmm(): Sir madamm this should never occur");
   return NULL;
 }
-void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size) {
+void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
+                              bool force) {
   if (virt == 0) {
     return NULL;
   }
   VMMRegion *cur = (VMMRegion *)map->head;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
+    if (cur->base > size && (prev->base + prev->length) < virt) {
+      VMMRegion *new =
+          create_region((prev->base + prev->length), align_up(size, 4096));
+      prev->next = (struct VMMRegion *)new;
+      new->next = (struct VMMRegion *)cur;
+      arch_map_vmm_region(map, virt, size, true);
+    }
+    if (force && (prev->base + prev->length) < virt) {
+      if (cur->base < size) {
+        VMMRegion *tmp = (VMMRegion *)cur->next;
+        arch_unmap_vmm_region(map, cur->base, cur->length);
+
+        prev->next = (struct VMMRegion *)tmp;
+        slabfree(cur);
+      }
+    }
+    prev = cur;
+    cur = (VMMRegion *)cur->next;
   }
+  return NULL;
 }
 void kvmm_region_dealloc(pagemap *map, void *addr) {
   if (addr == NULL) {
