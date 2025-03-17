@@ -137,7 +137,9 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
   newthread->tid = tid;
-  newthread->fpu_state = kmalloc(align_up(get_fpu_storage_size(), 0x1000));
+  newthread->fpu_state = (void *)align_up(
+      (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
+  kprintf("fpu state %p\r\n", (void *)newthread->fpu_state);
   build_fpu_state(newthread->fpu_state);
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);

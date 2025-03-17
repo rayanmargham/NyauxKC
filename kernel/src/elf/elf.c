@@ -94,6 +94,7 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
 void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
               struct StackFrame *frame) {
   uint64_t userstack = frame->rsp;
+  kprintf("frame ec %lx\r\n", frame->error_code);
   struct vnode *node = NULL;
   vfs_lookup(NULL, path, &node);
   assert(node != NULL);
@@ -120,7 +121,7 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
     entrypoint = interpinfo.entrypoint;
     kprintf("interp entry point is %lx\r\n", entrypoint);
   }
-
+  kprintf("frame ec %lx\r\n", frame->error_code);
   int argc = 0;
   while (argv[argc] != NULL) {
     argc++;
@@ -175,4 +176,5 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
   *--stack = argc;
   frame->rsp = (uint64_t)stack;
   frame->rip = entrypoint;
+  kprintf("frame ec %lx\r\n", frame->error_code);
 }
