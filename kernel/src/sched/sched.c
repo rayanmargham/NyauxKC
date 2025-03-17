@@ -13,6 +13,7 @@
 #include "sched/reaper.h"
 #include "smp/smp.h"
 #include "utils/basic.h"
+#include <elf/elf.h>
 // ARCH STUFF
 #include "arch/x86_64/cpu/structures.h"
 #include <arch/x86_64/fpu/xsave.h>
@@ -130,24 +131,28 @@ void build_fpu_state(void *area) {
   state->fcw |= 0x33F;
   state->mxcsr |= 0x1F80;
 }
-void create_uthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
+struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
+                                uint64_t tid) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
   newthread->tid = tid;
-  newthread->fpu_state = kmalloc(get_fpu_storage_size());
+  newthread->fpu_state = kmalloc(align_up(get_fpu_storage_size(), 0x1000));
   build_fpu_state(newthread->fpu_state);
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
-  struct StackFrame hh = arch_create_frame(true, entry, kstack - 8);
+  uint64_t ustack =
+      (uint64_t)uvmm_region_alloc(proc->cur_map, KSTACKSIZE, 0) + KSTACKSIZE;
+  struct StackFrame hh = arch_create_frame(true, entry, ustack - 8);
   newthread->kernel_stack_base = kstack;
   newthread->kernel_stack_ptr = kstack;
   build_fpu_state(newthread->fpu_state);
   newthread->arch_data.frame = hh;
   refcount_inc(&newthread->count);
   refcount_inc(&newthread->count);
-  ThreadReady(newthread);
+  return newthread;
 }
+
 extern void shitfuck();
 void create_kentry() {
   hashmap_set_allocator(kmalloc, kfree);
@@ -156,14 +161,20 @@ void create_kentry() {
 
   create_kthread((uint64_t)kentry, kernelprocess, 1);
   create_kthread((uint64_t)reaper, kernelprocess, 0);
-  void *fucking_program = uvmm_region_alloc(&ker_map, 0x1000, 0);
-  memcpy(fucking_program, shitfuck, 30);
-  create_uthread((uint64_t)fucking_program, kernelprocess, 3);
+
   // create_kthread((uint64_t)klocktest, kernelprocess, 2);
   // create_kthread((uint64_t)klocktest2, kernelprocess, 3);
 #endif
 }
-
+void do_funny() {
+  struct process_t *bashprocess = create_process(&ker_map);
+  struct thread_t *fun = create_uthread(0, bashprocess, 2);
+  kprintf("stack %lx\r\n", fun->arch_data.frame.rsp);
+  load_elf(&ker_map, "/bin/bash", (char *[]){"/bin/bash", NULL},
+           (char *[]){NULL}, &fun->arch_data.frame);
+  kprintf("stack2 %lx\r\n", fun->arch_data.frame.rsp);
+  ThreadReady(fun);
+}
 // returns the old thread
 struct thread_t *switch_queue(struct per_cpu_data *cpu) {
   if (cpu->cur_thread) {
@@ -206,9 +217,16 @@ void schedd(struct StackFrame *frame) {
     // kprintf("schedd(): no threads to run\r\n");
     return;
   }
+  if (cpu->cur_thread) {
+    cpu->cur_thread->arch_data.fs_base = rdmsr(0xC0000100);
+  }
+
   if (frame->cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
-    // fpu_save(cpu->cur_thread->fpu_state);
+    if (cpu->cur_thread) {
+      fpu_save(cpu->cur_thread->fpu_state);
+    }
+
 #endif
   }
   struct thread_t *old = switch_queue(cpu);
@@ -218,10 +236,12 @@ void schedd(struct StackFrame *frame) {
   cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
   send_eoi();
+  wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
   if (cpu->cur_thread->arch_data.frame.cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
-    // fpu_store(cpu->cur_thread->fpu_state);
+    fpu_store(cpu->cur_thread->fpu_state);
     change_rsp0(cpu->cur_thread->kernel_stack_base);
+
     __asm__ volatile("swapgs");
 #endif
   }

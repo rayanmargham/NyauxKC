@@ -1,3 +1,5 @@
+#include "arch/x86_64/cpu/structures.h"
+#include "mem/vmm.h"
 #include <limine.h>
 #include <stdint.h>
 #define EI_NIDENT 16
@@ -61,6 +63,15 @@ typedef struct {
     Elf64_Addr d_ptr;
   } d_un;
 } Elf64_Dyn;
+struct ElfInfo {
+  char *interpath;
+  uint64_t entrypoint;
+  uint64_t phdr;
+  uint64_t phent;
+  uint64_t phnum;
+};
+void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
+              struct StackFrame *frame);
 extern volatile struct limine_executable_file_request kernelfile;
 Elf64_Ehdr *get_kernel_elfheader();
 uint64_t get_kerneL_address();

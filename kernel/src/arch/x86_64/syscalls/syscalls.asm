@@ -1,10 +1,12 @@
 extern syscall_exit
 extern syscall_debug
+extern syscall_setfsbase
 global syscall_entry
 section .data
 syscallarray:
     dq syscall_exit ; 0
     dq syscall_debug ; 1
+    dq syscall_setfsbase ; 2
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:
@@ -12,7 +14,6 @@ syscall_entry:
     mov [gs:0], rsp
     mov rsp, [gs:8]
     push rcx
-    push rdx
     push rbp
     push rsi
     push rdi
@@ -42,7 +43,6 @@ syscall_entry:
     pop rdi
     pop rsi
     pop rbp
-    pop rdx
     pop rcx
     
     mov rsp, [gs:0]

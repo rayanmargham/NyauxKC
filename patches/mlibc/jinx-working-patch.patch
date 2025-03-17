@@ -56,10 +56,11 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..d604075
+index 0000000..60f8bf2
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,51 @@
++#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
 +#include <dirent.h>
@@ -68,7 +69,9 @@ index 0000000..d604075
 +#include <limits.h>
 +#include <mlibc/all-sysdeps.hpp>
 +#include <mlibc/debug.hpp>
++#include <stdint.h>
 +#include <stdlib.h>
++#include <sys/types.h>
 +#define STUB_ONLY                                                              \
 +  {                                                                            \
 +    __ensure(!"STUB_ONLY function was called");                                \
@@ -77,11 +80,13 @@ index 0000000..d604075
 +
 +namespace mlibc {
 +
-+void sys_libc_log(const char *message) {}
++void sys_libc_log(const char *message) {
++  __syscall2(1, (uint64_t)message, strlen(message));
++}
 +
 +void sys_libc_panic() {
 +  sys_libc_log("\nMLIBC PANIC\n");
-+  __builtin_unreachable();
++  __builtin_trap();
 +}
 +
 +void sys_exit(int status) STUB_ONLY;
@@ -96,13 +101,99 @@ index 0000000..d604075
 +int sys_write(int fd, const void *buf, size_t count,
 +              ssize_t *bytes_written) STUB_ONLY;
 +int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) STUB_ONLY;
-+int sys_tcb_set(void *pointer) STUB_ONLY;
++int sys_tcb_set(void *pointer) {
++  __syscall1(2, (uint64_t)pointer);
++  return 0;
++};
 +int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd,
 +               off_t offset, void **window) STUB_ONLY;
 +int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
 +int sys_clock_get(int clock, time_t *secs, long *nanos) STUB_ONLY;
 +
 +} // namespace mlibc
+\ No newline at end of file
+diff --git mlibc-workdir/sysdeps/nyaux/generic/syscall.h mlibc-workdir/sysdeps/nyaux/generic/syscall.h
+new file mode 100644
+index 0000000..208b317
+--- /dev/null
++++ mlibc-workdir/sysdeps/nyaux/generic/syscall.h
+@@ -0,0 +1,76 @@
++#pragma once
++#include <stdint.h>
++struct __syscall_ret {
++  uint64_t ret;
++  uint64_t errno;
++};
++
++static __syscall_ret __syscall6(int number, uint64_t arg1, uint64_t arg2,
++                                uint64_t arg3, uint64_t arg4, uint64_t arg5,
++                                uint64_t arg6) {
++  struct __syscall_ret ret;
++  register uint64_t arg_r8 asm("r8") = arg4;
++  register uint64_t arg_r9 asm("r9") = arg5;
++  register uint64_t arg_r10 asm("r10") = arg6;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg_r8),
++                 "r"(arg_r9), "r"(arg_r10)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++static __syscall_ret __syscall5(int number, uint64_t arg1, uint64_t arg2,
++                                uint64_t arg3, uint64_t arg4, uint64_t arg5) {
++  struct __syscall_ret ret;
++  register uint64_t arg_r8 asm("r8") = arg4;
++  register uint64_t arg_r9 asm("r9") = arg5;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg_r8),
++                 "r"(arg_r9)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++static __syscall_ret __syscall4(int number, uint64_t arg1, uint64_t arg2,
++                                uint64_t arg3, uint64_t arg4) {
++  struct __syscall_ret ret;
++  register uint64_t arg_r8 asm("r8") = arg4;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg_r8)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++static __syscall_ret __syscall3(int number, uint64_t arg1, uint64_t arg2,
++                                uint64_t arg3) {
++  struct __syscall_ret ret;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++static __syscall_ret __syscall2(int number, uint64_t arg1, uint64_t arg2) {
++  struct __syscall_ret ret;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number), "D"(arg1), "S"(arg2)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++static __syscall_ret __syscall1(int number, uint64_t arg1) {
++  struct __syscall_ret ret;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number), "D"(arg1)
++               : "rcx", "r11", "memory");
++  return ret;
++}
++static __syscall_ret __syscall0(int number) {
++  struct __syscall_ret ret;
++  asm volatile("syscall"
++               : "=a"(ret.ret), "=d"(ret.errno)
++               : "a"(number)
++               : "rcx", "r11", "memory");
++  return ret;
++}
 \ No newline at end of file
 diff --git mlibc-workdir/sysdeps/nyaux/include/abi-bits/access.h mlibc-workdir/sysdeps/nyaux/include/abi-bits/access.h
 new file mode 120000

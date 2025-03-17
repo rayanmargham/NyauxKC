@@ -120,17 +120,17 @@ static inline void unwrap_or_panic(result res) {
     panic("unwrap_or_panic() failed...");
   }
 }
-static inline uint32_t align_up(uint32_t value, uint32_t alignment) {
+static inline uint64_t align_up(uint64_t value, uint64_t alignment) {
   return (value + alignment - 1) & ~(alignment - 1);
 }
 
-static inline uint32_t align_down(uint32_t value, uint32_t alignment) {
+static inline uint64_t align_down(uint64_t value, uint64_t alignment) {
   return value & ~(alignment - 1);
 }
 // stolen :)
 static inline uint64_t next_pow2(uint64_t x) {
 #ifdef __GNUC__
-  return x == 1 ? 1 : 1 << (64 - __builtin_clzl(x - 1));
+  return x == 1 ? 1 : (uint64_t)1 << (64 - __builtin_clzl(x - 1));
 #else
   x |= x >> 1;
   x |= x >> 2;

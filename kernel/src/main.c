@@ -206,6 +206,7 @@ void kmain(void) {
 
   hcf(); // we js chill
 }
+extern void do_funny();
 void kentry() {
   // init vfs, load font from initramfs, change font or smthin for flanterm or
   // use a custom made terminal idk, lots of things to do
@@ -218,7 +219,7 @@ void kentry() {
   node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0);
 
   flanterm_write(get_fctx(), (const char *)sexial, node->stat.size);
-  test_elf();
+  do_funny();
   rsh();
   exit_thread();
 }

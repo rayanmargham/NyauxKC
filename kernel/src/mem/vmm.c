@@ -49,6 +49,13 @@ void kprintf_all_vmm_regions() {
     blah = (VMMRegion *)blah->next;
   }
 }
+void kprintf_all_uvmm_regions() {
+  VMMRegion *blah = (VMMRegion *)ker_map.userhead;
+  while (blah != NULL) {
+    kprintf_vmmregion(blah);
+    blah = (VMMRegion *)blah->next;
+  }
+}
 pagemap ker_map = {.head = NULL, .root = NULL};
 void per_cpu_vmm_init() { arch_switch_pagemap(&ker_map); }
 void vmm_init() {
@@ -132,6 +139,7 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
       arch_map_vmm_region(&ker_map, new->base, new->length, true);
+      kprintf("allocated 0x%lx\r\n", new->base);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -148,8 +156,7 @@ void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
   if (virt == 0) {
     return NULL;
   }
-  kprintf("hi\r\n");
-  VMMRegion *cur = (VMMRegion *)map->head;
+  VMMRegion *cur = (VMMRegion *)map->userhead;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (prev == NULL) {
@@ -157,14 +164,11 @@ void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
       cur = (VMMRegion *)cur->next;
       continue;
     }
-    if (cur->base >= (virt + size + 0x1000) &&
-        (prev->base + prev->length) <= virt) {
-      kprintf("sound\r\n");
-      VMMRegion *new =
-          create_region((prev->base + prev->length), align_up(size, 4096));
+    if (cur->base >= (virt + size) && (prev->base + prev->length) <= virt) {
+      VMMRegion *new = create_region(virt, align_up(size, 4096));
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
-      arch_map_vmm_region(map, virt, size, true);
+      arch_map_vmm_region(map, new->base, new->length, true);
       return (void *)virt;
     }
     if (force && (prev->base + prev->length) <= virt) {
@@ -172,8 +176,12 @@ void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
         VMMRegion *tmp = (VMMRegion *)cur->next;
         arch_unmap_vmm_region(map, cur->base, cur->length);
 
-        prev->next = (struct VMMRegion *)tmp;
         slabfree(cur);
+        VMMRegion *new = create_region(virt, align_up(size, 4096));
+        prev->next = (struct VMMRegion *)new;
+        new->next = (struct VMMRegion *)tmp;
+        arch_map_vmm_region(map, virt, size, true);
+        return (void *)virt;
       }
     }
     prev = cur;

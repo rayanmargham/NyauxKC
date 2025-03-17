@@ -10,6 +10,7 @@ struct StackFrame {
 } __attribute__((packed));
 struct arch_thread_t {
   struct StackFrame frame;
+  uint64_t fs_base;
   // uhhhh lol
 };
 struct arch_per_cpu_data {

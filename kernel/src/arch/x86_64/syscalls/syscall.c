@@ -1,16 +1,27 @@
 #include "syscall.h"
 #include "../instructions/instructions.h"
 #include "elf/symbols/symbols.h"
+#include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include <stdint.h>
 
-void syscall_exit() { kprintf("hi FROM syscall_exit()\r\n"); }
-void syscall_debug(char *string, size_t length) {
+struct __syscall_ret syscall_exit() {
+  kprintf("hi FROM syscall_exit()\r\n");
+  return (struct __syscall_ret){0, 0};
+}
+struct __syscall_ret syscall_debug(char *string, size_t length) {
   char *buffer = kmalloc(1024);
   memcpy(buffer, string, length);
   buffer[length] = '\0';
   kprintf("userland: %s", buffer);
+  return (struct __syscall_ret){0, 0};
+}
+struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  cpu->cur_thread->arch_data.fs_base = ptr;
+  wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
+  return (struct __syscall_ret){0, 0};
 }
 extern void syscall_entry();
 
