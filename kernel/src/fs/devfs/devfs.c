@@ -93,7 +93,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       insert_into_list(dir, entry);
       *res = newnode;
       return 0;
-    } else {
+    } else if (type == VDEVICE) {
       struct devfsnode *file =
           (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));

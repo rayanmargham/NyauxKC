@@ -61,7 +61,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
     get_process_finish(proc);
 
   } else {
-    struct FileDescriptionHandle *hnd = get_fd(dirfd);
+    struct FileDescriptorHandle *hnd = get_fd(dirfd);
     if (hnd == NULL) {
       return (struct __syscall_ret){.ret = -1, .errno = EBADF};
     }
@@ -77,7 +77,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   kprintf("sys_read(): reading fd %d\r\n", fd);
-  struct FileDescriptionHandle *hnd = get_fd(fd);
+  struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -91,7 +91,7 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
 }
 struct __syscall_ret syscall_close(int fd) {
   kprintf("sys_close(): closing fd %d\r\n", fd);
-  struct FileDescriptionHandle *hnd = get_fd(fd);
+  struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -100,7 +100,7 @@ struct __syscall_ret syscall_close(int fd) {
 }
 struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
   kprintf("sys_seek(): seeking with fd %d\r\n", fd);
-  struct FileDescriptionHandle *hnd = get_fd(fd);
+  struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -120,7 +120,7 @@ struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
   return (struct __syscall_ret){.ret = hnd->offset, .errno = 0};
 }
 struct __syscall_ret syscall_isatty(int fd) {
-  struct FileDescriptionHandle *hnd = get_fd(fd);
+  struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }

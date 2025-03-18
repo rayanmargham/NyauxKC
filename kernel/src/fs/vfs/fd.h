@@ -5,7 +5,7 @@
 #include <utils/libc.h>
 
 #include "utils/hashmap.h"
-struct FileDescriptionHandle {
+struct FileDescriptorHandle {
   int fd;
   uint64_t offset;
   struct vnode *node;
@@ -16,4 +16,4 @@ bool fd_iter(const void *item, void *udata);
 uint64_t fd_hash(const void *item, uint64_t seed0, uint64_t seed1);
 int fddalloc(struct vnode *node);
 void fddfree(int fd);
-struct FileDescriptionHandle *get_fd(int fd);
+struct FileDescriptorHandle *get_fd(int fd);

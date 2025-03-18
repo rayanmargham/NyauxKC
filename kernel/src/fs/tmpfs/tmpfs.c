@@ -84,7 +84,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       *res = newnode;
       // kprintf("tmpfs(): created\r\n");
       return 0;
-    } else {
+    } else if (type == VREG || type == VSYMLINK) {
       struct tmpfsnode *file =
           (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));

@@ -6,6 +6,7 @@
 void vfs_init();
 enum vtype {
   VREG,
+  VDEVICE,
   VDIR,
   VSYMLINK // symlink
 };

@@ -45,7 +45,7 @@ struct process_t *create_process(pagemap *map) {
   him->cur_map = map;
   him->lock = SPINLOCK_INITIALIZER;
   him->cnt = 0;
-  him->fds = hashmap_new(sizeof(struct FileDescriptionHandle), 0, 0, 0, fd_hash,
+  him->fds = hashmap_new(sizeof(struct FileDescriptorHandle), 0, 0, 0, fd_hash,
                          fd_compare, NULL, NULL);
   him->fdalloc[0] = 1;
   him->fdalloc[1] = 1;
@@ -55,9 +55,9 @@ struct process_t *create_process(pagemap *map) {
     him->root = vfs_list->cur_vnode;
     him->cwd = him->root;
   }
-  hashmap_set(him->fds, &(struct FileDescriptionHandle){.fd = 0});
-  hashmap_set(him->fds, &(struct FileDescriptionHandle){.fd = 1});
-  hashmap_set(him->fds, &(struct FileDescriptionHandle){.fd = 2});
+  hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 0});
+  hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 1});
+  hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 2});
   return him;
 }
 struct thread_t *create_thread() {
