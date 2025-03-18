@@ -6,6 +6,7 @@ extern syscall_openat
 extern syscall_read
 extern syscall_seek
 extern syscall_close
+extern syscall_isatty
 global syscall_entry
 section .data
 syscallarray:
