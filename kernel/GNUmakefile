@@ -53,6 +53,7 @@ override CFLAGS += \
     -Wextra \
     -std=gnu23 \
     -nostdinc \
+    -g \
     -ffreestanding \
     -fno-stack-protector \
     -fno-omit-frame-pointer \

@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..60f8bf2
+index 0000000..c3e529e
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,51 @@
+@@ -0,0 +1,184 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -83,38 +83,170 @@ index 0000000..60f8bf2
 +void sys_libc_log(const char *message) {
 +  __syscall2(1, (uint64_t)message, strlen(message));
 +}
-+
++void sys_exit(int status) {
++  __syscall1(0, status);
++  __builtin_unreachable();
++};
 +void sys_libc_panic() {
 +  sys_libc_log("\nMLIBC PANIC\n");
-+  __builtin_trap();
++  sys_exit(1);
 +}
-+
-+void sys_exit(int status) STUB_ONLY;
-+int sys_anon_allocate(size_t size, void **pointer) STUB_ONLY;
++int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd,
++               off_t offset, void **window) {
++  struct __syscall_ret ret =
++      __syscall6(3, (uint64_t)hint, (uint64_t)size, (uint64_t)prot,
++                 (uint64_t)flags, (uint64_t)fd, (uint64_t)offset);
++  *window = (void *)ret.ret;
++  return ret.err;
++};
++int sys_anon_allocate(size_t size, void **pointer) {
++  return sys_vm_map(NULL, size, PROT_READ | PROT_WRITE, MAP_ANON, -1, 0,
++                    pointer);
++};
++int sys_vm_protect(void *pointer, size_t size, int prot) { return 0; }
 +int sys_anon_free(void *pointer, size_t size) STUB_ONLY;
-+int sys_close(int fd) STUB_ONLY;
++int sys_close(int fd) {
++  __syscall_ret ret = __syscall1(7, fd);
++
++  if (ret.err != 0)
++    return ret.err;
++
++  return 0;
++};
 +int sys_futex_wait(int *pointer, int expected,
 +                   const struct timespec *time) STUB_ONLY;
-+int sys_futex_wake(int *pointer) STUB_ONLY;
-+int sys_open(const char *path, int flags, mode_t mode, int *fd) STUB_ONLY;
-+int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) STUB_ONLY;
-+int sys_write(int fd, const void *buf, size_t count,
-+              ssize_t *bytes_written) STUB_ONLY;
-+int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) STUB_ONLY;
++int sys_futex_wake(int *pointer) {
++  sys_libc_log("sys futex wake is a stub");
++  return 0;
++};
++int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
++  __syscall_ret ret = __syscall4(4, dirfd, (uint64_t)path, flags, mode);
++
++  if (ret.err != 0)
++    return ret.err;
++
++  *fd = (int)ret.ret;
++  return 0;
++}
++uid_t sys_geteuid() {
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++
++gid_t sys_getgid() {
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++
++int sys_setgid(gid_t gid) {
++  (void)gid;
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++
++pid_t sys_getpgid(pid_t pid, pid_t *pgid) {
++  (void)pid;
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  *pgid = 0;
++  return 0;
++}
++
++gid_t sys_getegid() {
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++
++int sys_setpgid(pid_t pid, pid_t pgid) {
++  (void)pid;
++  (void)pgid;
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++
++int sys_ttyname(int fd, char *buf, size_t size) {
++  (void)fd;
++  (void)buf;
++  (void)size;
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return ENOSYS;
++}
++uid_t sys_getuid() {
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++int sys_open(const char *path, int flags, mode_t mode, int *fd) {
++  return sys_openat(AT_FDCWD, path, flags, mode, fd);
++}
++int sys_read(int fd, void *buf, size_t count, ssize_t *bytes_read) {
++  if (fd == 0) {
++    *bytes_read = count;
++    return 0; // hack
++  }
++  __syscall_ret ret = __syscall3(5, fd, (uint64_t)buf, count);
++
++  if (ret.err != 0) {
++    return ret.err;
++  }
++
++  *bytes_read = (ssize_t)ret.ret;
++  return 0;
++}
++
++int sys_seek(int fd, off_t offset, int whence, off_t *new_offset) {
++  __syscall_ret ret = __syscall3(6, fd, offset, whence);
++
++  if (ret.err != 0) {
++    return ret.err;
++  }
++
++  *new_offset = (off_t)ret.ret;
++  return 0;
++}
 +int sys_tcb_set(void *pointer) {
 +  __syscall1(2, (uint64_t)pointer);
 +  return 0;
 +};
-+int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd,
-+               off_t offset, void **window) STUB_ONLY;
-+int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
-+int sys_clock_get(int clock, time_t *secs, long *nanos) STUB_ONLY;
 +
++int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
++int sys_clock_get(int clock, time_t *secs, long *nanos) { return ENOSYS; };
++int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
++  // __syscall_ret ret = __syscall(4, fd, buf, count);
++
++  // if (ret.errno != 0) {
++  // 	return ret.errno;
++  // }
++
++  // *bytes_written = (ssize_t)ret.ret;
++
++  return ENOSYS;
++}
++pid_t sys_getpid() {
++  // __syscall_ret ret = __syscall(31);
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++  return 0;
++}
++pid_t sys_getppid() {
++  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
++                      << frg::endlog;
++
++  return 0;
++}
++int sys_isatty(int fd) {
++  return ENOSYS; // hack TODO
++}
 +} // namespace mlibc
-\ No newline at end of file
 diff --git mlibc-workdir/sysdeps/nyaux/generic/syscall.h mlibc-workdir/sysdeps/nyaux/generic/syscall.h
 new file mode 100644
-index 0000000..208b317
+index 0000000..05aa39d
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/syscall.h
 @@ -0,0 +1,76 @@
@@ -122,7 +254,7 @@ index 0000000..208b317
 +#include <stdint.h>
 +struct __syscall_ret {
 +  uint64_t ret;
-+  uint64_t errno;
++  uint64_t err;
 +};
 +
 +static __syscall_ret __syscall6(int number, uint64_t arg1, uint64_t arg2,
@@ -133,7 +265,7 @@ index 0000000..208b317
 +  register uint64_t arg_r9 asm("r9") = arg5;
 +  register uint64_t arg_r10 asm("r10") = arg6;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg_r8),
 +                 "r"(arg_r9), "r"(arg_r10)
 +               : "rcx", "r11", "memory");
@@ -145,7 +277,7 @@ index 0000000..208b317
 +  register uint64_t arg_r8 asm("r8") = arg4;
 +  register uint64_t arg_r9 asm("r9") = arg5;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg_r8),
 +                 "r"(arg_r9)
 +               : "rcx", "r11", "memory");
@@ -156,7 +288,7 @@ index 0000000..208b317
 +  struct __syscall_ret ret;
 +  register uint64_t arg_r8 asm("r8") = arg4;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3), "r"(arg_r8)
 +               : "rcx", "r11", "memory");
 +  return ret;
@@ -165,7 +297,7 @@ index 0000000..208b317
 +                                uint64_t arg3) {
 +  struct __syscall_ret ret;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number), "D"(arg1), "S"(arg2), "d"(arg3)
 +               : "rcx", "r11", "memory");
 +  return ret;
@@ -173,7 +305,7 @@ index 0000000..208b317
 +static __syscall_ret __syscall2(int number, uint64_t arg1, uint64_t arg2) {
 +  struct __syscall_ret ret;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number), "D"(arg1), "S"(arg2)
 +               : "rcx", "r11", "memory");
 +  return ret;
@@ -181,7 +313,7 @@ index 0000000..208b317
 +static __syscall_ret __syscall1(int number, uint64_t arg1) {
 +  struct __syscall_ret ret;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number), "D"(arg1)
 +               : "rcx", "r11", "memory");
 +  return ret;
@@ -189,7 +321,7 @@ index 0000000..208b317
 +static __syscall_ret __syscall0(int number) {
 +  struct __syscall_ret ret;
 +  asm volatile("syscall"
-+               : "=a"(ret.ret), "=d"(ret.errno)
++               : "=a"(ret.ret), "=d"(ret.err)
 +               : "a"(number)
 +               : "rcx", "r11", "memory");
 +  return ret;

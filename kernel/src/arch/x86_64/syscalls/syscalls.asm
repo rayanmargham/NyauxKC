@@ -1,12 +1,23 @@
 extern syscall_exit
 extern syscall_debug
 extern syscall_setfsbase
+extern syscall_mmap
+extern syscall_openat
+extern syscall_read
+extern syscall_seek
+extern syscall_close
 global syscall_entry
 section .data
 syscallarray:
     dq syscall_exit ; 0
     dq syscall_debug ; 1
     dq syscall_setfsbase ; 2
+    dq syscall_mmap ; 3
+    dq syscall_openat ; 4
+    dq syscall_read ; 5
+    dq syscall_seek ; 6
+    dq syscall_close ; 7
+    dq syscall_isatty ; 8
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:

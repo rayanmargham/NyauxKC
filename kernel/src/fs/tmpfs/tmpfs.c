@@ -14,7 +14,7 @@ int node_compare(const void *a, const void *b, void *udata) {
   return strcmp(ua->name, ub->name);
 }
 static int create(struct vnode *curvnode, char *name, enum vtype type,
-                  struct vnode **res, void *data);
+                  struct vnodeops *ops, struct vnode **res, void *data);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
                  void *buffer, int rw);
@@ -47,7 +47,7 @@ static void insert_into_list(struct tmpfsnode *node, struct direntry *entry) {
   entry->cnt += 1;
 }
 static int create(struct vnode *curvnode, char *name, enum vtype type,
-                  struct vnode **res, void *data) {
+                  struct vnodeops *ops, struct vnode **res, void *data) {
   if (curvnode->v_type == VDIR) {
     struct tmpfsnode *node = (struct tmpfsnode *)curvnode->data;
     struct direntry *entry = (struct direntry *)node->data;
@@ -59,7 +59,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
       newnode->data = dir;
       newnode->v_type = VDIR;
-      newnode->ops = &tmpfs_ops;
+      newnode->ops = ops;
       newnode->vfs = curvnode->vfs;
       dir->direntry = direntry;
       dir->name = name;
@@ -90,7 +90,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
 
       newnode->v_type = type;
-      newnode->ops = &tmpfs_ops;
+      newnode->ops = ops;
       newnode->vfs = curvnode->vfs;
       newnode->data = file;
       file->name = name;

@@ -5,33 +5,32 @@
 #include <stdint.h>
 #include <term/term.h>
 
-struct devfsops
-{
-	size_t (*rw)(struct vnode* curvnode, size_t offset, size_t size, void* buffer, int rw);
+struct devfsops {
+  size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
+               void *buffer, int rw);
 };
+struct devfsinfo {
+  uint8_t major;
+  uint8_t minor;
+  struct devfsops *ops;
 
-struct devfsnode
-{
-	struct vnode* curvnode;
-	uint8_t major;
-	uint8_t minor;
-	struct devfsops ops;
-	struct devfsnode* next;
-	void* data;
-	char* name;
+  // .... anyhting else
+};
+struct devfsnode {
+  struct vnode *curvnode;
+  struct devfsinfo *info;
+  struct devfsnode *next;
+  union {
+    struct devfsdirentry *direntry;
+    void *data;
+  };
+  char *name;
 };
 extern struct vnodeops vnode_devops;
 extern struct vfs_ops vfs_devops;
-void devfs_init(struct vfs* curvfs);
-struct devfsinfo
-{
-	uint8_t major;
-	uint8_t minor;
-	struct devfsops* ops;
+void devfs_init(struct vfs *curvfs);
 
-	// .... anyhting else
-};
-struct devfsdirentry
-{
-	struct devfsnode* siblings;
+struct devfsdirentry {
+  struct devfsnode **nodes;
+  size_t cnt;
 };

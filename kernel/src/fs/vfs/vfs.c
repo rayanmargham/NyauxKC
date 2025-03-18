@@ -72,7 +72,6 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
 
 void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
                          void *buf) {
-  // kprintf("creating path %s\r\n", path);
   struct vnode *node = vfs_list->cur_vnode;
   assert(node->v_type == VDIR);
 
@@ -87,7 +86,7 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
     if (next_token == NULL) {
       assert(res != 0);
       assert(current_node->ops->create(current_node, strdup(token), type,
-                                       &next_node, NULL) == 0);
+                                       &tmpfs_ops, &next_node, NULL) == 0);
 
       if ((type == VREG || type == VSYMLINK) && buf != NULL && filesize != 0) {
         if (type == VSYMLINK) {
@@ -103,8 +102,8 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
     }
 
     if (res != 0)
-      assert(current_node->ops->create(current_node, token, VDIR, &next_node,
-                                       NULL) == 0);
+      assert(current_node->ops->create(current_node, token, VDIR, &tmpfs_ops,
+                                       &next_node, NULL) == 0);
     assert(next_node->v_type == VDIR);
 
     current_node = next_node;

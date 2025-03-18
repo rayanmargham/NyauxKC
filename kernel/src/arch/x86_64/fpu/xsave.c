@@ -84,7 +84,7 @@ void fpu_init() {
     kprintf("arch_fpu(): using legacy fxstor\r\n");
     // panic("nyaux needs xsave :)\r\n");
     // fxstor fxsave, 512 byte save
-    if (fpu_storage_size) {
+    if (fpu_storage_size == 0) {
       fpu_storage_size = 512;
       fpu_save = fxsave;
       fpu_store = fxrstor;

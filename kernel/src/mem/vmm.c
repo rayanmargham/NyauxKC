@@ -139,7 +139,6 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
       arch_map_vmm_region(&ker_map, new->base, new->length, true);
-      kprintf("allocated 0x%lx\r\n", new->base);
       return (void *)new->base;
     } else {
       prev = cur;

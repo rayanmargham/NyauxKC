@@ -14,6 +14,9 @@ struct process_t {
   refcount_t cnt;
   struct hashmap *fds;
   int fdalloc[255];
+  uint64_t exit_code;
+  struct vnode *root;
+  struct vnode *cwd; // current working directory
 };
 enum TASKSTATE {
   READY = 0,

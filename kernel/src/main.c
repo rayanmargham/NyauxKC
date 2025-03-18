@@ -15,6 +15,7 @@
 #include "dbg/kdb.h"
 #include "elf/symbols/symbols.h"
 #include "flanterm/flanterm.h"
+#include "fs/vfs/fd.h"
 #include "fs/vfs/vfs.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
@@ -22,6 +23,7 @@
 #include "term/term.h"
 #include "uacpi/status.h"
 #include "utils/basic.h"
+#include "utils/libc.h"
 
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
@@ -219,6 +221,14 @@ void kentry() {
   node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0);
 
   flanterm_write(get_fctx(), (const char *)sexial, node->stat.size);
+  // struct ring_buf *funnytest = init_ringbuf(10);
+  // while (put_ringbuf(funnytest, 5))
+  //   ;
+  // ;
+  // uint64_t ret = 0;
+  // while (get_ringbuf(funnytest, (uint64_t *)&ret)) {
+  //   kprintf("ringbuf(): %d\r\n", (int)ret);
+  // }
   do_funny();
   rsh();
   exit_thread();

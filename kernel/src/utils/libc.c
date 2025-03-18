@@ -1,3 +1,4 @@
+#include "utils/libc.h"
 #include <limits.h>
 #include <mem/kmem.h>
 #include <stddef.h>
@@ -125,4 +126,40 @@ char *strdup(const char *str) {
   memcpy(new_string, str, length);
   new_string[length] = '\0';
   return new_string;
+}
+struct ring_buf *init_ringbuf(size_t thesize) {
+  struct ring_buf *ringbuf = kmalloc(sizeof(struct ring_buf));
+  ringbuf->size = thesize;
+  ringbuf->write_idx = 0;
+  ringbuf->read_idx = 0;
+  ringbuf->buf = kmalloc(align_up(thesize * sizeof(uint64_t), 8));
+  return ringbuf;
+}
+// referenced from wikipedia but i sorta undestand it
+int put_ringbuf(struct ring_buf *buf, uint64_t data) {
+  if ((buf->write_idx + 1) % buf->size == buf->read_idx) {
+    return 0;
+  }
+  assert(buf != NULL || buf->buf != NULL);
+  buf->buf[buf->write_idx] = data;
+  buf->write_idx = (buf->write_idx + 1) % buf->size;
+  return 1;
+}
+int get_ringbuf(struct ring_buf *buf, uint64_t *value) {
+  if (buf->read_idx == buf->write_idx) {
+    return 0;
+  }
+  assert(buf != NULL || buf->buf != NULL);
+  *value = buf->buf[buf->read_idx];
+  buf->read_idx = (buf->read_idx + 1) % buf->size;
+  return 1;
+}
+void resize_ringbuf(struct ring_buf *buf, size_t resize) {
+  assert(buf != NULL || buf->buf != NULL);
+  void *new = kmalloc(resize);
+  void *old = buf->buf;
+  memcpy(new, old, buf->size);
+  kfree(old, buf->size);
+  buf->size = resize;
+  buf->buf = new;
 }

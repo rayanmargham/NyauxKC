@@ -141,6 +141,7 @@ int AllocateIrq() {
   return -1;
 }
 void *sched(struct StackFrame *frame) {
+  __asm__ volatile("cli");
   unsigned long rsp;
 
   // Inline assembly to read the RSP register

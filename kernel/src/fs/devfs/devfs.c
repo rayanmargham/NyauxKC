@@ -4,42 +4,46 @@
 #include <utils/libc.h>
 
 #include "dev/null/null.h"
+#include "dev/tty/tty.h"
 #include "fs/vfs/vfs.h"
 
 static int create(struct vnode *curvnode, char *name, enum vtype type,
-                  struct vnode **res, void *data);
+                  struct vnodeops *ops, struct vnode **res, void *data);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
-static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
-                 void *buffer, int rw);
+static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
+                  void *buffer, int rw);
 static int readdir(struct vnode *curvnode, int offset, char **name);
 static int mount(struct vfs *curvfs, char *path, void *data);
 struct vnodeops vnode_devops = {
-    .lookup = lookup, .create = create, .rw = rw, readdir};
+    .lookup = lookup, .create = create, .rw = rww, readdir};
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
+  devtty_init(curvfs);
   return 0;
 }
-void devfs_init(struct vfs *curvfs) {
-  char *token;
-  token = strtok("/dev", "/");
-  struct vnode *starter = curvfs->cur_vnode;
-  while (token != NULL) {
-    struct vnode *ret;
-    int result = starter->ops->lookup(starter, token, &ret);
-    if (result == -1) {
-      starter->ops->create(starter, token, VDIR, &ret, NULL);
-      starter = ret;
-    } else {
-      starter = ret;
-    }
-    token = strtok(NULL, "/");
+static void insert_into_list(struct devfsnode *node,
+                             struct devfsdirentry *entry) {
+  if (entry->cnt == 0) {
+    entry->nodes = kmalloc(sizeof(struct devfsnode *));
+    entry->nodes[0] = node;
+  } else {
+    struct devfsnode **oldnodes = entry->nodes;
+    entry->nodes = kmalloc(sizeof(struct devfsnode *) * (entry->cnt + 1));
+    memcpy(entry->nodes, oldnodes, entry->cnt * sizeof(struct devfsnode *));
+    kfree(oldnodes, entry->cnt * sizeof(struct devfsnode *));
+    entry->nodes[entry->cnt] = node;
   }
+  entry->cnt += 1;
+}
+void devfs_init(struct vfs *curvfs) {
+  struct vnode *starter = NULL;
+  vfs_lookup(NULL, "/", &starter);
   kprintf("devfs(): init\r\n");
   struct vfs *new = kmalloc(sizeof(struct vfs));
-  new->cur_vnode = starter;
-  new->cur_vnode->ops = &vnode_devops;
   new->vfs_ops = &vfs_devops;
+  struct vnode *replacement = NULL;
+  starter->ops->create(starter, "dev", VDIR, &vnode_devops, &replacement, NULL);
   struct vfs *old = curvfs;
   while (true) {
     if (old->vfs_next == NULL) {
@@ -48,101 +52,90 @@ void devfs_init(struct vfs *curvfs) {
     old = old->vfs_next;
   }
   old->vfs_next = new;
-  new->vfs_ops->mount(new, NULL, NULL);
+  new->cur_vnode = replacement;
+  new->vfs_ops->mount(new, "/", NULL);
 }
 
-int create(struct vnode *curvnode, char *name, enum vtype type,
-           struct vnode **res, void *data) {
-  if (type == VREG) {
-    struct devfsinfo *info = (struct devfsinfo *)data;
+static int create(struct vnode *curvnode, char *name, enum vtype type,
+                  struct vnodeops *ops, struct vnode **res, void *data) {
+  if (curvnode->v_type == VDIR) {
     struct devfsnode *node = (struct devfsnode *)curvnode->data;
-    struct devfsdirentry *entry = (struct devfsdirentry *)node->data;
-    node = entry->siblings;
-    struct devfsnode *prev = NULL;
-    while (node != NULL) {
-      if (node->next == NULL) {
-        prev = node;
-      }
-      node = node->next;
-    }
-    struct devfsnode *devnode =
-        (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
-    struct vnode *vnode = (struct vnode *)kmalloc(sizeof(struct vnode));
-    vnode->v_type = type;
-    vnode->data = devnode;
-    vnode->ops = &vnode_devops;
-    vnode->vfs = curvnode->vfs;
-    devnode->curvnode = vnode;
-    devnode->major = info->major;
-    devnode->minor = info->minor;
-    devnode->ops = *info->ops;
-    devnode->name = name;
+    struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
+    if (type == VDIR) {
+      struct devfsnode *dir =
+          (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+      struct devfsdirentry *direntry =
+          (struct devfsdirentry *)kmalloc(sizeof(struct devfsdirentry));
+      struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
+      newnode->data = dir;
+      newnode->v_type = VDIR;
+      newnode->ops = ops;
+      newnode->vfs = curvnode->vfs;
 
-    if (prev == NULL) {
-      entry->siblings = devnode;
-    } else {
-      prev->next = devnode;
-    }
-    *res = vnode;
-    kfree(info, sizeof(struct devfsinfo));
-    return 0;
-  } else if (type == VDIR) {
-    struct devfsnode *node = (struct devfsnode *)curvnode->data;
-    struct devfsdirentry *entry = (struct devfsdirentry *)node->data;
-    node = entry->siblings;
-    struct devfsnode *prev = NULL;
-    while (node != NULL) {
-      if (node->next == NULL) {
-        prev = node;
-      }
-      node = node->next;
-    }
-    struct devfsnode *devnode =
-        (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
-    struct devfsdirentry *direntryyy =
-        (struct devfsdirentry *)kmalloc(sizeof(struct devfsdirentry *));
-    struct vnode *vnode = (struct vnode *)kmalloc(sizeof(struct vnode));
-    vnode->v_type = type;
-    vnode->data = devnode;
-    vnode->ops = &vnode_devops;
-    vnode->vfs = curvnode->vfs;
-    devnode->curvnode = vnode;
-    devnode->major = 0;
-    devnode->minor = 0;
-    devnode->name = name;
-    devnode->data = direntryyy;
+      dir->direntry = direntry;
+      direntry->cnt = 0;
+      dir->name = name;
+      dir->curvnode = newnode;
+      dir->info = (struct devfsinfo *)data;
 
-    if (prev == NULL) {
-      entry->siblings = devnode;
+      struct devfsnode *dot =
+          (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+      dot->name = ".";
+      dot->curvnode = newnode;
+      dot->direntry = direntry;
+      struct devfsnode *dotdot =
+          (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+      dotdot->name = "..";
+      dotdot->curvnode = curvnode;
+      dotdot->direntry = entry;
+      insert_into_list(dot, direntry);
+      insert_into_list(dotdot, direntry);
+      insert_into_list(dir, entry);
+      *res = newnode;
+      return 0;
     } else {
-      prev->next = devnode;
+      struct devfsnode *file =
+          (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+      struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
+
+      newnode->v_type = type;
+      newnode->ops = ops;
+      newnode->vfs = curvnode->vfs;
+      newnode->data = file;
+      file->name = name;
+      file->info = (struct devfsinfo *)data;
+      newnode->stat.size = 0;
+      insert_into_list(file, entry);
+      file->curvnode = newnode;
+      *res = newnode;
+      return 0;
     }
-    *res = vnode;
-    return 0;
   }
+  kprintf("error\r\n");
   return -1;
 }
-static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
-                 void *buffer, int rw) {
+static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
+                  void *buffer, int rw) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
-  return devnode->ops.rw(curvnode, offset, size, buffer, rw);
+  return devnode->info->ops->rw(curvnode, devnode->data, offset, size, buffer,
+                                rw);
 }
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   struct devfsnode *node = (struct devfsnode *)curvnode->data;
+  if (node == NULL) {
+    panic("devfs(): node is null");
+  }
   if (curvnode->v_type == VREG) {
     return -1;
   } else if (curvnode->v_type == VDIR) {
-    struct devfsdirentry *entry = (struct devfsdirentry *)node->data;
-
-    node = entry->siblings;
-    while (node != NULL) {
-      if (strcmp(node->name, name) == 0) {
-        *res = node->curvnode;
+    struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
+    for (size_t i = 0; i < entry->cnt; i++) {
+      if (strcmp(entry->nodes[i]->name, name) == 0) {
+        *res = entry->nodes[i]->curvnode;
         return 0;
       }
-      node = node->next;
     }
-    // kprintf("tmpfs(): nothing found\r\n");
+    return -1;
   }
   return -1;
 }

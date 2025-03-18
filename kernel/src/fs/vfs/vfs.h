@@ -9,6 +9,7 @@ enum vtype {
   VDIR,
   VSYMLINK // symlink
 };
+extern struct vfs *vfs_list;
 struct stat {
   size_t size;
 };
@@ -22,7 +23,7 @@ struct vnode {
 struct vnodeops {
   int (*lookup)(struct vnode *curvnode, char *name, struct vnode **res);
   int (*create)(struct vnode *curvnode, char *name, enum vtype type,
-                struct vnode **res, void *data);
+                struct vnodeops *ops, struct vnode **res, void *data);
   // curvnode, offset, size, buffer, rw
   size_t (*rw)(struct vnode *curvnode, size_t offset, size_t size, void *buffer,
                int rw);

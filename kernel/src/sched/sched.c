@@ -8,6 +8,7 @@
 #include "arch/x86_64/gdt/gdt.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "fs/vfs/fd.h"
+#include "fs/vfs/vfs.h"
 #include "mem/vmm.h"
 #include "sched.h"
 #include "sched/reaper.h"
@@ -46,6 +47,17 @@ struct process_t *create_process(pagemap *map) {
   him->cnt = 0;
   him->fds = hashmap_new(sizeof(struct FileDescriptionHandle), 0, 0, 0, fd_hash,
                          fd_compare, NULL, NULL);
+  him->fdalloc[0] = 1;
+  him->fdalloc[1] = 1;
+  him->fdalloc[2] = 1;
+  if (vfs_list) {
+
+    him->root = vfs_list->cur_vnode;
+    him->cwd = him->root;
+  }
+  hashmap_set(him->fds, &(struct FileDescriptionHandle){.fd = 0});
+  hashmap_set(him->fds, &(struct FileDescriptionHandle){.fd = 1});
+  hashmap_set(him->fds, &(struct FileDescriptionHandle){.fd = 2});
   return him;
 }
 struct thread_t *create_thread() {
@@ -171,10 +183,8 @@ void create_kentry() {
 void do_funny() {
   struct process_t *bashprocess = create_process(&ker_map);
   struct thread_t *fun = create_uthread(0, bashprocess, 2);
-  kprintf("stack %lx\r\n", fun->arch_data.frame.rsp);
-  load_elf(&ker_map, "/bin/bash", (char *[]){"/bin/bash", NULL},
-           (char *[]){NULL}, &fun->arch_data.frame);
-  kprintf("stack2 %lx\r\n", fun->arch_data.frame.rsp);
+  load_elf(&ker_map, "/bin/bash", (char *[]){"/bin/ls", NULL}, (char *[]){NULL},
+           &fun->arch_data.frame);
   ThreadReady(fun);
 }
 // returns the old thread
@@ -233,11 +243,12 @@ void schedd(struct StackFrame *frame) {
   }
   struct thread_t *old = switch_queue(cpu);
 #if defined(__x86_64__)
-  if (old != NULL)
+  if (old != NULL) {
+
     save_ctx(&old->arch_data.frame, frame);
+  }
   cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
-  send_eoi();
   wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
   if (cpu->cur_thread->arch_data.frame.cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
@@ -247,6 +258,7 @@ void schedd(struct StackFrame *frame) {
     __asm__ volatile("swapgs");
 #endif
   }
+  send_eoi();
   load_ctx(&cpu->cur_thread->arch_data.frame);
 #endif
 }
