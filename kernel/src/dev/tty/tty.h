@@ -17,3 +17,4 @@ struct tty {
   struct tty_device *device;
 };
 void devtty_init(struct vfs *curvfs);
+void tty_install_device(struct tty *tty, struct tty_device *device);

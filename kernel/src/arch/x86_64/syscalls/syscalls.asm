@@ -7,6 +7,7 @@ extern syscall_read
 extern syscall_seek
 extern syscall_close
 extern syscall_isatty
+extern syscall_write
 global syscall_entry
 section .data
 syscallarray:
@@ -19,6 +20,7 @@ syscallarray:
     dq syscall_seek ; 6
     dq syscall_close ; 7
     dq syscall_isatty ; 8
+    dq syscall_write ; 9
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:

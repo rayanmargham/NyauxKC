@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..c3e529e
+index 0000000..f782324
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,192 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -211,22 +211,32 @@ index 0000000..c3e529e
 +  return 0;
 +}
 +int sys_tcb_set(void *pointer) {
-+  __syscall1(2, (uint64_t)pointer);
++  __syscall_ret ret = __syscall1(2, (uint64_t)pointer);
++  if (ret.err != 0) {
++    return ret.err;
++  }
 +  return 0;
 +};
++int sys_isatty(int fd) {
++  __syscall_ret ret = __syscall1(8, fd);
++  if (ret.err != 0) {
++    return ret.err;
++  }
 +
++  return ret.ret;
++}
 +int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
 +int sys_clock_get(int clock, time_t *secs, long *nanos) { return ENOSYS; };
 +int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
-+  // __syscall_ret ret = __syscall(4, fd, buf, count);
++  __syscall_ret ret = __syscall3(9, fd, (uint64_t)buf, count);
 +
-+  // if (ret.errno != 0) {
-+  // 	return ret.errno;
-+  // }
++  if (ret.err != 0) {
++    return ret.err;
++  }
 +
-+  // *bytes_written = (ssize_t)ret.ret;
++  *bytes_written = (ssize_t)ret.ret;
 +
-+  return ENOSYS;
++  return 0;
 +}
 +pid_t sys_getpid() {
 +  // __syscall_ret ret = __syscall(31);
@@ -240,9 +250,7 @@ index 0000000..c3e529e
 +
 +  return 0;
 +}
-+int sys_isatty(int fd) {
-+  return ENOSYS; // hack TODO
-+}
++
 +} // namespace mlibc
 diff --git mlibc-workdir/sysdeps/nyaux/generic/syscall.h mlibc-workdir/sysdeps/nyaux/generic/syscall.h
 new file mode 100644

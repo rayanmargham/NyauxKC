@@ -181,8 +181,8 @@ void create_kentry() {
 #endif
 }
 void do_funny() {
-  struct process_t *bashprocess = create_process(&ker_map);
-  struct thread_t *fun = create_uthread(0, bashprocess, 2);
+  struct thread_t *fun = create_uthread(0, get_process_start(), 2);
+  get_process_finish(fun->proc);
   load_elf(&ker_map, "/bin/bash", (char *[]){"/bin/ls", NULL}, (char *[]){NULL},
            &fun->arch_data.frame);
   ThreadReady(fun);

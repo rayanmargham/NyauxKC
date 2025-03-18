@@ -79,6 +79,11 @@ void sputc(int ch, void *) {
   outb(0x3F8, (uint8_t)c);
 #endif
 }
+void sprintf_write(char *buf, size_t size) {
+  for (int i = 0; i < size; i++) {
+    sputc(buf[i], NULL);
+  }
+}
 void sprintf(const char *format, ...) {
   va_list args;
   va_start(args, format);

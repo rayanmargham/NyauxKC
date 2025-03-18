@@ -1,4 +1,5 @@
 #include "null.h"
+#include "fs/vfs/vfs.h"
 
 // impl open() later on
 struct devfsops nullops = {.rw = rw};
@@ -17,6 +18,6 @@ void devnull_init(struct vfs *curvfs) {
   info->minor = 0;
   info->ops = &nullops;
   kprintf("chilling\r\n");
-  curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "null", VREG, &vnode_devops,
-                                 &res, info);
+  curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "null", VDEVICE,
+                                 &vnode_devops, &res, info);
 }

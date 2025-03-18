@@ -10,7 +10,7 @@ source_imagedeps="curl"
 source_hostdeps="autoconf automake libtool pkg-config"
 imagedeps="build-essential"
 hostdeps="gcc autoconf automake libtool pkg-config"
-deps="core-libs ncurses readline"
+deps="core-libs"
 
 prepare() {
 #    for p in $(seq -w 38 38); do
@@ -30,10 +30,11 @@ configure() {
             -DSYS_BASH_LOGOUT='\"/etc/bash.bash_logout\"' \
             -DNON_INTERACTIVE_LOGIN_SHELLS \
         " \
-        --with-curses \
-        --enable-readline \
+        --disable-readline \
         --without-bash-malloc \
-        --with-installed-readline="${sysroot}/usr/lib"
+        # --with-curses \
+        # --enable-readline \
+        # --with-installed-readline="${sysroot}/usr/lib"
 }
 
 build() {

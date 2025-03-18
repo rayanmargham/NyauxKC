@@ -1,6 +1,8 @@
 #include "syscall.h"
 #include "../instructions/instructions.h"
 #include "elf/symbols/symbols.h"
+#include "fs/devfs/devfs.h"
+#include "fs/tmpfs/tmpfs.h"
 #include "fs/vfs/fd.h"
 #include "fs/vfs/vfs.h"
 #include "mem/vmm.h"
@@ -53,7 +55,6 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
-  kprintf("sys_openat(): opening path %s\r\n", path);
   struct vnode *node = NULL;
   if (dirfd == -100) {
     struct process_t *proc = get_process_start();
@@ -76,7 +77,6 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   return (struct __syscall_ret){.ret = outfd, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
-  kprintf("sys_read(): reading fd %d\r\n", fd);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -90,7 +90,6 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   return (struct __syscall_ret){.ret = bytes_written, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
-  kprintf("sys_close(): closing fd %d\r\n", fd);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -99,7 +98,6 @@ struct __syscall_ret syscall_close(int fd) {
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
-  kprintf("sys_seek(): seeking with fd %d\r\n", fd);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -121,9 +119,27 @@ struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
 }
 struct __syscall_ret syscall_isatty(int fd) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  if (hnd == NULL) {
+
+  if (hnd == NULL || hnd->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
+  if (hnd->node->v_type == VDEVICE) {
+    struct devfsnode *nod = hnd->node->data;
+    if (nod->info->major == 4) {
+      return (struct __syscall_ret){.ret = 0, .errno = 0};
+    }
+  }
+  return (struct __syscall_ret){.ret = 0, .errno = ENOTTY};
+}
+struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (hnd == NULL || hnd->node == NULL) {
+    return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+
+  size_t written =
+      hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1);
+  return (struct __syscall_ret){.ret = written, .errno = 0};
 }
 extern void syscall_entry();
 

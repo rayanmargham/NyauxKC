@@ -229,6 +229,7 @@ void kentry() {
   // while (get_ringbuf(funnytest, (uint64_t *)&ret)) {
   //   kprintf("ringbuf(): %d\r\n", (int)ret);
   // }
+
   do_funny();
   rsh();
   exit_thread();

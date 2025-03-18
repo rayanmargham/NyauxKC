@@ -111,7 +111,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       return 0;
     }
   }
-  kprintf("error\r\n");
+  kprintf("here error\r\n");
   return -1;
 }
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
