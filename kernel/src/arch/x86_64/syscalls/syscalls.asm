@@ -8,6 +8,8 @@ extern syscall_seek
 extern syscall_close
 extern syscall_isatty
 extern syscall_write
+extern syscall_ioctl
+extern syscall_dup
 global syscall_entry
 section .data
 syscallarray:
@@ -21,6 +23,8 @@ syscallarray:
     dq syscall_close ; 7
     dq syscall_isatty ; 8
     dq syscall_write ; 9
+    dq syscall_ioctl ; 10
+    dq syscall_dup ; 11
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:

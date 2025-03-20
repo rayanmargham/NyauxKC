@@ -55,6 +55,7 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
+  kprintf("opening %s\r\n", path);
   struct vnode *node = NULL;
   if (dirfd == -100) {
     struct process_t *proc = get_process_start();
@@ -63,7 +64,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 
   } else {
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
-    if (hnd == NULL) {
+    if (hnd == NULL || hnd->node == NULL) {
       return (struct __syscall_ret){.ret = -1, .errno = EBADF};
     }
     node = hnd->node;
@@ -140,6 +141,26 @@ struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
   size_t written =
       hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1);
   return (struct __syscall_ret){.ret = written, .errno = 0};
+}
+struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (hnd == NULL || hnd->node == NULL) {
+    return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+  kprintf("syscall_ioctl(): ioctling fd %d\r\n", fd);
+  void *result;
+  int res = hnd->node->ops->ioctl(hnd->node, request, arg, &result);
+  return (struct __syscall_ret){.ret = (uint64_t)result, .errno = res};
+}
+struct __syscall_ret syscall_dup(int fd, int flags) {
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (hnd == NULL || hnd->node == NULL) {
+    return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+  int newfd = fddup(fd);
+  kprintf("syscall_dup(): duping fd %d to fd %d\r\n", fd, newfd);
+
+  return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
 extern void syscall_entry();
 

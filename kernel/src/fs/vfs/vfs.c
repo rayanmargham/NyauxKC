@@ -86,7 +86,8 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
     if (next_token == NULL) {
       assert(res != 0);
       assert(current_node->ops->create(current_node, strdup(token), type,
-                                       &tmpfs_ops, &next_node, NULL) == 0);
+                                       &tmpfs_ops, &next_node, NULL,
+                                       NULL) == 0);
 
       if ((type == VREG || type == VSYMLINK) && buf != NULL && filesize != 0) {
         if (type == VSYMLINK) {
@@ -103,7 +104,7 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
 
     if (res != 0)
       assert(current_node->ops->create(current_node, token, VDIR, &tmpfs_ops,
-                                       &next_node, NULL) == 0);
+                                       &next_node, NULL, NULL) == 0);
     assert(next_node->v_type == VDIR);
 
     current_node = next_node;

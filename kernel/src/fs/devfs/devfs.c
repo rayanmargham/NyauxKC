@@ -8,14 +8,17 @@
 #include "fs/vfs/vfs.h"
 
 static int create(struct vnode *curvnode, char *name, enum vtype type,
-                  struct vnodeops *ops, struct vnode **res, void *data);
+                  struct vnodeops *ops, struct vnode **res, void *data,
+                  struct vnode *todifferentnode);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
                   void *buffer, int rw);
+static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
+                 void *result);
 static int readdir(struct vnode *curvnode, int offset, char **name);
 static int mount(struct vfs *curvfs, char *path, void *data);
 struct vnodeops vnode_devops = {
-    .lookup = lookup, .create = create, .rw = rww, readdir};
+    .lookup = lookup, .create = create, .rw = rww, readdir, .ioctl = ioctl};
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
@@ -42,8 +45,15 @@ void devfs_init(struct vfs *curvfs) {
   kprintf("devfs(): init\r\n");
   struct vfs *new = kmalloc(sizeof(struct vfs));
   new->vfs_ops = &vfs_devops;
-  struct vnode *replacement = NULL;
-  starter->ops->create(starter, "dev", VDIR, &vnode_devops, &replacement, NULL);
+  struct vnode *replacement = kmalloc(sizeof(struct vnode));
+  replacement->data = kmalloc(sizeof(struct devfsnode));
+  struct devfsnode *node = replacement->data;
+  node->name = "dev";
+  node->direntry = kmalloc(sizeof(struct devfsdirentry));
+  replacement->ops = &vnode_devops;
+  replacement->v_type = VDIR;
+  starter->ops->create(starter, "dev", VDIR, &vnode_devops, &replacement, NULL,
+                       replacement);
   struct vfs *old = curvfs;
   while (true) {
     if (old->vfs_next == NULL) {
@@ -57,7 +67,8 @@ void devfs_init(struct vfs *curvfs) {
 }
 
 static int create(struct vnode *curvnode, char *name, enum vtype type,
-                  struct vnodeops *ops, struct vnode **res, void *data) {
+                  struct vnodeops *ops, struct vnode **res, void *data,
+                  struct vnode *todifferentnode) {
   if (curvnode->v_type == VDIR) {
     struct devfsnode *node = (struct devfsnode *)curvnode->data;
     struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
@@ -117,8 +128,8 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
                   void *buffer, int rw) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
-  return devnode->info->ops->rw(curvnode, devnode->data, offset, size, buffer,
-                                rw);
+  return devnode->info->ops->rw(curvnode, devnode->info->data, offset, size,
+                                buffer, rw);
 }
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   struct devfsnode *node = (struct devfsnode *)curvnode->data;
@@ -130,7 +141,9 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   } else if (curvnode->v_type == VDIR) {
     struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
     for (size_t i = 0; i < entry->cnt; i++) {
+      kprintf("address %p, %p, cnt %lu\r\n", entry->nodes[i], res, entry->cnt);
       if (strcmp(entry->nodes[i]->name, name) == 0) {
+        kprintf("okay\r\n");
         *res = entry->nodes[i]->curvnode;
         return 0;
       }
@@ -141,4 +154,10 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
 }
 static int readdir(struct vnode *curvnode, int offset, char **name) {
   return -1;
+}
+static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
+                 void *result) {
+  struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
+  return devnode->info->ops->ioctl(curvnode, devnode->info->data, request, arg,
+                                   result);
 }

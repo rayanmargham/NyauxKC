@@ -8,22 +8,20 @@
 struct devfsops {
   size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
                void *buffer, int rw);
+  int (*ioctl)(struct vnode *curvnode, void *data, unsigned long request,
+               void *arg, void *result);
 };
 struct devfsinfo {
   uint8_t major;
   uint8_t minor;
   struct devfsops *ops;
-
+  void *data; // anything the device file wants to store
   // .... anyhting else
 };
 struct devfsnode {
   struct vnode *curvnode;
   struct devfsinfo *info;
-  struct devfsnode *next;
-  union {
-    struct devfsdirentry *direntry;
-    void *data;
-  };
+  struct devfsdirentry *direntry;
   char *name;
 };
 extern struct vnodeops vnode_devops;

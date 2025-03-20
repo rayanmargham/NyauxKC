@@ -30,10 +30,26 @@ int fddalloc(struct vnode *node) {
   get_process_finish(proc);
   return -1;
 }
+int fddup(int fromfd) {
+  struct FileDescriptorHandle *res = get_fd(fromfd);
+  int newfd = fddalloc(res->node);
+  struct FileDescriptorHandle *other = get_fd(newfd);
+  other->dummy = true;
+  other->realhnd = res;
+  return newfd;
+}
 struct FileDescriptorHandle *get_fd(int fd) {
   struct process_t *proc = get_process_start();
   struct FileDescriptorHandle *res =
       hashmap_get(proc->fds, &(struct FileDescriptorHandle){.fd = fd});
+  if (!res) {
+    return NULL;
+  }
+  while (res->dummy) {
+    if (res->realhnd != NULL) {
+      res = res->realhnd;
+    }
+  }
   get_process_finish(proc);
   return res;
 }

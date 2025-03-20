@@ -24,11 +24,14 @@ struct vnode {
 struct vnodeops {
   int (*lookup)(struct vnode *curvnode, char *name, struct vnode **res);
   int (*create)(struct vnode *curvnode, char *name, enum vtype type,
-                struct vnodeops *ops, struct vnode **res, void *data);
+                struct vnodeops *ops, struct vnode **res, void *data,
+                struct vnode *todifferentnode);
   // curvnode, offset, size, buffer, rw
   size_t (*rw)(struct vnode *curvnode, size_t offset, size_t size, void *buffer,
                int rw);
   int (*readdir)(struct vnode *curvnode, int offset, char **out);
+  int (*ioctl)(struct vnode *curvnode, unsigned long request, void *arg,
+               void *result);
 };
 struct vfs_ops {
   int (*mount)(struct vfs *curvfs, char *path, void *data);
