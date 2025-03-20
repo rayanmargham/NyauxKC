@@ -5,7 +5,9 @@
 #include "fs/vfs/vfs.h"
 #include "sched/sched.h"
 #include "term/term.h"
+#include "utils/libc.h"
 #include <arch/x86_64/syscalls/syscall.h>
+#include <stdint.h>
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
@@ -14,8 +16,14 @@ struct devfsops ttyops = {.rw = rw, .ioctl = ioctl};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw) {
   if (rw == 0) {
-    kprintf("attempted to read from tty\r\n");
-    return offset + size;
+    struct tty *tty = data;
+    int i = 0;
+    for (; i < (int)size; i++) {
+      char val = 0;
+      get_ringbuf(tty->rx, (uint64_t *)&val);
+      ((char *)buffer)[i] = val;
+    }
+    return i;
   } else {
     // MOST BASIC AH TTY
     flanterm_write(get_fctx(), buffer, size);
@@ -85,6 +93,8 @@ void devtty_init(struct vfs *curvfs) {
   newtty->termi.c_oflag = OPOST | ONLCR;
   newtty->termi.c_cflag = CS8 | CREAD | HUPCL;
   newtty->termi.c_lflag = ECHOK | ICANON;
+  newtty->tx = init_ringbuf(255);
+  newtty->rx = init_ringbuf(255);
   info->major = 4;
   info->minor = 0;
   info->ops = &ttyops;

@@ -231,6 +231,6 @@ void kentry() {
   // }
 
   do_funny();
-  rsh();
+  // rsh();
   exit_thread();
 }
