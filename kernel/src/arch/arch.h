@@ -22,6 +22,7 @@ void arch_map_vmm_region(pagemap *take, uint64_t base, uint64_t length_in_bytes,
 void arch_unmap_vmm_region(pagemap *take, uint64_t base,
                            uint64_t length_in_bytes);
 void arch_init_pagemap(pagemap *take);
+uint64_t arch_completeinit_pagemap(pagemap *take);
 void arch_destroy_pagemap(pagemap *take);
 void arch_switch_pagemap(pagemap *take);
 void arch_init_interruptcontrollers();

@@ -154,6 +154,14 @@ void arch_unmap_vmm_region(pagemap *take, uint64_t base,
   return x86_64_unmap_vmm_region(take, base, length_in_bytes);
 #endif
 }
+uint64_t arch_completeinit_pagemap(pagemap *take) {
+#if defined(__x86_64__)
+  x86_64_init_pagemap(take);
+  uint64_t hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
+  hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
+  return hhdm_pages;
+#endif
+}
 void arch_init_pagemap(pagemap *take) {
 #if defined(__x86_64__)
   x86_64_init_pagemap(take);

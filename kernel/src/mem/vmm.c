@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "arch/arch.h"
+#include "fs/devfs/devfs.h"
 #include "limine.h"
 #include "mem/pmm.h"
 #include "term/term.h"
@@ -208,4 +209,11 @@ void kvmm_region_dealloc(pagemap *map, void *addr) {
       continue;
     }
   }
+}
+pagemap *new_pagemap() {
+  pagemap *we = kmalloc(sizeof(pagemap));
+  uint64_t hhdmpages = arch_completeinit_pagemap(we);
+  result res = region_setup(we, hhdmpages);
+  unwrap_or_panic(res);
+  return we;
 }
