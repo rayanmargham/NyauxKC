@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..a4d0f05
+index 0000000..dd9221e
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,292 @@
+@@ -0,0 +1,291 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -254,7 +254,6 @@ index 0000000..a4d0f05
 +
 +  if (ret.err != 0)
 +    return ret.err;
-+  mlibc::infoLogger() << "mlibc: ioctl handled? in " << __func__ << frg::endlog;
 +  *result = (int)ret.ret;
 +  return 0;
 +}

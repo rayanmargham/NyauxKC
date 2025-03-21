@@ -58,9 +58,6 @@ void fddfree(int fd) {
 
   if (proc->fdalloc[fd] == 1) {
     proc->fdalloc[fd] = 0;
-    kprintf("giving %d\r\n", fd);
-    size_t iter = 0;
-    void *item;
     const void *e =
         hashmap_delete(proc->fds, &(struct FileDescriptorHandle){.fd = fd});
     if (e == NULL) {

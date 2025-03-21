@@ -66,6 +66,7 @@ void push_into_list(struct thread_t **list, struct thread_t *whatuwannapush);
 void ThreadReady(struct thread_t *thread);
 #ifdef __x86_64__
 extern void sched_yield();
+void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid);
 #endif
 struct process_t *get_process_start();
 struct process_t *get_process_finish(struct process_t *proc);

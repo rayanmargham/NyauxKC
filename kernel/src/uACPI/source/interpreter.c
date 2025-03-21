@@ -18,6 +18,8 @@
 #include <uacpi/internal/mutex.h>
 #include <uacpi/internal/osi.h>
 
+#ifndef UACPI_BAREBONES_MODE
+
 enum item_type {
     ITEM_NONE = 0,
     ITEM_NAMESPACE_NODE,
@@ -1410,7 +1412,7 @@ static uacpi_status handle_load(struct execution_context *ctx)
     uacpi_table table;
     uacpi_control_method *method;
     uacpi_object *src;
-    struct acpi_sdt_hdr *src_table;
+    struct acpi_sdt_hdr *src_table = UACPI_NULL;
     void *table_buffer;
     uacpi_size declared_size;
     uacpi_bool unmap_src = UACPI_FALSE;
@@ -6040,3 +6042,5 @@ uacpi_status uacpi_osi(uacpi_handle handle, uacpi_object *retval)
                 arg->buffer->text, is_supported ? "" : "un");
     return UACPI_STATUS_OK;
 }
+
+#endif // !UACPI_BAREBONES_MODE

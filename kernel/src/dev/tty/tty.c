@@ -19,9 +19,9 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     struct tty *tty = data;
     int i = 0;
     for (; i < (int)size; i++) {
-      char val = 0;
+      uint64_t val = 0;
       get_ringbuf(tty->rx, (uint64_t *)&val);
-      ((char *)buffer)[i] = val;
+      ((char *)buffer)[i] = (char)val;
     }
     return i;
   } else {
@@ -44,7 +44,6 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     flanterm_get_dimensions(ctx, &cols, &rows);
     struct winsize size = {.ws_row = rows, .ws_col = cols};
     *(struct winsize *)result = size;
-    kprintf("tty(): returning result :)\r\n");
     return 0;
 
     break;
@@ -53,7 +52,6 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     assert(data != NULL);
     struct tty *tty = data;
     *(struct termios *)arg = tty->termi;
-    kprintf("tty(): returning result for termios structure :)\r\n");
     return 0;
     break;
   case TCSETS:
@@ -65,6 +63,19 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     break;
   }
   return ENOSYS;
+}
+struct tty *curtty;
+extern bool serial_data_ready();
+void serial_put_input() {
+  while (true) {
+    if (serial_data_ready()) {
+      char got = (char)inb(0x3F8);
+      if (curtty && curtty->rx) {
+        put_ringbuf(curtty->rx, (uint64_t)got);
+      }
+    }
+  }
+  exit_thread();
 }
 void devtty_init(struct vfs *curvfs) {
   struct vnode *res;
@@ -92,9 +103,10 @@ void devtty_init(struct vfs *curvfs) {
   newtty->termi.c_iflag = ICRNL | IXON;
   newtty->termi.c_oflag = OPOST | ONLCR;
   newtty->termi.c_cflag = CS8 | CREAD | HUPCL;
-  newtty->termi.c_lflag = ECHOK | ICANON;
+  newtty->termi.c_lflag = ECHO | ICANON;
   newtty->tx = init_ringbuf(255);
   newtty->rx = init_ringbuf(255);
+  curtty = newtty;
   info->major = 4;
   info->minor = 0;
   info->ops = &ttyops;
@@ -109,4 +121,7 @@ void devtty_init(struct vfs *curvfs) {
   hnd1->node = res;
   hnd2->node = res;
   hnd3->node = res;
+  struct process_t *p = get_process_start();
+  create_kthread((uint64_t)serial_put_input, p, 4);
+  get_process_finish(p);
 }

@@ -24,7 +24,7 @@ int vfs_mount(struct vfs_ops ops, char *path, void *data) {
 // Lookup Function by iretq
 int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   struct vnode *starter = start;
-  if (path[0] == '/') {
+  if (path[0] == '/' || starter == NULL) {
     // assume root
     starter = vfs_list->cur_vnode;
     path += 1;
