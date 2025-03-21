@@ -171,9 +171,12 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
   struct process_t *proc = get_process_start();
-  kprintf("LENGTH IS %lu\r\n", len);
+  if (len > strlen(proc->cwdpath) + 1) {
+    return (struct __syscall_ret){.ret = -1, .errno = ERANGE};
+  }
+  memcpy(buffer, proc->cwd, len);
   get_process_finish(proc);
-  return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
+  return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
 }
 extern void syscall_entry();
 

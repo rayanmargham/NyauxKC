@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..bbd9862
+index 0000000..de7af67
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,328 @@
+@@ -0,0 +1,337 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -129,9 +129,16 @@ index 0000000..bbd9862
 +  *fd = (int)ret.ret;
 +  return 0;
 +}
++
 +uid_t sys_geteuid() {
 +  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n"
 +                      << frg::endlog;
++  return 0;
++}
++int sys_gethostname(char *buffer, size_t bufsize) {
++  if (bufsize >= 6) {
++    memcpy(buffer, "nyaux", 6);
++  }
 +  return 0;
 +}
 +
@@ -224,6 +231,7 @@ index 0000000..bbd9862
 +}
 +int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
 +int sys_clock_get(int clock, time_t *secs, long *nanos) { return ENOSYS; }
++#ifndef MLIBC_BUILDING_RTLD
 +int sys_getcwd(char *buffer, size_t size) {
 +  __syscall_ret ret = __syscall2(13, (uint64_t)buffer, size);
 +
@@ -232,8 +240,6 @@ index 0000000..bbd9862
 +
 +  return 0;
 +}
-+#ifndef MLIBC_BUILDING_RTLD
-+
 +int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
 +  __syscall_ret ret = __syscall3(9, fd, (uint64_t)buf, count);
 +
@@ -368,8 +374,11 @@ index 0000000..bbd9862
 +    break;
 +  }
 +  case fsfd_target::path: {
++    int fd = 0;
++    sys_openat(AT_FDCWD, path, flags, O_RDONLY, &fd);
++    ret = __syscall2(12, fd, (uint64_t)statbuf);
 +    // ret = __syscall(11, AT_FDCWD, path, statbuf, flags);
-+    return ENOSYS;
++    return ret.ret;
 +    break;
 +  }
 +  case fsfd_target::fd_path: {
