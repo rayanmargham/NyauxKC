@@ -8,6 +8,7 @@
 #include "utils/libc.h"
 #include <arch/x86_64/syscalls/syscall.h>
 #include <stdint.h>
+
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,

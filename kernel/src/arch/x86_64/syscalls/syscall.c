@@ -9,8 +9,8 @@
 #include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
-
 #include <stdint.h>
+#include <utils/abi-bits/stat.h>
 
 struct __syscall_ret syscall_exit(int exit_code) {
   kprintf("syscall_exit(): exit_code %d\r\n", exit_code);
