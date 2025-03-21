@@ -54,6 +54,7 @@ struct process_t *create_process(pagemap *map) {
 
     him->root = vfs_list->cur_vnode;
     him->cwd = him->root;
+    him->cwdpath = "/";
   }
   hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 0});
   hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 1});

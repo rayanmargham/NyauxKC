@@ -17,6 +17,7 @@ struct process_t {
   uint64_t exit_code;
   struct vnode *root;
   struct vnode *cwd; // current working directory
+  char *cwdpath
 };
 enum TASKSTATE {
   READY = 0,

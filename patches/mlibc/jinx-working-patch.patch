@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..dd9221e
+index 0000000..bbd9862
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,291 @@
+@@ -0,0 +1,328 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -224,7 +224,16 @@ index 0000000..dd9221e
 +}
 +int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
 +int sys_clock_get(int clock, time_t *secs, long *nanos) { return ENOSYS; }
++int sys_getcwd(char *buffer, size_t size) {
++  __syscall_ret ret = __syscall2(13, (uint64_t)buffer, size);
++
++  if (ret.err != 0)
++    return ret.err;
++
++  return 0;
++}
 +#ifndef MLIBC_BUILDING_RTLD
++
 +int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
 +  __syscall_ret ret = __syscall3(9, fd, (uint64_t)buf, count);
 +
@@ -350,6 +359,34 @@ index 0000000..dd9221e
 +  *newfd = (ssize_t)ret.ret;
 +  return 0;
 +}
++int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
++             struct stat *statbuf) {
++  __syscall_ret ret;
++  switch (fsfdt) {
++  case fsfd_target::fd: {
++    ret = __syscall2(12, fd, (uint64_t)statbuf);
++    break;
++  }
++  case fsfd_target::path: {
++    // ret = __syscall(11, AT_FDCWD, path, statbuf, flags);
++    return ENOSYS;
++    break;
++  }
++  case fsfd_target::fd_path: {
++    // ret = __syscall(11, fd, path, statbuf, flags);
++    return ENOSYS;
++    break;
++  }
++  default: {
++    __ensure(!"stat: Invalid fsfdt");
++    __builtin_unreachable();
++  }
++  }
++  if (ret.err != 0)
++    return ret.err;
++  return ret.ret;
++}
++
 +} // namespace mlibc
 diff --git mlibc-workdir/sysdeps/nyaux/generic/syscall.h mlibc-workdir/sysdeps/nyaux/generic/syscall.h
 new file mode 100644

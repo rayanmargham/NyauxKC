@@ -10,7 +10,6 @@
 #include "term/term.h"
 #include "utils/basic.h"
 #include <stdint.h>
-#include <utils/abi-bits/stat.h>
 
 struct __syscall_ret syscall_exit(int exit_code) {
   kprintf("syscall_exit(): exit_code %d\r\n", exit_code);
@@ -161,6 +160,20 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
   kprintf("syscall_dup(): duping fd %d to fd %d\r\n", fd, newfd);
 
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
+}
+struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (hnd == NULL || hnd->node == NULL) {
+    return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+  *output = hnd->node->stat;
+  return (struct __syscall_ret){.ret = 0, .errno = 0};
+}
+struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
+  struct process_t *proc = get_process_start();
+  kprintf("LENGTH IS %lu\r\n", len);
+  get_process_finish(proc);
+  return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
 }
 extern void syscall_entry();
 

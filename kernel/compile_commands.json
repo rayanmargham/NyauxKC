@@ -33,6 +33,8 @@
       "-mcmodel=kernel",
       "-I",
       "src",
+      "-I",
+      "src/utils/abi-bits",
       "-isystem",
       "freestnd-c-hdrs-0bsd",
       "-DLIMINE_API_REVISION=2",

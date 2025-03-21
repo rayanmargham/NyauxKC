@@ -10,6 +10,8 @@ extern syscall_isatty
 extern syscall_write
 extern syscall_ioctl
 extern syscall_dup
+extern syscall_fstat
+extern syscall_getcwd
 global syscall_entry
 section .data
 syscallarray:
@@ -25,6 +27,9 @@ syscallarray:
     dq syscall_write ; 9
     dq syscall_ioctl ; 10
     dq syscall_dup ; 11
+    dq syscall_fstat ; 12
+    dq syscall_getcwd ; 13
+
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:
