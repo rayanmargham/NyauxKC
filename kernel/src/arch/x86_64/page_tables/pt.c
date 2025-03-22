@@ -142,6 +142,13 @@ void x86_64_map_vmm_region_user(pagemap *take, uint64_t base,
         PRESENT | RWALLOWED | USERMODE);
   }
 }
+uint64_t x86_64_get_phys(pagemap *take, uint64_t virt) {
+  uint64_t *f = find_pte(take->root, virt);
+  if (f != NULL) {
+    return pte_to_phys(*f);
+  }
+  return 0;
+}
 void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
                              uint64_t length_in_bytes) {
   uint64_t amount_to_allocateinpages = length_in_bytes / PAGESIZE;

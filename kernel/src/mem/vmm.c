@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "arch/arch.h"
+#include "arch/x86_64/page_tables/pt.h"
 #include "fs/devfs/devfs.h"
 #include "limine.h"
 #include "mem/pmm.h"
@@ -20,6 +21,7 @@ VMMRegion *create_region(uint64_t base, uint64_t length) {
   VMMRegion *bro = slaballocate(sizeof(VMMRegion));
   bro->base = base;
   bro->length = length;
+  bro->nocopy = false;
   return bro;
 }
 result region_setup(pagemap *map, uint64_t hddm_in_pages) {
@@ -31,11 +33,15 @@ result region_setup(pagemap *map, uint64_t hddm_in_pages) {
       create_region(hhdm_request.response->offset, hddm_in_pages * 4096);
   hhdm->next = (struct VMMRegion *)kernel;
   kernel->next = NULL;
+  kernel->nocopy = true;
+  hhdm->nocopy = true;
   map->head = (struct VMMRegion *)hhdm;
   VMMRegion *userstart = create_region(0, 0x1000);
   VMMRegion *userend = create_region(0x7fffffffa000, 0x1000);
   userstart->next = (struct VMMRegion *)userend;
   userend->next = NULL;
+  userend->nocopy = true;
+  userstart->nocopy = true;
   map->userhead = (struct VMMRegion *)userstart;
   kprintf_vmmregion(hhdm);
   kprintf_vmmregion(kernel);
@@ -57,11 +63,12 @@ void kprintf_all_uvmm_regions() {
     blah = (VMMRegion *)blah->next;
   }
 }
+uint64_t hhdm_pages;
 pagemap ker_map = {.head = NULL, .root = NULL};
 void per_cpu_vmm_init() { arch_switch_pagemap(&ker_map); }
 void vmm_init() {
   arch_init_pagemap(&ker_map);
-  uint64_t hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
+  hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
   hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
   kprintf("vmm(): HDDM Pages %lu\r\n", hhdm_pages);
   // panic("h");
@@ -212,8 +219,57 @@ void kvmm_region_dealloc(pagemap *map, void *addr) {
 }
 pagemap *new_pagemap() {
   pagemap *we = kmalloc(sizeof(pagemap));
-  uint64_t hhdmpages = arch_completeinit_pagemap(we);
-  result res = region_setup(we, hhdmpages);
+  arch_completeinit_pagemap(we);
+  result res = region_setup(we, hhdm_pages);
   unwrap_or_panic(res);
   return we;
+}
+void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
+  assert(to != NULL);
+  for (int i = 511; i > 256; i--) {
+    ((uint64_t *)((uint64_t)to->root + hhdm_request.response->offset))[i] =
+        ((uint64_t *)((uint64_t)maptoduplicatefrom->root +
+                      hhdm_request.response->offset))[i];
+  }
+  kprintf("?\r\n");
+
+  VMMRegion *inital = (VMMRegion *)maptoduplicatefrom->head;
+  while (inital != NULL) {
+    // Copy VMM Regions
+    if (inital->nocopy) {
+      inital = (VMMRegion *)inital->next;
+      continue;
+    }
+    kprintf("mapping 0x%lx length in bytes 0x%lx\r\n", inital->base,
+            inital->length);
+    arch_map_vmm_region(to, inital->base, inital->length, false);
+    VMMRegion *e = create_region(inital->base, inital->length);
+    e->next = to->head;
+    to->head = (struct VMMRegion *)e;
+
+    // memcpy((void *)(arch_get_phys(to, e->base) +
+    // hhdm_request.response->offset),
+    //        (void *)(e->base), e->length);
+    inital = (VMMRegion *)inital->next;
+  }
+
+  kprintf("here?\r\n");
+  VMMRegion *user = (VMMRegion *)maptoduplicatefrom->userhead;
+  while (user != NULL) {
+    // Copy VMM Regions
+    if (user->nocopy) {
+      user = (VMMRegion *)user->next;
+      continue;
+    }
+    arch_map_vmm_region(to, user->base, user->length, true);
+    VMMRegion *e = create_region(user->base, user->length);
+    e->next = to->userhead;
+    to->head = (struct VMMRegion *)e;
+    for (int i = 0; i < (int)e->length; i += PAGESIZE) {
+      memcpy((void *)(arch_get_phys(to, e->base + i) +
+                      hhdm_request.response->offset),
+             (void *)(e->base + i), 0x1000);
+    }
+    user = (VMMRegion *)user->next;
+  }
 }

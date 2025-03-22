@@ -75,6 +75,11 @@ uint64_t arch_raw_io_in(volatile uint64_t address,
     break;
   }
 }
+uint64_t arch_get_phys(pagemap *take, uint64_t virt) {
+#if defined(__x86_64__)
+  return x86_64_get_phys(take, virt);
+#endif
+}
 int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler,
                            uacpi_handle ctx, uacpi_handle *out_irq_handle) {
 #if defined(__x86_64__)
@@ -157,9 +162,8 @@ void arch_unmap_vmm_region(pagemap *take, uint64_t base,
 uint64_t arch_completeinit_pagemap(pagemap *take) {
 #if defined(__x86_64__)
   x86_64_init_pagemap(take);
-  uint64_t hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
-  hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
-  return hhdm_pages;
+
+  return 0;
 #endif
 }
 void arch_init_pagemap(pagemap *take) {

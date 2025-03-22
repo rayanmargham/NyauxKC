@@ -10,7 +10,6 @@
 struct process_t {
   pagemap *cur_map;
   spinlock_t lock; // lock for accessing this
-
   refcount_t cnt;
   struct hashmap *fds;
   int fdalloc[255];

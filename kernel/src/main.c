@@ -230,7 +230,14 @@ void kentry() {
   //   kprintf("ringbuf(): %d\r\n", (int)ret);
   // }
 
-  do_funny();
+  // do_funny();
+  pagemap *test = new_pagemap();
+  kprintf("%p\r\n", test);
+  duplicate_pagemap(&ker_map, test);
+  kprintf("what \r\n");
+  // arch_switch_pagemap(test);
+  kprintf("now in different pagemap\r\n");
+  kprintf("yay\n");
   // rsh();
   exit_thread();
 }
