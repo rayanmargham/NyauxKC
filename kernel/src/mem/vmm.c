@@ -247,7 +247,7 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
       for (size_t i = 0; i < inital->length; i += 0x1000) {
         memcpy((void *)(arch_get_phys(to, inital->base + i) +
                         hhdm_request.response->offset),
-               (void *)inital->base, 0x1000);
+               (void *)inital->base + i, 0x1000);
       }
     }
     VMMRegion *e = create_region(inital->base, inital->length);
@@ -270,7 +270,7 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
       for (size_t i = 0; i < user->length; i += 0x1000) {
         memcpy((void *)(arch_get_phys(to, user->base + i) +
                         hhdm_request.response->offset),
-               (void *)user->base, 0x1000);
+               (void *)user->base + i, 0x1000);
       }
     }
     VMMRegion *e = create_region(user->base, user->length);
