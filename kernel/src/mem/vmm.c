@@ -1,5 +1,6 @@
 #include "vmm.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "arch/arch.h"
@@ -243,6 +244,11 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
 
     if (!arch_get_phys(to, inital->base)) {
       arch_map_vmm_region(to, inital->base, inital->length, false);
+      for (size_t i = 0; i < inital->length; i += 0x1000) {
+        memcpy((void *)(arch_get_phys(to, inital->base + i) +
+                        hhdm_request.response->offset),
+               (void *)inital->base, 0x1000);
+      }
     }
     VMMRegion *e = create_region(inital->base, inital->length);
     e->next = to->head;
@@ -261,6 +267,11 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     if (!arch_get_phys(to, user->base)) {
 
       arch_map_vmm_region(to, user->base, user->length, true);
+      for (size_t i = 0; i < user->length; i += 0x1000) {
+        memcpy((void *)(arch_get_phys(to, user->base + i) +
+                        hhdm_request.response->offset),
+               (void *)user->base, 0x1000);
+      }
     }
     VMMRegion *e = create_region(user->base, user->length);
     e->next = to->userhead;
