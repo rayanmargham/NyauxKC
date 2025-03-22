@@ -1,10 +1,10 @@
 #pragma once
+#include "utils/hashmap.h"
+#include <sched/sched.h>
 #include <stddef.h>
 #include <term/term.h>
 #include <utils/basic.h>
 #include <utils/libc.h>
-
-#include "utils/hashmap.h"
 struct FileDescriptorHandle {
   int fd;
   uint64_t offset;
@@ -20,3 +20,4 @@ int fddalloc(struct vnode *node);
 void fddfree(int fd);
 int fddup(int fromfd);
 struct FileDescriptorHandle *get_fd(int fd);
+void duplicate_process_fd(struct process_t *from, struct process_t *to);

@@ -105,8 +105,10 @@ void *page_fault_handler(struct StackFrame *frame) {
 
   kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
   kprintf("RIP is 0x%lx. Error Code 0x%lx\r\n", frame->rip, frame->error_code);
-  if (arch_get_per_cpu_data() != NULL) {
-    kprintf("Page Fault Happened in a thread.\r\n");
+  if (arch_get_per_cpu_data() != NULL &&
+      arch_get_per_cpu_data()->cur_thread != NULL) {
+    kprintf("Page Fault Happened in thread %lu\r\n",
+            arch_get_per_cpu_data()->cur_thread->tid);
   }
   STACKTRACE
   panic("Page Fault:c");

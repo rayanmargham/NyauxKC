@@ -1,6 +1,7 @@
 #include "fd.h"
 
 #include "sched/sched.h"
+#include "utils/hashmap.h"
 
 uint64_t fd_hash(const void *item, uint64_t seed0, uint64_t seed1) {
   const struct FileDescriptorHandle *user = item;
@@ -65,4 +66,18 @@ void fddfree(int fd) {
     }
   }
   get_process_finish(proc);
+}
+void duplicate_process_fd(struct process_t *from, struct process_t *to) {
+  // this ASSUMES that the hashmap for from is allocated
+  to->fds = hashmap_new(sizeof(struct FileDescriptorHandle), 0, 0, 0, fd_hash,
+                        fd_compare, NULL, NULL);
+  for (int i = 0; i < 255; i++) {
+    to->fdalloc[i] = from->fdalloc[i];
+    struct FileDescriptorHandle *hnd =
+        (struct FileDescriptorHandle *)hashmap_get(
+            from->fds, &(struct FileDescriptorHandle){.fd = i});
+    if (!hnd)
+      continue;
+    hashmap_set(to->fds, (const struct FileDescriptorHandle *)hnd);
+  }
 }

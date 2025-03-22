@@ -188,6 +188,7 @@ void kmain(void) {
   init_acpi_early();
   kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\n", total_memory(),
           total_memory() / 1048576);
+  kprintf("what \r\n");
   create_kentry();
   hashmap_set_allocator(kmalloc, kfree);
 
@@ -221,6 +222,7 @@ void kentry() {
   node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0);
 
   flanterm_write(get_fctx(), (const char *)sexial, node->stat.size);
+
   // struct ring_buf *funnytest = init_ringbuf(10);
   // while (put_ringbuf(funnytest, 5))
   //   ;
@@ -230,14 +232,17 @@ void kentry() {
   //   kprintf("ringbuf(): %d\r\n", (int)ret);
   // }
 
-  // do_funny();
-  pagemap *test = new_pagemap();
-  kprintf("%p\r\n", test);
-  duplicate_pagemap(&ker_map, test);
-  kprintf("what \r\n");
+  // pagemap *test = new_pagemap();
+  // kprintf("%p\r\n", test);
+  // duplicate_pagemap(&ker_map, test);
+  // kprintf("what \r\n");
   // arch_switch_pagemap(test);
-  kprintf("now in different pagemap\r\n");
-  kprintf("yay\n");
+  // kprintf("now in different pagemap\r\n");
+  // kprintf("yay\n");
+  // struct process_t *proc = get_process_start();
+  // proc->cur_map = test;
+  // get_process_finish(proc);
+  do_funny();
   // rsh();
   exit_thread();
 }

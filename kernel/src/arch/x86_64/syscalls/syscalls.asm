@@ -12,6 +12,7 @@ extern syscall_ioctl
 extern syscall_dup
 extern syscall_fstat
 extern syscall_getcwd
+extern syscall_fork
 global syscall_entry
 section .data
 syscallarray:
@@ -29,10 +30,12 @@ syscallarray:
     dq syscall_dup ; 11
     dq syscall_fstat ; 12
     dq syscall_getcwd ; 13
+    dq syscall_fork ; 14
 
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:
+    cli
     swapgs
     mov [gs:0], rsp
     mov rsp, [gs:8]
@@ -70,6 +73,7 @@ syscall_entry:
     
     mov rsp, [gs:0]
     swapgs
+    sti
     o64 sysret
 
 

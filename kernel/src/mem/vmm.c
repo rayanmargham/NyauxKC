@@ -131,8 +131,8 @@ void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
   return NULL;
 }
 void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
-  assert(ker_map.userhead != NULL);
-  assert(ker_map.root != NULL);
+  assert(map->userhead != NULL);
+  assert(map->root != NULL);
   VMMRegion *cur = (VMMRegion *)map->userhead;
   VMMRegion *prev = NULL;
   while (cur != NULL) {
@@ -146,7 +146,7 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
           create_region((prev->base + prev->length), align_up(amount, 4096));
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
-      arch_map_vmm_region(&ker_map, new->base, new->length, true);
+      arch_map_vmm_region(map, new->base, new->length, true);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -204,7 +204,7 @@ void kvmm_region_dealloc(pagemap *map, void *addr) {
   VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (cur->base == (uint64_t)addr) {
-      arch_unmap_vmm_region(&ker_map, cur->base, cur->length);
+      arch_unmap_vmm_region(map, cur->base, cur->length);
       if (prev != NULL)
         prev->next = cur->next;
       slabfree(cur);
@@ -226,7 +226,7 @@ pagemap *new_pagemap() {
 }
 void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
   assert(to != NULL);
-  for (int i = 511; i > 256; i--) {
+  for (int i = 511; i >= 256; i--) {
     ((uint64_t *)((uint64_t)to->root + hhdm_request.response->offset))[i] =
         ((uint64_t *)((uint64_t)maptoduplicatefrom->root +
                       hhdm_request.response->offset))[i];
@@ -240,16 +240,13 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
       inital = (VMMRegion *)inital->next;
       continue;
     }
-    kprintf("mapping 0x%lx length in bytes 0x%lx\r\n", inital->base,
-            inital->length);
-    arch_map_vmm_region(to, inital->base, inital->length, false);
+
+    if (!arch_get_phys(to, inital->base)) {
+      arch_map_vmm_region(to, inital->base, inital->length, false);
+    }
     VMMRegion *e = create_region(inital->base, inital->length);
     e->next = to->head;
     to->head = (struct VMMRegion *)e;
-
-    // memcpy((void *)(arch_get_phys(to, e->base) +
-    // hhdm_request.response->offset),
-    //        (void *)(e->base), e->length);
     inital = (VMMRegion *)inital->next;
   }
 
@@ -261,15 +258,14 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
       user = (VMMRegion *)user->next;
       continue;
     }
-    arch_map_vmm_region(to, user->base, user->length, true);
+    if (!arch_get_phys(to, user->base)) {
+
+      arch_map_vmm_region(to, user->base, user->length, true);
+    }
     VMMRegion *e = create_region(user->base, user->length);
     e->next = to->userhead;
     to->head = (struct VMMRegion *)e;
-    for (int i = 0; i < (int)e->length; i += PAGESIZE) {
-      memcpy((void *)(arch_get_phys(to, e->base + i) +
-                      hhdm_request.response->offset),
-             (void *)(e->base + i), 0x1000);
-    }
     user = (VMMRegion *)user->next;
   }
+  kprintf("also here?\r\n");
 }

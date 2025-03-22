@@ -178,6 +178,11 @@ struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
   get_process_finish(proc);
   return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
 }
+struct __syscall_ret syscall_fork() {
+  int child = scheduler_fork();
+  kprintf("syscall_fork(): forked process to %d\r\n", child);
+  return (struct __syscall_ret){.ret = child, .errno = 0};
+}
 extern void syscall_entry();
 
 void syscall_init() {

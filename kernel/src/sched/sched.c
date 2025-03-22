@@ -61,6 +61,7 @@ struct process_t *create_process(pagemap *map) {
   hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 2});
   return him;
 }
+
 struct thread_t *create_thread() {
   struct thread_t *him = (struct thread_t *)kmalloc(sizeof(struct thread_t));
   him->count = 0;
@@ -184,9 +185,38 @@ void create_kentry() {
 void do_funny() {
   struct thread_t *fun = create_uthread(0, get_process_start(), 2);
   get_process_finish(fun->proc);
-  load_elf(&ker_map, "/bin/bash", (char *[]){"/bin/ls", NULL}, (char *[]){NULL},
-           &fun->arch_data.frame);
+  pagemap *curpagemap = fun->proc->cur_map;
+  load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/ls", NULL},
+           (char *[]){NULL}, &fun->arch_data.frame);
   ThreadReady(fun);
+}
+int scheduler_fork() {
+  struct process_t *oldprocess = get_process_start();
+  pagemap *new = new_pagemap();
+  struct process_t *newprocess = create_process(new);
+  duplicate_pagemap(oldprocess->cur_map, new);
+  newprocess->cur_map = new;
+  newprocess->cwd = oldprocess->cwd;
+  if (oldprocess->cwdpath)
+    newprocess->cwdpath = strdup(oldprocess->cwdpath);
+  duplicate_process_fd(oldprocess, newprocess);
+  struct thread_t *calledby = arch_get_per_cpu_data()->cur_thread;
+  struct thread_t *fun = create_thread();
+  fun->fpu_state = calledby->fpu_state;
+  fun->count = calledby->count;
+  fun->tid = calledby->tid + 1;
+  uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
+  fun->kernel_stack_base = kstack;
+  fun->kernel_stack_ptr = kstack;
+  fun->proc = newprocess;
+#if defined __x86_64__
+  fun->arch_data.frame = calledby->arch_data.frame;
+  fun->arch_data.frame.rax = 0;
+  fun->arch_data.fs_base = calledby->arch_data.fs_base;
+
+#endif
+  ThreadReady(fun);
+  return fun->tid;
 }
 // returns the old thread
 struct thread_t *switch_queue(struct per_cpu_data *cpu) {

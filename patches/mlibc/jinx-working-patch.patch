@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..de7af67
+index 0000000..e1b54a9
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,337 @@
+@@ -0,0 +1,347 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -264,6 +264,16 @@ index 0000000..de7af67
 +  return 0;
 +}
 +#ifndef MLIBC_BUILDING_RTLD
++int sys_fork(pid_t *child) {
++  __syscall_ret ret = __syscall0(14);
++
++  if (ret.err != 0) {
++    return ret.err;
++  }
++
++  *child = (pid_t)ret.ret;
++  return 0;
++}
 +int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 +  __syscall_ret ret = __syscall3(10, fd, request, (uint64_t)arg);
 +

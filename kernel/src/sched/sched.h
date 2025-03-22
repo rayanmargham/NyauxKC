@@ -68,6 +68,8 @@ void ThreadReady(struct thread_t *thread);
 extern void sched_yield();
 void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid);
 #endif
+int scheduler_fork();
+
 struct process_t *get_process_start();
 struct process_t *get_process_finish(struct process_t *proc);
 void arch_create_bsp_per_cpu_data();
