@@ -39,6 +39,7 @@ syscall_entry:
     swapgs
     mov [gs:0], rsp
     mov rsp, [gs:8]
+    push rbx
     push rcx
     push rbp
     push rsi
@@ -70,6 +71,7 @@ syscall_entry:
     pop rsi
     pop rbp
     pop rcx
+    pop rbx
     
     mov rsp, [gs:0]
     swapgs

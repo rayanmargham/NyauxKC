@@ -202,7 +202,9 @@ int scheduler_fork() {
   duplicate_process_fd(oldprocess, newprocess);
   struct thread_t *calledby = arch_get_per_cpu_data()->cur_thread;
   struct thread_t *fun = create_thread();
-  fun->fpu_state = calledby->fpu_state;
+  fun->fpu_state = (void *)align_up(
+      (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
+  memcpy(fun->fpu_state, calledby->fpu_state, get_fpu_storage_size());
   fun->count = calledby->count;
   fun->tid = calledby->tid + 1;
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
@@ -211,13 +213,15 @@ int scheduler_fork() {
   fun->proc = newprocess;
 #if defined __x86_64__
   struct SyscallFrame {
-	  uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-	  uint64_t rdi, rsi, rbp, rcx;
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+    uint64_t rdi, rsi, rbp, rcx, rbx;
   };
-  struct SyscallFrame *syscallframe = (struct SyscallFrame *)(arch_get_per_cpu_data()->arch_data.kernel_stack_ptr - 12 * 8);
+  struct SyscallFrame *syscallframe =
+      (struct SyscallFrame
+           *)(arch_get_per_cpu_data()->arch_data.kernel_stack_ptr - 12 * 8);
 
   fun->arch_data.frame = (struct StackFrame){};
-  struct StackFrame* destframe = &fun->arch_data.frame;
+  struct StackFrame *destframe = &fun->arch_data.frame;
   destframe->r15 = syscallframe->r15;
   destframe->r14 = syscallframe->r14;
   destframe->r13 = syscallframe->r13;
@@ -230,6 +234,7 @@ int scheduler_fork() {
   destframe->rsi = syscallframe->rsi;
   destframe->rbp = syscallframe->rbp;
   destframe->rcx = syscallframe->rcx;
+  destframe->rbx = syscallframe->rbx;
   destframe->rip = syscallframe->rcx;
   // USER CODE
   destframe->cs = 0x40 | 3;
@@ -242,6 +247,7 @@ int scheduler_fork() {
   fun->arch_data.fs_base = calledby->arch_data.fs_base;
 
 #endif
+
   ThreadReady(fun);
   return fun->tid;
 }
