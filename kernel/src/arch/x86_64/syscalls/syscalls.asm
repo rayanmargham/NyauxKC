@@ -35,10 +35,10 @@ syscallarray:
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:
-    cli
     swapgs
     mov [gs:0], rsp
     mov rsp, [gs:8]
+    push rax ; pad to 16 bytes
     push rbx
     push rcx
     push rbp
@@ -72,10 +72,10 @@ syscall_entry:
     pop rbp
     pop rcx
     pop rbx
-    
+    ; pad gets discarded by the below move to rsp
+
     mov rsp, [gs:0]
     swapgs
-    sti
     o64 sysret
 
 

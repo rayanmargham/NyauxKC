@@ -16,7 +16,7 @@ struct process_t {
   uint64_t exit_code;
   struct vnode *root;
   struct vnode *cwd; // current working directory
-  char *cwdpath
+  char *cwdpath;
 };
 enum TASKSTATE {
   READY = 0,
@@ -71,5 +71,5 @@ void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid);
 int scheduler_fork();
 
 struct process_t *get_process_start();
-struct process_t *get_process_finish(struct process_t *proc);
+void get_process_finish(struct process_t *proc);
 void arch_create_bsp_per_cpu_data();

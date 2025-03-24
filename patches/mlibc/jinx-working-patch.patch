@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..e1b54a9
+index 0000000..551fc80
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,347 @@
+@@ -0,0 +1,346 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -388,7 +388,6 @@ index 0000000..e1b54a9
 +    sys_openat(AT_FDCWD, path, flags, O_RDONLY, &fd);
 +    ret = __syscall2(12, fd, (uint64_t)statbuf);
 +    // ret = __syscall(11, AT_FDCWD, path, statbuf, flags);
-+    return ret.ret;
 +    break;
 +  }
 +  case fsfd_target::fd_path: {

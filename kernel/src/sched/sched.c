@@ -214,11 +214,11 @@ int scheduler_fork() {
 #if defined __x86_64__
   struct SyscallFrame {
     uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-    uint64_t rdi, rsi, rbp, rcx, rbx;
+    uint64_t rdi, rsi, rbp, rcx, rbx, pad;
   };
   struct SyscallFrame *syscallframe =
       (struct SyscallFrame
-           *)(arch_get_per_cpu_data()->arch_data.kernel_stack_ptr - 12 * 8);
+           *)(arch_get_per_cpu_data()->arch_data.kernel_stack_ptr - sizeof(struct SyscallFrame));
 
   fun->arch_data.frame = (struct StackFrame){};
   struct StackFrame *destframe = &fun->arch_data.frame;
@@ -333,6 +333,6 @@ struct process_t *get_process_start() {
   spinlock_lock(&cpu->cur_thread->proc->lock);
   return cpu->cur_thread->proc;
 }
-struct process_t *get_process_finish(struct process_t *proc) {
+void get_process_finish(struct process_t *proc) {
   spinlock_unlock(&proc->lock);
 }
