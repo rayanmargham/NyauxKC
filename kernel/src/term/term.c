@@ -56,7 +56,8 @@ void tputc(int ch, void *ctx) {
 }
 struct flanterm_context *get_fctx() { return ft_ctx; }
 void kprintf(const char *format, ...) {
-  asm volatile("cli");
+  uint64_t flags;
+  asm volatile("pushfq; cli; pop %0" : "=r"(flags));
   spinlock_lock(&lock);
   va_list args;
   va_start(args, format);
@@ -68,7 +69,9 @@ void kprintf(const char *format, ...) {
   }
   va_end(args);
   spinlock_unlock(&lock);
-  asm volatile("sti");
+  if (flags & 1 << 9) {
+    asm volatile("sti");
+  }
 }
 
 void sputc(int ch, void *) {

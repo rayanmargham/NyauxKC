@@ -275,7 +275,7 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     }
     VMMRegion *e = create_region(user->base, user->length);
     e->next = to->userhead;
-    to->head = (struct VMMRegion *)e;
+    to->userhead = (struct VMMRegion *)e;
     user = (VMMRegion *)user->next;
   }
   kprintf("also here?\r\n");
