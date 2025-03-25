@@ -54,7 +54,8 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
-  kprintf("opening %s\r\n", path);
+  kprintf("opening %s from thread %lu\r\n", path,
+          arch_get_per_cpu_data()->cur_thread->tid);
   struct vnode *node = NULL;
   if (dirfd == -100) {
     struct process_t *proc = get_process_start();
