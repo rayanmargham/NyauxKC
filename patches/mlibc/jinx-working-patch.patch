@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..551fc80
+index 0000000..0d9b0ad
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,374 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -346,6 +346,34 @@ index 0000000..551fc80
 +  }
 +
 +  return 0;
++}
++int sys_waitpid(pid_t pid, int *status, int flags, struct rusage *ru,
++                pid_t *ret_pid) {
++  if (ru) {
++    mlibc::infoLogger() << "mlibc: struct rusage in sys_waitpid is unsupported"
++                        << frg::endlog;
++    return ENOSYS;
++  }
++
++again:
++  __syscall_ret ret = __syscall3(15, pid, (uint64_t)status, flags);
++
++  if (ret.err != 0) {
++    if (ret.err == EINTR) {
++      goto again;
++    }
++
++    return ret.err;
++  }
++
++  *ret_pid = (pid_t)ret.ret;
++  return 0;
++}
++int sys_execve(const char *path, char *const argv[], char *const envp[]) {
++  // __syscall_ret ret = __syscall(17, path, argv, envp);
++
++  // return ret.errno;
++  return ENOSYS;
 +}
 +#endif
 +int sys_sigprocmask(int how, const sigset_t *__restrict set,

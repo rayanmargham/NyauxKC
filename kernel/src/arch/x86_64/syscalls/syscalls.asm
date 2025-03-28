@@ -13,6 +13,7 @@ extern syscall_dup
 extern syscall_fstat
 extern syscall_getcwd
 extern syscall_fork
+extern syscall_waitpid
 global syscall_entry
 section .data
 syscallarray:
@@ -31,6 +32,7 @@ syscallarray:
     dq syscall_fstat ; 12
     dq syscall_getcwd ; 13
     dq syscall_fork ; 14
+    dq syscall_waitpid ; 15
 
 .length: dq ($ - syscallarray) / 8
 section .text

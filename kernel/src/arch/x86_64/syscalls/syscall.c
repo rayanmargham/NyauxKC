@@ -9,15 +9,17 @@
 #include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
+
 #include <stdint.h>
 
 struct __syscall_ret syscall_exit(int exit_code) {
   kprintf("syscall_exit(): exit_code %d\r\n", exit_code);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  struct process_t *proc = get_process_start();
-  proc->exit_code = exit_code;
-  get_process_finish(proc);
+  if (cpu->cur_thread->proc->pid == 0) {
+    exit_thread();
+  }
   cpu->cur_thread->state = ZOMBIE;
+  exit_process(exit_code);
   // kill all threads TODO
   sched_yield();
   panic("shouldn't be here");
@@ -183,6 +185,32 @@ struct __syscall_ret syscall_fork() {
   int child = scheduler_fork();
   kprintf("syscall_fork(): forked process to %d\r\n", child);
   return (struct __syscall_ret){.ret = child, .errno = 0};
+}
+struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  kprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
+  if (pid != -1) {
+    return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
+  }
+  struct process_t *us = cpu->process_list;
+  while (us != NULL) {
+
+    if (us->state == ZOMBIE) {
+      kprintf("doing so with error code %lu\r\n", us->exit_code);
+      *status = us->exit_code;
+      us->state = BLOCKED;
+      return (struct __syscall_ret){.ret = us->pid, .errno = 0};
+    }
+    if (us->state == BLOCKED) {
+      us->state = READY;
+      return (struct __syscall_ret){.ret = us->pid, .errno = ECHILD};
+    }
+    if (us->next == us) {
+      break;
+    }
+    us = us->next;
+  }
+  return (struct __syscall_ret){.ret = 0, .errno = EAGAIN};
 }
 extern void syscall_entry();
 

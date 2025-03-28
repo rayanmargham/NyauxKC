@@ -7,7 +7,17 @@
 #include "utils/basic.h"
 #include "utils/hashmap.h"
 #define KSTACKSIZE 16384
+enum TASKSTATE {
+  READY = 0,
+  RUNNING = 1,
+  ZOMBIE = 2,
+  BLOCKED = 3,
+  KILLED = 4,
+  READYING = 5,
+};
 struct process_t {
+  uint64_t pid;
+  enum TASKSTATE state;
   pagemap *cur_map;
   spinlock_t lock; // lock for accessing this
   refcount_t cnt;
@@ -17,13 +27,9 @@ struct process_t {
   struct vnode *root;
   struct vnode *cwd; // current working directory
   char *cwdpath;
-};
-enum TASKSTATE {
-  READY = 0,
-  RUNNING = 1,
-  ZOMBIE = 2,
-  BLOCKED = 3,
-  READYING = 4,
+  struct thread_t
+      *queuewaitingforexit; // threads waiting for the process to exit
+  struct process_t *next;   // FUCK YOU!!! :)
 };
 struct thread_t {
   struct process_t *proc; // there should be a lock on this
@@ -42,7 +48,8 @@ struct per_cpu_data {
   struct thread_t *cur_thread; // trl
   struct thread_t
       *to_be_reapered; // any thread with refcount zero will be thrown into here
-                       // a reaper thread will kill the dead
+  // a reaper thread will kill the dead
+  struct process_t *process_list
 };
 struct fpu_state {
   uint16_t fcw;
@@ -69,7 +76,7 @@ extern void sched_yield();
 void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid);
 #endif
 int scheduler_fork();
-
+void exit_process(uint64_t exit_code);
 struct process_t *get_process_start();
 void get_process_finish(struct process_t *proc);
 void arch_create_bsp_per_cpu_data();

@@ -40,9 +40,12 @@ void arch_create_per_cpu_data() {
   wrmsr(0xC0000101, (uint64_t)hey);
 #endif
 }
+uint64_t pidalloc = 0;
+uint64_t pidallocate() { return pidalloc++; }
 struct process_t *create_process(pagemap *map) {
   struct process_t *him = (struct process_t *)kmalloc(sizeof(struct process_t));
   him->cur_map = map;
+  him->pid = pidallocate();
   him->lock = SPINLOCK_INITIALIZER;
   him->cnt = 0;
   him->fds = hashmap_new(sizeof(struct FileDescriptorHandle), 0, 0, 0, fd_hash,
@@ -50,6 +53,7 @@ struct process_t *create_process(pagemap *map) {
   him->fdalloc[0] = 1;
   him->fdalloc[1] = 1;
   him->fdalloc[2] = 1;
+  him->next = NULL;
   if (vfs_list) {
 
     him->root = vfs_list->cur_vnode;
@@ -75,15 +79,16 @@ void push_into_list(struct thread_t **list, struct thread_t *whatuwannapush) {
     (*list)->back = *list;
     return;
   }
-  struct thread_t *temp = (*list);
-  struct thread_t *old = (*list);
-  while (temp->next != old) {
-    temp = temp->next;
-  }
-  temp->next = whatuwannapush;
-  whatuwannapush->back = temp;
-  whatuwannapush->next = old;
-  old->back = whatuwannapush;
+  // thanks mr gpt for somehow finding a bug here???
+  // might be due to the circular list not being mantained properly ig?
+  // gdb said it was fine but the while loop didnt terminate ????
+  // idk but thanks mr gpt i didnt wanna spend hours debugging that anyway
+  // more syscalls time :)
+  struct thread_t *tail = (*list)->back;
+  tail->next = whatuwannapush;
+  whatuwannapush->back = tail;
+  whatuwannapush->next = *list;
+  (*list)->back = whatuwannapush;
 }
 struct thread_t *pop_from_list(struct thread_t **list) {
   struct thread_t *old = *list;
@@ -92,9 +97,7 @@ struct thread_t *pop_from_list(struct thread_t **list) {
   (*list)->back->next = *list;
   return old;
 }
-
 void exit_thread() {
-  __asm__ volatile("cli");
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->state = ZOMBIE;
   assert(cpu->cur_thread->proc != NULL);
@@ -113,6 +116,44 @@ void exit_thread() {
   // reaper thread is always running
   sched_yield();
 }
+void exit_process(uint64_t exit_code) {
+  // Turn the process into a zombie process
+  // send all threads to the reaper to be exterminated
+  // set process state to zombie
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  struct process_t *cur_proc = cpu->cur_thread->proc;
+  struct thread_t *ptr = cpu->run_queue;
+  struct thread_t *previous = ptr->back;
+  kprintf("original %p\r\n", previous);
+  while (ptr != NULL && ptr != previous) {
+    if (ptr->proc == cur_proc) {
+      struct thread_t *got = ptr->next;
+      struct thread_t *back = ptr->back;
+      back->next = got;
+      ptr->back = NULL;
+      ptr->next = NULL;
+      kprintf("thread %lu\r\n", ptr->tid);
+      // terminate thread
+      refcount_dec(&ptr->count);
+      refcount_dec(&ptr->count);
+      refcount_dec(&cur_proc->cnt);
+      ptr->next = cpu->to_be_reapered;
+      cpu->to_be_reapered = ptr;
+      ptr = got;
+      continue;
+    }
+    ptr = ptr->next;
+  }
+  cur_proc->state = ZOMBIE;
+  cur_proc->exit_code = exit_code;
+  struct thread_t *sex = cur_proc->queuewaitingforexit;
+  while (sex != NULL) {
+    sex = pop_from_list(&cur_proc->queuewaitingforexit);
+    ThreadReady(sex);
+  }
+
+  exit_thread();
+}
 
 void ThreadBlock(struct thread_t *whichqueue) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
@@ -122,13 +163,14 @@ void ThreadBlock(struct thread_t *whichqueue) {
 void ThreadReady(struct thread_t *thread) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   thread->state = READYING;
-
   push_into_list(&cpu->run_queue, thread);
 }
 void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
+  proc->next = cpu->process_list;
+  cpu->process_list = proc;
   newthread->tid = tid;
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
@@ -150,6 +192,8 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
+  proc->next = cpu->process_list;
+  cpu->process_list = proc;
   newthread->tid = tid;
   newthread->fpu_state = (void *)align_up(
       (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
@@ -197,6 +241,8 @@ int scheduler_fork() {
   duplicate_pagemap(oldprocess->cur_map, new);
   newprocess->cur_map = new;
   newprocess->cwd = oldprocess->cwd;
+  newprocess->next = arch_get_per_cpu_data()->process_list;
+  arch_get_per_cpu_data()->process_list = newprocess;
   if (oldprocess->cwdpath)
     newprocess->cwdpath = strdup(oldprocess->cwdpath);
   duplicate_process_fd(oldprocess, newprocess);
@@ -217,8 +263,9 @@ int scheduler_fork() {
     uint64_t rdi, rsi, rbp, rcx, rbx, pad;
   };
   struct SyscallFrame *syscallframe =
-      (struct SyscallFrame
-           *)(arch_get_per_cpu_data()->arch_data.kernel_stack_ptr - sizeof(struct SyscallFrame));
+      (struct SyscallFrame *)(arch_get_per_cpu_data()
+                                  ->arch_data.kernel_stack_ptr -
+                              sizeof(struct SyscallFrame));
 
   fun->arch_data.frame = (struct StackFrame){};
   struct StackFrame *destframe = &fun->arch_data.frame;
