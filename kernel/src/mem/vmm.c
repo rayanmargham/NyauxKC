@@ -12,7 +12,7 @@
 #include "utils/basic.h"
 
 void kprintf_vmmregion(VMMRegion *region) {
-  kprintf("\e[0;95mVMM Region {\r\n");
+  kprintf("VMM Region \e[0;95m{\r\n");
   kprintf(" base: 0x%lx\r\n", region->base);
   kprintf(" base + length: %lx\r\n", region->base + region->length);
   kprintf(" next: %p\r\n", (void *)region->next);
@@ -218,6 +218,27 @@ void kvmm_region_dealloc(pagemap *map, void *addr) {
     }
   }
 }
+void uvmm_region_dealloc(pagemap *map, void *addr) {
+  if (addr == NULL) {
+    return;
+  }
+  VMMRegion *cur = (VMMRegion *)map->userhead;
+  VMMRegion *prev = NULL;
+  while (cur != NULL) {
+    if (cur->base == (uint64_t)addr) {
+      arch_unmap_vmm_region(map, cur->base, cur->length);
+      if (prev != NULL)
+        prev->next = cur->next;
+      slabfree(cur);
+
+      return;
+    } else {
+      prev = cur;
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+  }
+}
 pagemap *new_pagemap() {
   pagemap *we = kmalloc(sizeof(pagemap));
   arch_completeinit_pagemap(we);
@@ -232,7 +253,6 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
         ((uint64_t *)((uint64_t)maptoduplicatefrom->root +
                       hhdm_request.response->offset))[i];
   }
-  kprintf("?\r\n");
 
   VMMRegion *inital = (VMMRegion *)maptoduplicatefrom->head;
   while (inital != NULL) {
@@ -256,7 +276,6 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     inital = (VMMRegion *)inital->next;
   }
 
-  kprintf("here?\r\n");
   VMMRegion *user = (VMMRegion *)maptoduplicatefrom->userhead;
   while (user != NULL) {
     // Copy VMM Regions
@@ -278,5 +297,4 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     to->userhead = (struct VMMRegion *)e;
     user = (VMMRegion *)user->next;
   }
-  kprintf("also here?\r\n");
 }

@@ -185,3 +185,14 @@ struct __syscall_ret {
 #define TIOCNOTTY 0x5422
 #define TIOCSETD 0x5423
 #define TIOCGETD 0x5424
+#define WEXITSTATUS(x) (((x) & 0xff00) >> 8)
+#define WTERMSIG(x) ((x) & 0x7f)
+#define WSTOPSIG(x) WEXITSTATUS(x)
+#define WIFEXITED(x) (WTERMSIG(x) == 0)
+#define WIFSIGNALED(x) (((signed char)(((x) & 0x7f) + 1) >> 1) > 0)
+#define WIFSTOPPED(x) (((x) & 0xff) == 0x7f)
+#define WIFCONTINUED(x) ((x) == 0xffff)
+#define WCOREDUMP(x) ((x) & WCOREFLAG)
+
+/* glibc extension, but also useful for kernels */
+#define W_EXITCODE(ret, sig) (((ret) << 8) | (sig))

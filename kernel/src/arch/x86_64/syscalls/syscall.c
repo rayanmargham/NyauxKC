@@ -33,6 +33,7 @@ struct __syscall_ret syscall_debug(char *string, size_t length) {
   return (struct __syscall_ret){0, 0};
 }
 struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
+  kprintf("syscall_setfsbase()\r\n");
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->arch_data.fs_base = ptr;
   wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
@@ -40,6 +41,7 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 }
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
+  kprintf("syscall_mmap(): size %lu\r\n", size);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
@@ -54,9 +56,15 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
   }
   return (struct __syscall_ret){-1, ENOSYS};
 }
+struct __syscall_ret syscall_free(void *pointer, size_t size) {
+  kprintf("syscall_free(): freeing %lu\r\n", size);
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  uvmm_region_dealloc(cpu->cur_thread->proc->cur_map, pointer);
+  return (struct __syscall_ret){-0, 0};
+}
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
-  kprintf("opening %s from thread %lu\r\n", path,
+  kprintf("syscall_openat(): opening %s from thread %lu\r\n", path,
           arch_get_per_cpu_data()->cur_thread->tid);
   struct vnode *node = NULL;
   if (dirfd == -100) {
@@ -93,6 +101,7 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   return (struct __syscall_ret){.ret = bytes_written, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
+  kprintf("syscall_close()\r\n");
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -121,6 +130,7 @@ struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
   return (struct __syscall_ret){.ret = hnd->offset, .errno = 0};
 }
 struct __syscall_ret syscall_isatty(int fd) {
+  kprintf("syscall_isatty()\r\n");
   struct FileDescriptorHandle *hnd = get_fd(fd);
 
   if (hnd == NULL || hnd->node == NULL) {
@@ -165,6 +175,7 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
 struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
+  kprintf("syscall_fstat()\r\n");
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL || hnd->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -173,8 +184,10 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
+  kprintf("syscall_getcwd()\r\n");
   struct process_t *proc = get_process_start();
   if (len > strlen(proc->cwdpath) + 1) {
+    get_process_finish(proc);
     return (struct __syscall_ret){.ret = -1, .errno = ERANGE};
   }
   memcpy(buffer, proc->cwd, len);
@@ -185,6 +198,11 @@ struct __syscall_ret syscall_fork() {
   int child = scheduler_fork();
   kprintf("syscall_fork(): forked process to %d\r\n", child);
   return (struct __syscall_ret){.ret = child, .errno = 0};
+}
+struct __syscall_ret syscall_getpid() {
+  kprintf("syscall_getpid(): getting pid\r\n");
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  return (struct __syscall_ret){.ret = cpu->cur_thread->proc->pid, .errno = 0};
 }
 struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
@@ -197,13 +215,13 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
 
     if (us->state == ZOMBIE) {
       kprintf("doing so with error code %lu\r\n", us->exit_code);
-      *status = us->exit_code;
+      *status = W_EXITCODE(us->exit_code, 0);
       us->state = BLOCKED;
       return (struct __syscall_ret){.ret = us->pid, .errno = 0};
     }
     if (us->state == BLOCKED) {
       us->state = READY;
-      return (struct __syscall_ret){.ret = us->pid, .errno = ECHILD};
+      return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
     }
     if (us->next == us) {
       break;

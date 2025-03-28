@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..0d9b0ad
+index 0000000..e5aa293
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,374 @@
+@@ -0,0 +1,376 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -105,7 +105,10 @@ index 0000000..0d9b0ad
 +                    pointer);
 +};
 +int sys_vm_protect(void *pointer, size_t size, int prot) { return 0; }
-+int sys_anon_free(void *pointer, size_t size) STUB_ONLY;
++int sys_anon_free(void *pointer, size_t size) {
++  __syscall2(17, (uint64_t)pointer, size);
++  return 0;
++};
 +int sys_close(int fd) {
 +  __syscall_ret ret = __syscall1(7, fd);
 +
@@ -253,9 +256,8 @@ index 0000000..0d9b0ad
 +}
 +
 +pid_t sys_getpid() {
-+  // __syscall_ret ret = __syscall(31);
-+  mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!" << frg::endlog;
-+  return 0;
++  __syscall_ret ret = __syscall0(16);
++  return ret.ret;
 +}
 +#endif
 +pid_t sys_getppid() {
@@ -373,7 +375,7 @@ index 0000000..0d9b0ad
 +  // __syscall_ret ret = __syscall(17, path, argv, envp);
 +
 +  // return ret.errno;
-+  return ENOSYS;
++  return ENOENT;
 +}
 +#endif
 +int sys_sigprocmask(int how, const sigset_t *__restrict set,

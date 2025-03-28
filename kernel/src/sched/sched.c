@@ -146,15 +146,15 @@ void exit_process(uint64_t exit_code) {
   }
   cur_proc->state = ZOMBIE;
   cur_proc->exit_code = exit_code;
-  struct thread_t *sex = cur_proc->queuewaitingforexit;
-  while (sex != NULL) {
-    sex = pop_from_list(&cur_proc->queuewaitingforexit);
-    ThreadReady(sex);
-  }
+  // struct thread_t *sex = cur_proc->queuewaitingforexit;
+  // while (sex != NULL) {
+  //   sex = pop_from_list(&cur_proc->queuewaitingforexit);
+  //   ThreadReady(sex);
+  // }
 
   exit_thread();
 }
-
+void collect_exit_code() {}
 void ThreadBlock(struct thread_t *whichqueue) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->state = BLOCKED;
@@ -292,7 +292,7 @@ int scheduler_fork() {
 
   fun->arch_data.frame.rax = 0;
   fun->arch_data.fs_base = calledby->arch_data.fs_base;
-
+  get_process_finish(oldprocess);
 #endif
 
   ThreadReady(fun);

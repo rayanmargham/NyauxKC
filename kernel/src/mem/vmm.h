@@ -39,6 +39,7 @@ void kvmm_region_dealloc(pagemap *map, void *addr);
 void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags);
 void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
                               bool force);
+void uvmm_region_dealloc(pagemap *map, void *addr);
 pagemap *new_pagemap();
 void kprintf_all_vmm_regions();
 void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to);
