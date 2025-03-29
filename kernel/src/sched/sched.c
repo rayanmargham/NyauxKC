@@ -212,6 +212,17 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   refcount_inc(&newthread->count);
   return newthread;
 }
+void clear_and_prepare_thread(struct thread_t *t) {
+  t->kernel_stack_ptr = t->kernel_stack_base;
+  kfree(t->fpu_state, align_up(get_fpu_storage_size(), 0x1000) + 64);
+  t->fpu_state = (void *)align_up(
+      (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
+  build_fpu_state(t->fpu_state);
+  uint64_t ustack =
+      (uint64_t)uvmm_region_alloc(t->proc->cur_map, KSTACKSIZE, 0) + KSTACKSIZE;
+  struct StackFrame hh = arch_create_frame(true, 0, ustack - 8);
+  t->arch_data.frame = hh;
+}
 
 extern void shitfuck();
 void create_kentry() {
@@ -230,8 +241,8 @@ void do_funny() {
   struct thread_t *fun = create_uthread(0, get_process_start(), 2);
   get_process_finish(fun->proc);
   pagemap *curpagemap = fun->proc->cur_map;
-  load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/ls", NULL},
-           (char *[]){NULL}, &fun->arch_data.frame);
+  load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/bash", NULL},
+           (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame);
   ThreadReady(fun);
 }
 int scheduler_fork() {
@@ -345,18 +356,20 @@ void schedd(struct StackFrame *frame) {
   if (cpu->cur_thread) {
     cpu->cur_thread->arch_data.fs_base = rdmsr(0xC0000100);
   }
-
-  if (frame->cs & 3) /* if usermode */ {
+  if (frame) {
+    if (frame->cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
-    if (cpu->cur_thread) {
-      fpu_save(cpu->cur_thread->fpu_state);
-    }
+      if (cpu->cur_thread) {
+        fpu_save(cpu->cur_thread->fpu_state);
+      }
 
 #endif
+    }
   }
+
   struct thread_t *old = switch_queue(cpu);
 #if defined(__x86_64__)
-  if (old != NULL) {
+  if (old != NULL && frame != NULL) {
 
     save_ctx(&old->arch_data.frame, frame);
   }

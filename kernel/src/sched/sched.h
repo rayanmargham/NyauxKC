@@ -80,3 +80,4 @@ void exit_process(uint64_t exit_code);
 struct process_t *get_process_start();
 void get_process_finish(struct process_t *proc);
 void arch_create_bsp_per_cpu_data();
+void clear_and_prepare_thread(struct thread_t *t);

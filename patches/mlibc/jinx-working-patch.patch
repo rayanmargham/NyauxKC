@@ -56,10 +56,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..e5aa293
+index 0000000..f6faf48
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,376 @@
+@@ -0,0 +1,385 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -372,10 +372,13 @@ index 0000000..e5aa293
 +  return 0;
 +}
 +int sys_execve(const char *path, char *const argv[], char *const envp[]) {
-+  // __syscall_ret ret = __syscall(17, path, argv, envp);
-+
-+  // return ret.errno;
-+  return ENOENT;
++  __syscall_ret ret =
++      __syscall3(18, (uint64_t)path, (uint64_t)argv, (uint64_t)envp);
++  if (ret.ret != 0) {
++    return ret.err;
++  } else {
++    __builtin_unreachable();
++  }
 +}
 +#endif
 +int sys_sigprocmask(int how, const sigset_t *__restrict set,
@@ -410,17 +413,23 @@ index 0000000..e5aa293
 +  __syscall_ret ret;
 +  switch (fsfdt) {
 +  case fsfd_target::fd: {
++    mlibc::infoLogger() << "mlibc: statfd is a stub" << frg::endlog;
 +    ret = __syscall2(12, fd, (uint64_t)statbuf);
 +    break;
 +  }
 +  case fsfd_target::path: {
 +    int fd = 0;
-+    sys_openat(AT_FDCWD, path, flags, O_RDONLY, &fd);
++    int bad = sys_openat(AT_FDCWD, path, flags, O_RDONLY, &fd);
++    if (bad != 0) {
++      return bad;
++    }
 +    ret = __syscall2(12, fd, (uint64_t)statbuf);
++    bad = sys_close(fd);
 +    // ret = __syscall(11, AT_FDCWD, path, statbuf, flags);
 +    break;
 +  }
 +  case fsfd_target::fd_path: {
++    mlibc::infoLogger() << "mlibc: statfd_path is a stub" << frg::endlog;
 +    // ret = __syscall(11, fd, path, statbuf, flags);
 +    return ENOSYS;
 +    break;

@@ -175,12 +175,12 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
 struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
-  kprintf("syscall_fstat()\r\n");
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL || hnd->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   *output = hnd->node->stat;
+  kprintf("syscall_fstat(): size %lu\r\n", output->size);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
@@ -206,9 +206,9 @@ struct __syscall_ret syscall_getpid() {
 }
 struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  kprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
+  // kprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
   if (pid != -1) {
-    return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
+    return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
   struct process_t *us = cpu->process_list;
   while (us != NULL) {
@@ -228,7 +228,46 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
     }
     us = us->next;
   }
-  return (struct __syscall_ret){.ret = 0, .errno = EAGAIN};
+  return (struct __syscall_ret){.ret = -1, .errno = EAGAIN};
+}
+struct __syscall_ret syscall_execve(const char *path, char *const argv[],
+                                    char *const envp[]) {
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  struct vnode *result;
+  char *kernelpath = strdup(path);
+  int res = vfs_lookup(cpu->cur_thread->proc->cwd, path, &result);
+  if (res != 0) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
+  } else {
+    int argc = 0;
+    while (argv[argc] != NULL) {
+      argc++;
+    }
+    int g = 0;
+    while (envp[g] != NULL) {
+      g++;
+    }
+
+    char **newargv = kmalloc((argc + 1) * 8);
+    char **newenvp = kmalloc((g + 1) * 8);
+    newargv[argc] = NULL;
+    newenvp[g] = NULL;
+    for (int i = 0; i < argc; i++) {
+      char *blah = strdup(argv[i]);
+      newargv[i] = blah;
+    }
+    for (int i = 0; i < g; i++) {
+      char *blah = strdup(envp[i]);
+      newenvp[i] = blah;
+    }
+    deallocate_all_user_regions(cpu->cur_thread->proc->cur_map);
+    clear_and_prepare_thread(cpu->cur_thread);
+    kprintf("syscall_execve(): Ready To Execute\r\n");
+    load_elf(cpu->cur_thread->proc->cur_map, kernelpath, newargv, newenvp,
+             &cpu->cur_thread->arch_data.frame);
+    kprintf("okay\r\n");
+    schedd(NULL);
+  }
 }
 extern void syscall_entry();
 

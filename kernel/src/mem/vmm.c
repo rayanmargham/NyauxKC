@@ -148,6 +148,7 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
       arch_map_vmm_region(map, new->base, new->length, true);
+      kprintf("uvm_region_alloc(): returning %p\r\n", (void *)new->base);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -297,4 +298,26 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     to->userhead = (struct VMMRegion *)e;
     user = (VMMRegion *)user->next;
   }
+}
+void deallocate_all_user_regions(pagemap *target) {
+  VMMRegion *cur = (VMMRegion *)target->userhead;
+  while (cur != NULL) {
+    if (cur->nocopy) {
+      slabfree(cur);
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+    arch_unmap_vmm_region(target, cur->base, cur->length);
+    slabfree(cur);
+
+    cur = (VMMRegion *)cur->next;
+  }
+  assert(cur == NULL);
+  VMMRegion *userstart = create_region(0, 0x1000);
+  VMMRegion *userend = create_region(0x7fffffffa000, 0x1000);
+  userstart->next = (struct VMMRegion *)userend;
+  userend->next = NULL;
+  userend->nocopy = true;
+  userstart->nocopy = true;
+  target->userhead = (struct VMMRegion *)userstart;
 }
