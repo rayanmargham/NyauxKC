@@ -63,6 +63,8 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
   }
   size_t sizeofexecutable = highest_address + lowest_address;
   void *feet = uvmm_region_alloc(usrmap, sizeofexecutable, 0);
+  kprintf("elf: loaded elf at %p\r\n",
+          (void *)((uint64_t)feet - lowest_address));
   out->entrypoint = (uint64_t)feet - lowest_address + hdr->e_entry;
   out->phent = hdr->e_phentsize;
   out->phnum = hdr->e_phnum;

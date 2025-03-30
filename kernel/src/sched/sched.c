@@ -201,8 +201,10 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   build_fpu_state(newthread->fpu_state);
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
+  kprintf("user thread creation(): giving %lu for the stack\r\n",
+          (size_t)USTACKSIZE);
   uint64_t ustack =
-      (uint64_t)uvmm_region_alloc(proc->cur_map, KSTACKSIZE, 0) + KSTACKSIZE;
+      (uint64_t)uvmm_region_alloc(proc->cur_map, USTACKSIZE, 0) + USTACKSIZE;
   struct StackFrame hh = arch_create_frame(true, entry, ustack - 8);
   newthread->kernel_stack_base = kstack;
   newthread->kernel_stack_ptr = kstack;
@@ -219,7 +221,7 @@ void clear_and_prepare_thread(struct thread_t *t) {
       (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
   build_fpu_state(t->fpu_state);
   uint64_t ustack =
-      (uint64_t)uvmm_region_alloc(t->proc->cur_map, KSTACKSIZE, 0) + KSTACKSIZE;
+      (uint64_t)uvmm_region_alloc(t->proc->cur_map, USTACKSIZE, 0) + USTACKSIZE;
   struct StackFrame hh = arch_create_frame(true, 0, ustack - 8);
   t->arch_data.frame = hh;
 }

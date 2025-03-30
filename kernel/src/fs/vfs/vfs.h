@@ -16,6 +16,14 @@ struct timespec {
   long tv_sec;  /* Seconds.  */
   long tv_nsec; /* Nanoseconds.  */
 };
+#define S_IFMT 0x0F000   /* bit mask for the file type bit field*/
+#define S_IFBLK 0x06000  /* block device*/
+#define S_IFCHR 0x02000  /* character device*/
+#define S_IFIFO 0x01000  /* fifo*/
+#define S_IFREG 0x08000  /* regular file*/
+#define S_IFDIR 0x04000  /* directory */
+#define S_IFLNK 0x0A000  /* sym link*/
+#define S_IFSOCK 0x0C000 /* socket*/
 struct stat {
   unsigned long st_dev;
   unsigned long st_ino;

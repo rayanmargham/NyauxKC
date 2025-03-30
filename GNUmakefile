@@ -58,7 +58,7 @@ run: nyaux.iso
 	qemu-system-x86_64 $(QEMUFLAGS)
 .PHONY: run-debug
 run-debug: nyaux.iso
-	qemu-system-x86_64 $(QEMUFLAGS) -s -S -d int -M smm=off
+	qemu-system-x86_64 $(QEMUFLAGS) -s -S -M smm=off
 
 .PHONY: clean
 clean:

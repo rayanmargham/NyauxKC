@@ -180,7 +180,8 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   *output = hnd->node->stat;
-  kprintf("syscall_fstat(): size %lu\r\n", output->size);
+  kprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
+          output->size, output->st_mode);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {

@@ -63,6 +63,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       struct direntry *direntry =
           (struct direntry *)kmalloc(sizeof(struct direntry));
       dir->direntry = direntry;
+
       dir->name = name;
       dir->size = 0;
       struct tmpfsnode *dot =
@@ -74,6 +75,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       if (!todifferentnode) {
 
         struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
+        newnode->stat.st_mode |= S_IFDIR;
         newnode->data = dir;
         newnode->v_type = VDIR;
         newnode->ops = ops;
@@ -100,6 +102,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
         dotdot->size = 0;
         dotdot->node = curvnode;
         dotdot->direntry = entry;
+        todifferentnode->stat.st_mode = S_IFDIR;
         insert_into_list(dot, direntry);
         insert_into_list(dotdot, direntry);
         insert_into_list(dir, entry);
@@ -121,6 +124,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       file->name = name;
       file->size = 0;
       newnode->stat.size = 0;
+      newnode->stat.st_mode = type == VREG ? S_IFREG : S_IFLNK;
       insert_into_list(file, entry);
       file->node = newnode;
       *res = newnode;
@@ -162,6 +166,7 @@ static int mount(struct vfs *curvfs, char *path, void *data) {
   newnode->ops = &tmpfs_ops;
   newnode->data = dir;
   newnode->v_type = VDIR;
+  newnode->stat.st_mode = S_IFDIR;
   newnode->vfs = curvfs;
   struct tmpfsnode *dot = (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
   dot->name = ".";

@@ -7,6 +7,7 @@
 #include "utils/basic.h"
 #include "utils/hashmap.h"
 #define KSTACKSIZE 16384
+#define USTACKSIZE 1048576
 enum TASKSTATE {
   READY = 0,
   RUNNING = 1,
