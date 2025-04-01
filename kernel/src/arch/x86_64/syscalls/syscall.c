@@ -209,7 +209,7 @@ struct __syscall_ret syscall_getpid() {
 }
 struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  // sprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
+  sprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
   if (pid != -1) {
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
@@ -219,12 +219,12 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
     if (us->state == ZOMBIE) {
       sprintf("doing so with error code %lu\r\n", us->exit_code);
       *status = W_EXITCODE(us->exit_code, 0);
-      us->state = READY;
+      us->cnt = 0;
+      us->state = BLOCKED;
       return (struct __syscall_ret){.ret = us->pid, .errno = 0};
     }
-    if (us->state == READY) {
-      us->state = BLOCKED;
-      us->cnt = 0;
+    if (us->state == BLOCKED) {
+
       return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
     }
     if (us->next == us) {
