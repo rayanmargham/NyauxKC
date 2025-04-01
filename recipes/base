@@ -3,4 +3,4 @@
 name=base
 version=0.0
 revision=1
-deps="base-files kernel bash ncurses readline"
+deps="base-files kernel bash ncurses readline doomgeneric nano"

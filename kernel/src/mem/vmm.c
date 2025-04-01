@@ -12,11 +12,11 @@
 #include "utils/basic.h"
 
 void kprintf_vmmregion(VMMRegion *region) {
-  kprintf("VMM Region \e[0;95m{\r\n");
-  kprintf(" base: 0x%lx\r\n", region->base);
-  kprintf(" base + length: %lx\r\n", region->base + region->length);
-  kprintf(" next: %p\r\n", (void *)region->next);
-  kprintf("}\e[0;37m\r\n");
+  sprintf("VMM Region \e[0;95m{\r\n");
+  sprintf(" base: 0x%lx\r\n", region->base);
+  sprintf(" base + length: %lx\r\n", region->base + region->length);
+  sprintf(" next: %p\r\n", (void *)region->next);
+  sprintf("}\e[0;37m\r\n");
 }
 VMMRegion *create_region(uint64_t base, uint64_t length) {
   VMMRegion *bro = slaballocate(sizeof(VMMRegion));
@@ -148,7 +148,7 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
       arch_map_vmm_region(map, new->base, new->length, true);
-      kprintf("uvm_region_alloc(): returning %p\r\n", (void *)new->base);
+      sprintf("uvm_region_alloc(): returning %p\r\n", (void *)new->base);
       return (void *)new->base;
     } else {
       prev = cur;

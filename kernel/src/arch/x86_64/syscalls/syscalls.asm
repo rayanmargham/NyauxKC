@@ -17,6 +17,7 @@ extern syscall_waitpid
 extern syscall_getpid
 extern syscall_free
 extern syscall_execve
+extern syscall_faccessat
 global syscall_entry
 section .data
 syscallarray:
@@ -39,6 +40,7 @@ syscallarray:
     dq syscall_getpid ; 16
     dq syscall_free ; 17
     dq syscall_execve ; 18
+    dq syscall_faccessat ; 19
 
 .length: dq ($ - syscallarray) / 8
 section .text

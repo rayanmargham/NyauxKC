@@ -40,7 +40,7 @@ void reaper() {
            cpu->cur_thread->kernel_stack_base);
 
     if (reaper->proc->cnt <= 0 &&
-        (reaper->proc->state != ZOMBIE && reaper->proc->state != BLOCKED)) {
+        (reaper->proc->state != ZOMBIE && reaper->proc->state == BLOCKED)) {
       kfree((uint64_t *)(reaper->kernel_stack_base - KSTACKSIZE), KSTACKSIZE);
       struct process_t *proc = reaper->proc;
       remove_from_process_list(cpu, proc);

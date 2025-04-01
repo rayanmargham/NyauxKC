@@ -24,6 +24,8 @@ configure() {
         --with-cxx-shared \
         --with-cxx-binding \
         --without-normal \
+        --without-stripping \
+        --with-trace \
         --with-manpage-format=normal \
         --with-pkg-config-libdir=/usr/lib/pkgconfig \
         --with-termlib \
@@ -51,5 +53,5 @@ package() {
     # Remove static libraries
     rm -rf "${dest_dir}${prefix}"/lib/*.a
 
-    post_package_strip
+    # post_package_strip
 }

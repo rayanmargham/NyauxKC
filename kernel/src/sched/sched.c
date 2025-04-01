@@ -28,6 +28,7 @@ struct per_cpu_data *arch_get_per_cpu_data() {
   return hi;
 #endif
 }
+
 void arch_create_bsp_per_cpu_data() { wrmsr(0xC0000101, (uint64_t)&bsp); }
 void arch_create_per_cpu_data() {
 #if defined(__x86_64__)
@@ -124,7 +125,6 @@ void exit_process(uint64_t exit_code) {
   struct process_t *cur_proc = cpu->cur_thread->proc;
   struct thread_t *ptr = cpu->run_queue;
   struct thread_t *previous = ptr->back;
-  kprintf("original %p\r\n", previous);
   while (ptr != NULL && ptr != previous) {
     if (ptr->proc == cur_proc) {
       struct thread_t *got = ptr->next;
@@ -244,7 +244,7 @@ void do_funny() {
   get_process_finish(fun->proc);
   pagemap *curpagemap = fun->proc->cur_map;
   load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/bash", NULL},
-           (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame);
+           (char *[]){"TERM=vt100", NULL}, &fun->arch_data.frame);
   ThreadReady(fun);
 }
 int scheduler_fork() {

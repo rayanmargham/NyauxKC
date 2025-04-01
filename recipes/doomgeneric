@@ -1,0 +1,15 @@
+name=doomgeneric
+revision=1
+from_source=doomgeneric
+hostdeps="gcc binutils"
+deps="base"
+
+build() {
+	cp -rp ${source_dir}/doomgeneric/* .
+	make
+}
+
+package() {
+	mkdir -p ${dest_dir}/usr/bin
+	cp -f doomgeneric ${dest_dir}/usr/bin/doomgeneric
+}

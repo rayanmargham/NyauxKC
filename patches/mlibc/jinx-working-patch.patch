@@ -4206,10 +4206,10 @@ index 0000000..9d0c66a
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..f6faf48
+index 0000000..1d59ed4
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,385 @@
+@@ -0,0 +1,398 @@
 +#include "syscall.h"
 +#include <asm/ioctls.h>
 +#include <bits/ensure.h>
@@ -4529,6 +4529,19 @@ index 0000000..f6faf48
 +  } else {
 +    __builtin_unreachable();
 +  }
++}
++int sys_faccessat(int dirfd, const char *pathname, int mode, int flags) {
++  __syscall_ret ret = __syscall4(19, dirfd, (uint64_t)pathname, mode, flags);
++
++  if (ret.err != 0) {
++    return ret.err;
++  }
++
++  return 0;
++}
++
++int sys_access(const char *path, int mode) {
++  return sys_faccessat(AT_FDCWD, path, mode, 0);
 +}
 +#endif
 +int sys_sigprocmask(int how, const sigset_t *__restrict set,

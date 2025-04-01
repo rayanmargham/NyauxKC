@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 struct __syscall_ret syscall_exit(int exit_code) {
-  kprintf("syscall_exit(): exit_code %d\r\n", exit_code);
+  sprintf("syscall_exit(): exit_code %d\r\n", exit_code);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (cpu->cur_thread->proc->pid == 0) {
     exit_thread();
@@ -29,11 +29,11 @@ struct __syscall_ret syscall_debug(char *string, size_t length) {
   char *buffer = kmalloc(1024);
   memcpy(buffer, string, length);
   buffer[length] = '\0';
-  kprintf("userland: %s\r\n", buffer);
+  sprintf("userland: %s\r\n", buffer);
   return (struct __syscall_ret){0, 0};
 }
 struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
-  kprintf("syscall_setfsbase()\r\n");
+  sprintf("syscall_setfsbase()\r\n");
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->arch_data.fs_base = ptr;
   wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
@@ -41,7 +41,7 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 }
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
-  kprintf("syscall_mmap(): size %lu\r\n", size);
+  sprintf("syscall_mmap(): size %lu\r\n", size);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
@@ -57,17 +57,17 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
   return (struct __syscall_ret){-1, ENOSYS};
 }
 struct __syscall_ret syscall_free(void *pointer, size_t size) {
-  kprintf("syscall_free(): freeing %lu\r\n", size);
+  sprintf("syscall_free(): freeing %lu\r\n", size);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   uvmm_region_dealloc(cpu->cur_thread->proc->cur_map, pointer);
   return (struct __syscall_ret){-0, 0};
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
-  kprintf("syscall_openat(): opening %s from thread %lu\r\n", path,
+  sprintf("syscall_openat(): opening %s from thread %lu\r\n", path,
           arch_get_per_cpu_data()->cur_thread->tid);
   struct vnode *node = NULL;
-  if (dirfd == -100) {
+  if (dirfd == AT_FDCWD) {
     struct process_t *proc = get_process_start();
     node = proc->cwd;
     get_process_finish(proc);
@@ -101,7 +101,7 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   return (struct __syscall_ret){.ret = bytes_written, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
-  kprintf("syscall_close()\r\n");
+  sprintf("syscall_close()\r\n");
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -130,10 +130,11 @@ struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
   return (struct __syscall_ret){.ret = hnd->offset, .errno = 0};
 }
 struct __syscall_ret syscall_isatty(int fd) {
-  kprintf("syscall_isatty()\r\n");
+
   struct FileDescriptorHandle *hnd = get_fd(fd);
 
   if (hnd == NULL || hnd->node == NULL) {
+    sprintf("syscall_isatty(): fd %d not a tty\r\n", fd);
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   if (hnd->node->v_type == VDEVICE) {
@@ -159,7 +160,7 @@ struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {
   if (hnd == NULL || hnd->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
-  kprintf("syscall_ioctl(): ioctling fd %d\r\n", fd);
+  sprintf("syscall_ioctl(): ioctling fd %d\r\n", fd);
   void *result;
   int res = hnd->node->ops->ioctl(hnd->node, request, arg, &result);
   return (struct __syscall_ret){.ret = (uint64_t)result, .errno = res};
@@ -170,22 +171,23 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   int newfd = fddup(fd);
-  kprintf("syscall_dup(): duping fd %d to fd %d\r\n", fd, newfd);
+  sprintf("syscall_dup(): duping fd %d to fd %d\r\n", fd, newfd);
 
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
 struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL || hnd->node == NULL) {
+    sprintf("syscall_fstat(): bad file descriptor\r\n");
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   *output = hnd->node->stat;
-  kprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
+  sprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
           output->size, output->st_mode);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
-  kprintf("syscall_getcwd()\r\n");
+  sprintf("syscall_getcwd()\r\n");
   struct process_t *proc = get_process_start();
   if (len > strlen(proc->cwdpath) + 1) {
     get_process_finish(proc);
@@ -197,17 +199,17 @@ struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
 }
 struct __syscall_ret syscall_fork() {
   int child = scheduler_fork();
-  kprintf("syscall_fork(): forked process to %d\r\n", child);
+  sprintf("syscall_fork(): forked process to %d\r\n", child);
   return (struct __syscall_ret){.ret = child, .errno = 0};
 }
 struct __syscall_ret syscall_getpid() {
-  kprintf("syscall_getpid(): getting pid\r\n");
+  sprintf("syscall_getpid(): getting pid\r\n");
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   return (struct __syscall_ret){.ret = cpu->cur_thread->proc->pid, .errno = 0};
 }
 struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  // kprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
+  // sprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
   if (pid != -1) {
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
@@ -215,13 +217,14 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   while (us != NULL) {
 
     if (us->state == ZOMBIE) {
-      kprintf("doing so with error code %lu\r\n", us->exit_code);
+      sprintf("doing so with error code %lu\r\n", us->exit_code);
       *status = W_EXITCODE(us->exit_code, 0);
-      us->state = BLOCKED;
+      us->state = READY;
       return (struct __syscall_ret){.ret = us->pid, .errno = 0};
     }
-    if (us->state == BLOCKED) {
-      us->state = READY;
+    if (us->state == READY) {
+      us->state = BLOCKED;
+      us->cnt = 0;
       return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
     }
     if (us->next == us) {
@@ -230,6 +233,26 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
     us = us->next;
   }
   return (struct __syscall_ret){.ret = -1, .errno = EAGAIN};
+}
+struct __syscall_ret syscall_faccessat(int dirfd, const char *pathname,
+                                       int mode, int flags) {
+  if (flags & AT_SYMLINK_NOFOLLOW) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
+  }
+  if (dirfd != AT_FDCWD) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
+  }
+  struct vnode *node = NULL;
+  struct process_t *proc = get_process_start();
+  node = proc->cwd;
+  get_process_finish(proc);
+  struct vnode *retur = NULL;
+  int res = vfs_lookup(node, pathname, &retur);
+  if (res != 0) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
+  }
+  sprintf("syscall_faccessat(): ignoring mode %d flags %d\r\n", mode, flags);
+  return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_execve(const char *path, char *const argv[],
                                     char *const envp[]) {
@@ -263,10 +286,10 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
     }
     deallocate_all_user_regions(cpu->cur_thread->proc->cur_map);
     clear_and_prepare_thread(cpu->cur_thread);
-    kprintf("syscall_execve(): Ready To Execute\r\n");
+    sprintf("syscall_execve(): Ready To Execute\r\n");
     load_elf(cpu->cur_thread->proc->cur_map, kernelpath, newargv, newenvp,
              &cpu->cur_thread->arch_data.frame);
-    kprintf("okay\r\n");
+    sprintf("okay\r\n");
     schedd(NULL);
   }
 }

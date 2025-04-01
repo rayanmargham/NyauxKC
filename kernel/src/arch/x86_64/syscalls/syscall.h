@@ -194,6 +194,11 @@ struct __syscall_ret {
 #define WIFSTOPPED(x) (((x) & 0xff) == 0x7f)
 #define WIFCONTINUED(x) ((x) == 0xffff)
 #define WCOREDUMP(x) ((x) & WCOREFLAG)
-
+#define AT_FDCWD -100
+#define AT_SYMLINK_NOFOLLOW 0x100
+#define R_OK 4 /* Test for read permission.  */
+#define W_OK 2 /* Test for write permission.  */
+#define X_OK 1 /* Test for execute permission.  */
+#define F_OK 0 /* Test for existence.  */
 /* glibc extension, but also useful for kernels */
 #define W_EXITCODE(ret, sig) (((ret) << 8) | (sig))

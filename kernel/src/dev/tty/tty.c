@@ -34,7 +34,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 }
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
-  kprintf("tty(): request is 0x%lx\r\n", request);
+  sprintf("tty(): request is 0x%lx\r\n", request);
   switch (request) {
   case TIOCGWINSZ:
     // usermode is requesting to get the window size of the tty
@@ -59,8 +59,11 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     assert(data != NULL);
     struct tty *ttyy = data;
     ttyy->termi = *(struct termios *)arg;
-    kprintf("tty(): set values :)\r\n");
+    sprintf("tty(): set values :)\r\n");
     return 0;
+    break;
+  default:
+    sprintf("tty(): unsupported tty request 0x%lx\r\n", request);
     break;
   }
   return ENOSYS;
