@@ -40,8 +40,8 @@ sched_yield:
     mov ax, ss
     push rax
 
-    ; push rsp
-    lea rax, [rsp+8]
+    ; push rsp, skip rax and rip
+    lea rax, [rsp+24]
     push rax
 
     ; push rflags

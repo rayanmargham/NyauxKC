@@ -29,14 +29,16 @@ struct process_t {
   struct vnode *cwd; // current working directory
   char *cwdpath;
   struct thread_t
-      *queuewaitingforexit; // threads waiting for the process to exit
-  struct process_t *next;   // FUCK YOU!!! :)
+      *queuewaitingforexit;   // threads waiting for the process to exit
+  struct process_t *children; // linked list of children for this process
+  struct process_t *parent;   // our parent
 };
 struct thread_t {
   struct process_t *proc; // there should be a lock on this
   struct arch_thread_t arch_data;
   uint64_t kernel_stack_ptr;
   uint64_t kernel_stack_base;
+  uint64_t syscall_user_sp;
   struct thread_t *next, *back;
   uint64_t tid;
   enum TASKSTATE state;
@@ -50,7 +52,6 @@ struct per_cpu_data {
   struct thread_t
       *to_be_reapered; // any thread with refcount zero will be thrown into here
   // a reaper thread will kill the dead
-  struct process_t *process_list
 };
 struct fpu_state {
   uint16_t fcw;

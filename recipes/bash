@@ -29,6 +29,7 @@ configure() {
             -DSYS_BASHRC='\"/etc/bash.bashrc\"' \
             -DSYS_BASH_LOGOUT='\"/etc/bash.bash_logout\"' \
             -DNON_INTERACTIVE_LOGIN_SHELLS \
+            -DDEBUG \
         " \
         --without-bash-malloc \
         --with-curses \

@@ -5,21 +5,20 @@
 #include "mem/vmm.h"
 #include "sched.h"
 #include "utils/basic.h"
-void remove_from_process_list(struct per_cpu_data *cpu,
-                              struct process_t *processtoremove) {
-  if (cpu) {
-    struct process_t *process_list = cpu->process_list;
+void remove_from_parent_process(struct process_t *processtoremove) {
+  if (processtoremove) {
+    struct process_t *parent = processtoremove->parent;
     struct process_t *previous = NULL;
-    while (process_list) {
-      if (process_list == processtoremove) {
+    while (parent) {
+      if (parent == processtoremove) {
         if (!previous) {
-          cpu->process_list = processtoremove->next;
+          parent->children = processtoremove->children;
         } else {
-          previous->next = processtoremove->next;
+          previous->parent = processtoremove->parent;
         }
       }
-      previous = process_list;
-      process_list = process_list->next;
+      previous = parent;
+      parent = parent->children;
     }
   }
 }
@@ -43,11 +42,12 @@ void reaper() {
         (reaper->proc->state != ZOMBIE && reaper->proc->state == BLOCKED)) {
       kfree((uint64_t *)(reaper->kernel_stack_base - KSTACKSIZE), KSTACKSIZE);
       struct process_t *proc = reaper->proc;
-      remove_from_process_list(cpu, proc);
-      if (!(proc->cur_map == &ker_map)) {
+      remove_from_parent_process(proc);
+      if (!(proc->cur_map == &ker_map) &&
+          proc->cur_map != cpu->cur_thread->proc->cur_map) {
         kprintf("proc_addr: %#llx, tid: %u, proc_as: %#llx, kern_as: %#llx\n",
                 proc, reaper->tid, proc->cur_map, &ker_map);
-        kprintf("reaper(): Freeing a PageMap is ENOSYS\r\r\n");
+        free_pagemap(proc->cur_map);
       }
       kfree(proc, sizeof(struct process_t));
 

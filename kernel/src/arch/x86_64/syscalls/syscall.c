@@ -95,10 +95,13 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   if (hnd->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EIO};
   }
-  size_t bytes_written =
-      hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0);
-  hnd->offset += bytes_written;
-  return (struct __syscall_ret){.ret = bytes_written, .errno = 0};
+  if (count > (hnd->node->stat.size - hnd->offset) &&
+      hnd->node->stat.size != 0 && hnd->node->v_type != VCHRDEVICE) {
+    count = hnd->node->stat.size - hnd->offset;
+  }
+  size_t bytes_read = hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0);
+  hnd->offset += bytes_read;
+  return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
   sprintf("syscall_close()\r\n");
@@ -137,7 +140,7 @@ struct __syscall_ret syscall_isatty(int fd) {
     sprintf("syscall_isatty(): fd %d not a tty\r\n", fd);
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
-  if (hnd->node->v_type == VDEVICE) {
+  if (hnd->node->v_type == VCHRDEVICE) {
     struct devfsnode *nod = hnd->node->data;
     if (nod->info->major == 4) {
       return (struct __syscall_ret){.ret = 0, .errno = 0};
@@ -208,12 +211,18 @@ struct __syscall_ret syscall_getpid() {
   return (struct __syscall_ret){.ret = cpu->cur_thread->proc->pid, .errno = 0};
 }
 struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
+
+  // return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
   if (pid != -1) {
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
-  struct process_t *us = cpu->process_list;
+neverstop:
+
+  cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
+  struct process_t *us = cpu->cur_thread->proc->children;
+
   while (us != NULL) {
 
     if (us->state == ZOMBIE) {
@@ -224,15 +233,19 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
       return (struct __syscall_ret){.ret = us->pid, .errno = 0};
     }
     if (us->state == BLOCKED) {
-
+      sprintf("'no more children\r\n");
       return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
     }
-    if (us->next == us) {
+    if (us->children == us) {
       break;
     }
-    us = us->next;
+    us = us->children;
   }
-  return (struct __syscall_ret){.ret = -1, .errno = EAGAIN};
+  // TODO: fix syscall to save user rsp
+  sched_yield();
+
+  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
+  goto neverstop;
 }
 struct __syscall_ret syscall_faccessat(int dirfd, const char *pathname,
                                        int mode, int flags) {

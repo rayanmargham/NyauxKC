@@ -54,7 +54,7 @@ struct process_t *create_process(pagemap *map) {
   him->fdalloc[0] = 1;
   him->fdalloc[1] = 1;
   him->fdalloc[2] = 1;
-  him->next = NULL;
+  him->children = NULL;
   if (vfs_list) {
 
     him->root = vfs_list->cur_vnode;
@@ -169,8 +169,6 @@ void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
-  proc->next = cpu->process_list;
-  cpu->process_list = proc;
   newthread->tid = tid;
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
@@ -192,8 +190,6 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   struct thread_t *newthread = create_thread();
   newthread->proc = proc;
-  proc->next = cpu->process_list;
-  cpu->process_list = proc;
   newthread->tid = tid;
   newthread->fpu_state = (void *)align_up(
       (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
@@ -254,8 +250,11 @@ int scheduler_fork() {
   duplicate_pagemap(oldprocess->cur_map, new);
   newprocess->cur_map = new;
   newprocess->cwd = oldprocess->cwd;
-  newprocess->next = arch_get_per_cpu_data()->process_list;
-  arch_get_per_cpu_data()->process_list = newprocess;
+  // so fucking simple
+  // so fucking easy
+  newprocess->children = oldprocess->children;
+  newprocess->parent = oldprocess;
+  oldprocess->children = newprocess;
   if (oldprocess->cwdpath)
     newprocess->cwdpath = strdup(oldprocess->cwdpath);
   duplicate_process_fd(oldprocess, newprocess);

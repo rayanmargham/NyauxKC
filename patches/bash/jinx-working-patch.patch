@@ -130,6 +130,22 @@ index 931dba9..1b70a13 100644
  extern void zreset PARAMS((void));
  extern void zsyncfd PARAMS((int));
  
+diff --git bash-clean/jobs.c bash-workdir/jobs.c
+index d3e4ab0..9f66e83 100644
+--- bash-clean/jobs.c
++++ bash-workdir/jobs.c
+@@ -2979,9 +2979,9 @@ wait_for (pid, flags)
+ 	  CHECK_WAIT_INTR;
+ 	  r = waitchld (pid, 1);	/* XXX */
+ 	  waiting_for_child = old_waiting;
+-#if 0
++
+ itrace("wait_for: blocking wait for %d returns %d child = %p", (int)pid, r, child);
+-#endif
++
+ 	  queue_sigchld = 0;
+ 	  if (r == -1 && errno == ECHILD && this_shell_builtin == wait_builtin)
+ 	    {
 diff --git bash-clean/lib/sh/random.c bash-workdir/lib/sh/random.c
 index 1eaa71a..27aa87b 100644
 --- bash-clean/lib/sh/random.c

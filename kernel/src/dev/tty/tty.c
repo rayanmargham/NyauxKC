@@ -115,7 +115,7 @@ void devtty_init(struct vfs *curvfs) {
   info->minor = 0;
   info->ops = &ttyops;
   info->data = newtty;
-  curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "tty", VDEVICE,
+  curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "tty", VCHRDEVICE,
                                  &vnode_devops, &res, info, NULL);
 
   struct FileDescriptorHandle *hnd1 = get_fd(0);

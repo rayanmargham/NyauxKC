@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 
+#include "arch/x86_64/instructions/instructions.h"
 #include "limine.h"
+#include "mem/pmm.h"
 #include "mem/vmm.h"
 #include "term/term.h"
 #include "utils/basic.h"
@@ -112,6 +114,12 @@ void x86_64_switch_pagemap(pagemap *take) {
   switch_to_pagemap((uint64_t)(take->root));
 }
 uint64_t unmap(uint64_t *pt, uint64_t virt) {
+  if (virt < (hhdm_request.response->offset + (hhdm_pages * 0x1000)) &&
+      (virt > (hhdm_request.response->offset))) {
+    // make sure we dont accidentely unmap the hhdm
+    sprintf("ignoring virt 0x%lx\r\n", virt);
+    return 0;
+  }
   uint64_t *f = find_pte(pt, virt);
   if (f != NULL) {
     uint64_t old_phys = pte_to_phys(*f);
@@ -157,8 +165,30 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
     pmm_dealloc((void *)(phys + hhdm_request.response->offset));
   }
 }
+static void destroy_page_table(uint64_t *table, int level) {
+  uint64_t *vtable =
+      (uint64_t *)((uint64_t)table + hhdm_request.response->offset);
+  for (int i = 0; i < 512; i++) {
+    if (vtable[i] & PRESENT) {
+      if (level < 3 && !(vtable[i] & PAGE2MB)) {
+        sprintf("pt: got 0x%lx\r\n", pte_to_phys(vtable[i]));
+        uint64_t *next_table =
+            (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
+        destroy_page_table(next_table, level + 1);
+      }
+    }
+  }
+  sprintf("ee pt: got 0x%lx\r\n", pte_to_phys((uint64_t)table));
+  pmm_dealloc((void *)((uint64_t)pte_to_phys((uint64_t)table) +
+                       hhdm_request.response->offset));
+}
 void x86_64_destroy_pagemap(pagemap *take) {
-  // TODO
+  if (take && take->root) {
+    destroy_page_table(take->root, 0);
+    sprintf("okay\r\n");
+    pmm_dealloc(take->root + hhdm_request.response->offset);
+    take->root = NULL;
+  }
 }
 bool is2mibaligned(uint64_t addr, uint64_t length) {
   if (is_aligned(addr, MIB(2)) && length >= MIB(2)) {

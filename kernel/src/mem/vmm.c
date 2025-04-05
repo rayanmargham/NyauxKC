@@ -321,3 +321,42 @@ void deallocate_all_user_regions(pagemap *target) {
   userstart->nocopy = true;
   target->userhead = (struct VMMRegion *)userstart;
 }
+void deallocate_all_kernel_regions_and_user(pagemap *target) {
+  VMMRegion *cur = (VMMRegion *)target->head;
+  while (cur != NULL) {
+    if (cur->nocopy) {
+      slabfree(cur);
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+    if (!arch_get_phys(target, cur->base)) {
+
+      arch_unmap_vmm_region(target, cur->base, cur->length);
+    }
+    slabfree(cur);
+
+    cur = (VMMRegion *)cur->next;
+  }
+  assert(cur == NULL);
+  cur = (VMMRegion *)target->userhead;
+  while (cur != NULL) {
+    if (cur->nocopy) {
+      slabfree(cur);
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+    if (!arch_get_phys(target, cur->base)) {
+
+      arch_unmap_vmm_region(target, cur->base, cur->length);
+    }
+    slabfree(cur);
+
+    cur = (VMMRegion *)cur->next;
+  }
+  assert(cur == NULL);
+}
+void free_pagemap(pagemap *take) {
+  deallocate_all_kernel_regions_and_user(take);
+  arch_destroy_pagemap(take);
+  kfree(take, sizeof(pagemap));
+}

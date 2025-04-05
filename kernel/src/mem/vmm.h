@@ -45,3 +45,4 @@ pagemap *new_pagemap();
 void kprintf_all_vmm_regions();
 void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to);
 void deallocate_all_user_regions(pagemap *target);
+void free_pagemap(pagemap *take);
