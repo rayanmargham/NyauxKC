@@ -168,17 +168,15 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
 static void destroy_page_table(uint64_t *table, int level) {
   uint64_t *vtable =
       (uint64_t *)((uint64_t)table + hhdm_request.response->offset);
-  for (int i = 0; i < 512; i++) {
+  for (int i = 0; i < 256; i++) {
     if (vtable[i] & PRESENT) {
       if (level < 3 && !(vtable[i] & PAGE2MB)) {
-        sprintf("pt: got 0x%lx\r\n", pte_to_phys(vtable[i]));
         uint64_t *next_table =
             (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
         destroy_page_table(next_table, level + 1);
       }
     }
   }
-  sprintf("ee pt: got 0x%lx\r\n", pte_to_phys((uint64_t)table));
   pmm_dealloc((void *)((uint64_t)pte_to_phys((uint64_t)table) +
                        hhdm_request.response->offset));
 }
@@ -186,7 +184,9 @@ void x86_64_destroy_pagemap(pagemap *take) {
   if (take && take->root) {
     destroy_page_table(take->root, 0);
     sprintf("okay\r\n");
-    pmm_dealloc(take->root + hhdm_request.response->offset);
+    sprintf("take root is %p\r\n", take->root);
+    pmm_dealloc(
+        (void *)(((uint64_t)take->root) + hhdm_request.response->offset));
     take->root = NULL;
   }
 }

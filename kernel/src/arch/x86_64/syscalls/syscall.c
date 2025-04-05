@@ -222,7 +222,9 @@ neverstop:
 
   cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
   struct process_t *us = cpu->cur_thread->proc->children;
-
+  if (!us) {
+    return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
+  }
   while (us != NULL) {
 
     if (us->state == ZOMBIE) {
@@ -231,10 +233,6 @@ neverstop:
       us->cnt = 0;
       us->state = BLOCKED;
       return (struct __syscall_ret){.ret = us->pid, .errno = 0};
-    }
-    if (us->state == BLOCKED) {
-      sprintf("'no more children\r\n");
-      return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
     }
     if (us->children == us) {
       break;

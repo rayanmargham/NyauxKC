@@ -358,5 +358,6 @@ void deallocate_all_kernel_regions_and_user(pagemap *target) {
 void free_pagemap(pagemap *take) {
   deallocate_all_kernel_regions_and_user(take);
   arch_destroy_pagemap(take);
+  sprintf("done?\r\n");
   kfree(take, sizeof(pagemap));
 }

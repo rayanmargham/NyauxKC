@@ -7,14 +7,17 @@
 #include "utils/basic.h"
 void remove_from_parent_process(struct process_t *processtoremove) {
   if (processtoremove) {
-    struct process_t *parent = processtoremove->parent;
+    assert(processtoremove->parent != processtoremove);
+    struct process_t *parent = processtoremove->parent->children;
     struct process_t *previous = NULL;
     while (parent) {
       if (parent == processtoremove) {
         if (!previous) {
-          parent->children = processtoremove->children;
+
+          parent->parent->children = processtoremove->children;
         } else {
           previous->parent = processtoremove->parent;
+          previous->parent->children = processtoremove->children;
         }
       }
       previous = parent;
@@ -47,7 +50,7 @@ void reaper() {
           proc->cur_map != cpu->cur_thread->proc->cur_map) {
         kprintf("proc_addr: %#llx, tid: %u, proc_as: %#llx, kern_as: %#llx\n",
                 proc, reaper->tid, proc->cur_map, &ker_map);
-        free_pagemap(proc->cur_map);
+        // free_pagemap(proc->cur_map);
       }
       kfree(proc, sizeof(struct process_t));
 
