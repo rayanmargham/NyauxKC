@@ -377,10 +377,10 @@ void schedd(struct StackFrame *frame) {
   cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
   wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
+  change_rsp0(cpu->cur_thread->kernel_stack_base); // do this unconditally
   if (cpu->cur_thread->arch_data.frame.cs & 3) /* if usermode */ {
 #if defined(__x86_64__)
     fpu_store(cpu->cur_thread->fpu_state);
-    change_rsp0(cpu->cur_thread->kernel_stack_base);
 
     __asm__ volatile("swapgs");
 #endif

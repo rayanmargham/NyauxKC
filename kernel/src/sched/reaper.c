@@ -50,7 +50,7 @@ void reaper() {
           proc->cur_map != cpu->cur_thread->proc->cur_map) {
         kprintf("proc_addr: %#llx, tid: %u, proc_as: %#llx, kern_as: %#llx\n",
                 proc, reaper->tid, proc->cur_map, &ker_map);
-        // free_pagemap(proc->cur_map);
+        free_pagemap(proc->cur_map);
       }
       kfree(proc, sizeof(struct process_t));
 
