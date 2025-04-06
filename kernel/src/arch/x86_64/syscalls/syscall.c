@@ -41,7 +41,7 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 }
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
-  sprintf("syscall_mmap(): size %lu\r\n", size);
+  sprintf("syscall_mmap(): size %lu flags %x\n\n", size, flags);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {

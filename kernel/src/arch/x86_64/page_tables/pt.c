@@ -166,19 +166,34 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
   }
 }
 static void destroy_page_table(uint64_t *table, int level) {
+  // we are already in a differnt page table so this should be fine
   uint64_t *vtable =
       (uint64_t *)((uint64_t)table + hhdm_request.response->offset);
-  for (int i = 0; i < 256; i++) {
-    if (vtable[i] & PRESENT) {
-      if (level < 3 && !(vtable[i] & PAGE2MB)) {
-        uint64_t *next_table =
-            (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
-        destroy_page_table(next_table, level + 1);
+  if (level != 0) {
+    for (int i = 0; i < 512; i++) {
+      if (vtable[i] & PRESENT) {
+        if (level < 3 && !(vtable[i] & PAGE2MB)) {
+          uint64_t *next_table =
+              (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
+          destroy_page_table(next_table, level + 1);
+          pmm_dealloc(vtable);
+        }
+      }
+    }
+  } else {
+    for (int i = 0; i < 256; i++) {
+      if (vtable[i] & PRESENT) {
+        if (level < 3 && !(vtable[i] & PAGE2MB)) {
+          uint64_t *next_table =
+              (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
+          destroy_page_table(next_table, level + 1);
+          pmm_dealloc(vtable);
+        }
       }
     }
   }
-  pmm_dealloc((void *)((uint64_t)pte_to_phys((uint64_t)table) +
-                       hhdm_request.response->offset));
+  pmm_dealloc(
+      (void *)(pte_to_phys((uint64_t)table) + hhdm_request.response->offset));
 }
 void x86_64_destroy_pagemap(pagemap *take) {
   if (take && take->root) {

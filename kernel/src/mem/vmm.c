@@ -329,10 +329,7 @@ void deallocate_all_kernel_regions_and_user(pagemap *target) {
       cur = (VMMRegion *)cur->next;
       continue;
     }
-    if (!arch_get_phys(target, cur->base)) {
-
-      arch_unmap_vmm_region(target, cur->base, cur->length);
-    }
+    // its page tables will get destroyerd so this is fine
     slabfree(cur);
 
     cur = (VMMRegion *)cur->next;
@@ -345,10 +342,7 @@ void deallocate_all_kernel_regions_and_user(pagemap *target) {
       cur = (VMMRegion *)cur->next;
       continue;
     }
-    if (!arch_get_phys(target, cur->base)) {
 
-      arch_unmap_vmm_region(target, cur->base, cur->length);
-    }
     slabfree(cur);
 
     cur = (VMMRegion *)cur->next;
