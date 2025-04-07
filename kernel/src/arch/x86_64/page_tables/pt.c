@@ -167,7 +167,6 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
 }
 static void destroy_page_table(uint64_t *table, int level) {
   // we are already in a differnt page table so this should be fine
-  sprintf("deallocating %p level %d\r\n", table, level);
   uint64_t *vtable =
       (uint64_t *)((uint64_t)table + hhdm_request.response->offset);
   if (level != 0) {
@@ -199,8 +198,8 @@ void x86_64_destroy_pagemap(pagemap *take) {
     destroy_page_table(take->root, 0);
     sprintf("okay\r\n");
     sprintf("take root is %p\r\n", take->root);
-    pmm_dealloc(
-        (void *)(((uint64_t)take->root) + hhdm_request.response->offset));
+    // pmm_dealloc(
+    //     (void *)(((uint64_t)take->root) + hhdm_request.response->offset));
     take->root = NULL;
   }
 }
