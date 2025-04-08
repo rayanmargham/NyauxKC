@@ -7,7 +7,9 @@
 
 #include "../cpu/lapic.h"
 #include "../instructions/instructions.h"
+#include "arch/arch.h"
 #include "arch/x86_64/cpu/structures.h"
+#include "mem/vmm.h"
 #include "sched/sched.h"
 
 #define INTERRUPT_GATE 0xE
@@ -102,11 +104,26 @@ uint64_t read_cr2() {
 
 void *page_fault_handler(struct StackFrame *frame) {
   __asm__ volatile("cli");
+  if (arch_get_per_cpu_data()->cur_thread == NULL ||
+      arch_get_per_cpu_data()->cur_thread->proc == NULL) {
 
-  kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
-  kprintf("RIP is 0x%lx. Error Code 0x%lx\r\n", frame->rip, frame->error_code);
+    kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
+    kprintf("RIP is 0x%lx. Error Code 0x%lx\r\n", frame->rip,
+            frame->error_code);
+    STACKTRACE
+    panic("Page Fault:c");
+  }
+  struct process_t *proc = arch_get_per_cpu_data()->cur_thread->proc;
+  uint64_t virt = read_cr2();
+  if (iswithinvmmregion(proc->cur_map, virt)) {
+    arch_map_usersingularpage(proc->cur_map, virt);
+    return frame;
+  }
   if (arch_get_per_cpu_data() != NULL &&
       arch_get_per_cpu_data()->cur_thread != NULL) {
+    kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
+    kprintf("RIP is 0x%lx. Error Code 0x%lx\r\n", frame->rip,
+            frame->error_code);
     kprintf("Page Fault Happened in thread %lu\r\n",
             arch_get_per_cpu_data()->cur_thread->tid);
   }

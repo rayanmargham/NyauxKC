@@ -43,8 +43,9 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     size_t rows = 0;
     struct flanterm_context *ctx = get_fctx();
     flanterm_get_dimensions(ctx, &cols, &rows);
+    kprintf("rows: %lu cols: %lu\r\n", rows, cols);
     struct winsize size = {.ws_row = rows, .ws_col = cols};
-    *(struct winsize *)result = size;
+    *(struct winsize *)arg = size;
     return 0;
 
     break;

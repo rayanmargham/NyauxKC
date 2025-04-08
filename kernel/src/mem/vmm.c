@@ -23,6 +23,7 @@ VMMRegion *create_region(uint64_t base, uint64_t length) {
   bro->base = base;
   bro->length = length;
   bro->nocopy = false;
+  bro->demand_paged = false;
   return bro;
 }
 result region_setup(pagemap *map, uint64_t hddm_in_pages) {
@@ -131,6 +132,44 @@ void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
   panic("vmm(): Sir madamm this should never occur");
   return NULL;
 }
+bool iswithinvmmregion(pagemap *map, uint64_t virt) {
+  VMMRegion *cur = (VMMRegion *)map->userhead;
+  while (cur != NULL) {
+    if (virt >= cur->base && virt <= (cur->base + cur->length) &&
+        cur->demand_paged) {
+      return true;
+    }
+    cur = (VMMRegion *)cur->next;
+  }
+}
+void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount) {
+  assert(ker_map.userhead != NULL);
+  assert(ker_map.root != NULL);
+  VMMRegion *cur = (VMMRegion *)map->userhead;
+  VMMRegion *prev = NULL;
+  while (cur != NULL) {
+    if (prev == NULL) {
+      prev = cur;
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+    if ((cur->base - (prev->base + prev->length)) >= ARCH_CHECK_SPACE(amount)) {
+      VMMRegion *new =
+          create_region((prev->base + prev->length), align_up(amount, 4096));
+      new->demand_paged = true;
+      prev->next = (struct VMMRegion *)new;
+      new->next = (struct VMMRegion *)cur;
+      return (void *)new->base;
+    } else {
+      prev = cur;
+      cur = (VMMRegion *)cur->next;
+      continue;
+    }
+  };
+  kprintf("vmm(): No free Regions, Too Much Memory being used!!!\r\n");
+  panic("vmm(): Sir madamm this should never occur");
+  return NULL;
+}
 void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
   assert(map->userhead != NULL);
   assert(map->root != NULL);
@@ -227,6 +266,9 @@ void uvmm_region_dealloc(pagemap *map, void *addr) {
   VMMRegion *prev = NULL;
   while (cur != NULL) {
     if (cur->base == (uint64_t)addr) {
+      // if (cur->demand_paged) {
+      //   return;
+      // }
       arch_unmap_vmm_region(map, cur->base, cur->length);
       if (prev != NULL)
         prev->next = cur->next;
@@ -352,6 +394,5 @@ void deallocate_all_kernel_regions_and_user(pagemap *target) {
 void free_pagemap(pagemap *take) {
   deallocate_all_kernel_regions_and_user(take);
   arch_destroy_pagemap(take);
-  sprintf("done?\r\n");
   kfree(take, sizeof(pagemap));
 }

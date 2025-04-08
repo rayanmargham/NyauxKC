@@ -28,6 +28,7 @@ void arch_destroy_pagemap(pagemap *take);
 void arch_switch_pagemap(pagemap *take);
 void arch_init_interruptcontrollers();
 void arch_enable_interrupts();
+void arch_map_usersingularpage(pagemap *take, uint64_t virt);
 void arch_disable_interrupts();
 #ifdef __x86_64__
 #define ARCH_CHECK_SPACE(amount) (align_up((amount), 4096) + 0x1000)

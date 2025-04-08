@@ -32,6 +32,7 @@ typedef struct {
   uint64_t base;
   uint64_t length;
   bool nocopy;
+  bool demand_paged;
   struct VMMRegion *next;
 } VMMRegion;
 void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags);
@@ -46,3 +47,5 @@ void kprintf_all_vmm_regions();
 void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to);
 void deallocate_all_user_regions(pagemap *target);
 void free_pagemap(pagemap *take);
+bool iswithinvmmregion(pagemap *map, uint64_t virt);
+void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount);

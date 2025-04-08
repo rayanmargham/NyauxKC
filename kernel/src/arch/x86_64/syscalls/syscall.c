@@ -50,9 +50,10 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                             (uint64_t)hint, size, false),
           0};
     }
-    return (struct __syscall_ret){
-        (uint64_t)uvmm_region_alloc(cpu->cur_thread->proc->cur_map, size, 0),
-        0};
+
+    return (struct __syscall_ret){(uint64_t)uvmm_region_alloc_demend_paged(
+                                      cpu->cur_thread->proc->cur_map, size),
+                                  0};
   }
   return (struct __syscall_ret){-1, ENOSYS};
 }
@@ -190,15 +191,17 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
-  sprintf("syscall_getcwd()\r\n");
   struct process_t *proc = get_process_start();
-  if (len > strlen(proc->cwdpath) + 1) {
+  sprintf("syscall_getcwd(): size: %lu, len of buf %lu\r\n",
+          strlen(proc->cwdpath), len);
+  if (len < strlen(proc->cwdpath) + 1) {
+    sprintf("nope\r\n");
     get_process_finish(proc);
     return (struct __syscall_ret){.ret = -1, .errno = ERANGE};
   }
   memcpy(buffer, proc->cwd, len);
   get_process_finish(proc);
-  return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
+  return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_fork() {
   int child = scheduler_fork();

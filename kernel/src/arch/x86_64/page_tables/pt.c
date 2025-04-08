@@ -150,6 +150,11 @@ void x86_64_map_vmm_region_user(pagemap *take, uint64_t base,
         PRESENT | RWALLOWED | USERMODE);
   }
 }
+void x86_64_map_usersingular_page(pagemap *take, uint64_t virt) {
+  void *page =
+      (uint64_t *)((uint64_t)pmm_alloc() - hhdm_request.response->offset);
+  map(take->root, (uint64_t)page, virt, PRESENT | RWALLOWED | USERMODE);
+}
 uint64_t x86_64_get_phys(pagemap *take, uint64_t virt) {
   uint64_t *f = find_pte(take->root, virt);
   if (f != NULL) {
@@ -161,6 +166,9 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
                              uint64_t length_in_bytes) {
   uint64_t amount_to_allocateinpages = length_in_bytes / PAGESIZE;
   for (uint64_t i = 0; i != amount_to_allocateinpages; i++) {
+    if (x86_64_get_phys(take, base + (i * PAGESIZE)) == 0) {
+      continue;
+    }
     uint64_t phys = unmap(take->root, base + (i * PAGESIZE));
     pmm_dealloc((void *)(phys + hhdm_request.response->offset));
   }
@@ -169,10 +177,13 @@ static void destroy_page_table(uint64_t *table, int level) {
   // we are already in a differnt page table so this should be fine
   uint64_t *vtable =
       (uint64_t *)((uint64_t)table + hhdm_request.response->offset);
+  if (level == 4) {
+    goto bro;
+  }
   if (level != 0) {
     for (int i = 0; i < 512; i++) {
       if (vtable[i] & PRESENT) {
-        if (level < 3 && !(vtable[i] & PAGE2MB)) {
+        if (!(vtable[i] & PAGE2MB)) {
           uint64_t *next_table =
               (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
           destroy_page_table(next_table, level + 1);
@@ -182,7 +193,7 @@ static void destroy_page_table(uint64_t *table, int level) {
   } else {
     for (int i = 0; i < 256; i++) {
       if (vtable[i] & PRESENT) {
-        if (level < 3 && !(vtable[i] & PAGE2MB)) {
+        if (!(vtable[i] & PAGE2MB)) {
           uint64_t *next_table =
               (uint64_t *)(((uint64_t)(pte_to_phys(vtable[i]))));
           destroy_page_table(next_table, level + 1);
@@ -190,14 +201,13 @@ static void destroy_page_table(uint64_t *table, int level) {
       }
     }
   }
+bro:
   pmm_dealloc(
       (void *)(pte_to_phys((uint64_t)table) + hhdm_request.response->offset));
 }
 void x86_64_destroy_pagemap(pagemap *take) {
   if (take && take->root) {
     destroy_page_table(take->root, 0);
-    sprintf("okay\r\n");
-    sprintf("take root is %p\r\n", take->root);
     // pmm_dealloc(
     //     (void *)(((uint64_t)take->root) + hhdm_request.response->offset));
     take->root = NULL;

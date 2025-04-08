@@ -12,6 +12,7 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
 void x86_64_switch_pagemap(pagemap *take);
 void x86_64_map_vmm_region_user(pagemap *take, uint64_t base,
                                 uint64_t length_in_bytes);
+void x86_64_map_usersingular_page(pagemap *take, uint64_t virt);
 extern uint64_t hhdm_pages;
 uint64_t x86_64_get_phys(pagemap *take, uint64_t virt);
 #define EXECUTEDISABLE (1ul << 63)

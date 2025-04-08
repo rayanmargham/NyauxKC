@@ -208,3 +208,8 @@ void arch_init_interruptcontrollers() {
   populate_ioapic();
 #endif
 }
+void arch_map_usersingularpage(pagemap *take, uint64_t virt) {
+#ifdef __x86_64__
+  x86_64_map_usersingular_page(take, virt);
+#endif
+}

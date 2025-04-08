@@ -43,6 +43,7 @@ void arch_create_per_cpu_data() {
 }
 uint64_t pidalloc = 0;
 uint64_t pidallocate() { return pidalloc++; }
+uint64_t piddealloc() { return pidalloc--; }
 struct process_t *create_process(pagemap *map) {
   struct process_t *him = (struct process_t *)kmalloc(sizeof(struct process_t));
   him->cur_map = map;
@@ -151,7 +152,7 @@ void exit_process(uint64_t exit_code) {
   //   sex = pop_from_list(&cur_proc->queuewaitingforexit);
   //   ThreadReady(sex);
   // }
-
+  piddealloc();
   exit_thread();
 }
 void collect_exit_code() {}
@@ -308,7 +309,7 @@ int scheduler_fork() {
 #endif
 
   ThreadReady(fun);
-  return fun->tid;
+  return fun->proc->pid;
 }
 // returns the old thread
 struct thread_t *switch_queue(struct per_cpu_data *cpu) {

@@ -3,6 +3,7 @@
 #include <fs/tmpfs/tmpfs.h>
 #include <utils/libc.h>
 
+#include "dev/fbdev/fb.h"
 #include "dev/null/null.h"
 #include "dev/tty/tty.h"
 #include "fs/vfs/vfs.h"
@@ -23,6 +24,7 @@ struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
   devtty_init(curvfs);
+  devfbdev_init(curvfs);
   return 0;
 }
 static void insert_into_list(struct devfsnode *node,
