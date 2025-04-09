@@ -121,7 +121,7 @@ void serial_put_input() {
   exit_thread();
 }
 void devtty_init(struct vfs *curvfs) {
-  kpribnt struct vnode *res;
+  struct vnode *res;
   struct devfsinfo *info = kmalloc(sizeof(struct devfsinfo));
   struct tty *newtty = kmalloc(sizeof(struct tty));
   // dont fucking ask
