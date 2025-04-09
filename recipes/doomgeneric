@@ -2,7 +2,7 @@ name=doomgeneric
 revision=1
 from_source=doomgeneric
 hostdeps="gcc binutils"
-deps="base"
+deps="core-libs"
 
 build() {
 	cp -rp ${source_dir}/doomgeneric/* .

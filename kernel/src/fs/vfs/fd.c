@@ -31,6 +31,17 @@ int fddalloc(struct vnode *node) {
   get_process_finish(proc);
   return -1;
 }
+int fdmake(int oldfd, int fd) {
+  struct FileDescriptorHandle *g = get_fd(oldfd);
+  struct process_t *proc = get_process_start();
+  proc->fdalloc[fd] = 1;
+  hashmap_set(
+      proc->fds,
+      &(struct FileDescriptorHandle){
+          .fd = fd, .offset = 0, .node = g->node, .dummy = true, .realhnd = g});
+  get_process_finish(proc);
+  return fd;
+}
 int fddup(int fromfd) {
   struct FileDescriptorHandle *res = get_fd(fromfd);
   int newfd = fddalloc(res->node);
@@ -44,6 +55,7 @@ struct FileDescriptorHandle *get_fd(int fd) {
   struct FileDescriptorHandle *res =
       hashmap_get(proc->fds, &(struct FileDescriptorHandle){.fd = fd});
   if (!res) {
+    get_process_finish(proc);
     return NULL;
   }
   while (res->dummy) {
@@ -71,7 +83,7 @@ void duplicate_process_fd(struct process_t *from, struct process_t *to) {
   // this ASSUMES that the hashmap for from is allocated
   to->fds = hashmap_new(sizeof(struct FileDescriptorHandle), 0, 0, 0, fd_hash,
                         fd_compare, NULL, NULL);
-  for (int i = 0; i < 255; i++) {
+  for (int i = 0; i < 256; i++) {
     to->fdalloc[i] = from->fdalloc[i];
     struct FileDescriptorHandle *hnd =
         (struct FileDescriptorHandle *)hashmap_get(

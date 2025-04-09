@@ -14,3 +14,80 @@ index 33cd1b9..0c5277c 100644
  constexpr bool logRpath = false;
  constexpr bool logLdPath = false;
  constexpr bool logSymbolVersions = false;
+diff --git mlibc-clean/options/rtld/generic/main.cpp mlibc-workdir/options/rtld/generic/main.cpp
+index e96df46..40d48e6 100644
+--- mlibc-clean/options/rtld/generic/main.cpp
++++ mlibc-workdir/options/rtld/generic/main.cpp
+@@ -24,9 +24,9 @@
+ #define HIDDEN  __attribute__((__visibility__("hidden")))
+ #define EXPORT  __attribute__((__visibility__("default")))
+ 
+-static constexpr bool logEntryExit = false;
+-static constexpr bool logStartup = false;
+-static constexpr bool logDlCalls = false;
++static constexpr bool logEntryExit = true;
++static constexpr bool logStartup = true;
++static constexpr bool logDlCalls = true;
+ 
+ #ifndef MLIBC_STATIC_BUILD
+ extern HIDDEN void *_GLOBAL_OFFSET_TABLE_[];
+diff --git mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
+index e2c2278..c4e3a24 100755
+--- mlibc-clean/sysdeps/nyaux/generic/generic.cpp
++++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
+@@ -59,7 +59,7 @@ int sys_close(int fd) {
+ int sys_futex_wait(int *pointer, int expected,
+                    const struct timespec *time) STUB_ONLY;
+ int sys_futex_wake(int *pointer) {
+-  sys_libc_log("sys futex wake is a stub");
++  // sys_libc_log("sys futex wake is a stub");
+   return 0;
+ };
+ int sys_openat(int dirfd, const char *path, int flags, mode_t mode, int *fd) {
+@@ -274,10 +274,10 @@ int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
+     optional_action = TCSETS;
+     break;
+   case TCSADRAIN:
+-    return ENOSYS;
++    optional_action = TCSETS;
+     break;
+   case TCSAFLUSH:
+-    return ENOSYS;
++    optional_action = TCSETS;
+     break;
+   default:
+     __ensure(!"Unsupported tcsetattr");
+@@ -317,6 +317,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]) {
+   if (ret.ret != 0) {
+     return ret.err;
+   } else {
++    mlibc::infoLogger() << "HOW??" << frg::endlog;
+     __builtin_unreachable();
+   }
+ }
+@@ -362,6 +363,14 @@ int sys_dup(int fd, int flags, int *newfd) {
+   *newfd = (ssize_t)ret.ret;
+   return 0;
+ }
++int sys_dup2(int fd, int flags, int newfd) {
++  __syscall_ret ret = __syscall3(SYSCALL_DUP2, fd, newfd, flags);
++
++  if (ret.err != 0)
++    return ret.err;
++
++  return 0;
++}
+ int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
+              struct stat *statbuf) {
+   __syscall_ret ret;
+diff --git mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h mlibc-workdir/sysdeps/nyaux/include/nyaux/syscalls.h
+index d613c67..81c9e6f 100644
+--- mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h
++++ mlibc-workdir/sysdeps/nyaux/include/nyaux/syscalls.h
+@@ -21,4 +21,5 @@
+ #define SYSCALL_FREE 17
+ #define SYSCALL_EXECVE 18
+ #define SYSCALL_FACCESSAT 19
++#define SYSCALL_DUP2 20
+ #endif
+\ No newline at end of file

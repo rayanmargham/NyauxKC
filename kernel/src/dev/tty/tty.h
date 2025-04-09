@@ -140,6 +140,8 @@ struct tty {
   struct ring_buf *tx;
   struct tty_device *device;
   struct termios termi;
+  spinlock_t rxlock;
+  spinlock_t txlock;
 };
 void devtty_init(struct vfs *curvfs);
 void tty_install_device(struct tty *tty, struct tty_device *device);

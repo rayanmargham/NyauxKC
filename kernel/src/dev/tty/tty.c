@@ -5,6 +5,7 @@
 #include "fs/vfs/vfs.h"
 #include "sched/sched.h"
 #include "term/term.h"
+#include "utils/basic.h"
 #include "utils/libc.h"
 #include <arch/x86_64/syscalls/syscall.h>
 #include <stdint.h>
@@ -19,7 +20,21 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
   if (rw == 0) {
     struct tty *tty = data;
     int i = 0;
-    for (; i < (int)size; i++) {
+    if (tty->termi.c_lflag & ICANON) {
+
+      for (; i < (int)size; i++) {
+        uint64_t val = 0;
+        get_ringbuf(tty->rx, (uint64_t *)&val);
+        ((char *)buffer)[i] = (char)val;
+        if ((char)val == '\n') {
+          break;
+        }
+      }
+      return i;
+    }
+    // return a character
+    int ok = size < VMIN ? size : VMIN;
+    for (; i < (int)ok; i++) {
       uint64_t val = 0;
       get_ringbuf(tty->rx, (uint64_t *)&val);
       ((char *)buffer)[i] = (char)val;
@@ -43,7 +58,6 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     size_t rows = 0;
     struct flanterm_context *ctx = get_fctx();
     flanterm_get_dimensions(ctx, &cols, &rows);
-    kprintf("rows: %lu cols: %lu\r\n", rows, cols);
     struct winsize size = {.ws_row = rows, .ws_col = cols};
     *(struct winsize *)arg = size;
     return 0;
@@ -53,37 +67,61 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     // usermode is requesting the termios structure
     assert(data != NULL);
     struct tty *tty = data;
+    if (tty->termi.c_lflag & ICANON) {
+      sprintf("tty(): canonical mode is enabled\r\n");
+    }
     *(struct termios *)arg = tty->termi;
     return 0;
     break;
   case TCSETS:
     assert(data != NULL);
     struct tty *ttyy = data;
+    sprintf("tty(): before c_lflags 0x%x, c_iflag 0x%x\r\n",
+            ttyy->termi.c_lflag, ttyy->termi.c_iflag);
     ttyy->termi = *(struct termios *)arg;
+    sprintf("tty(): after c_lflags 0x%x, c_iflag 0x%x\r\n", ttyy->termi.c_lflag,
+            ttyy->termi.c_iflag);
     sprintf("tty(): set values :)\r\n");
     return 0;
+    break;
+  case TIOCGPGRP:
+
+    // Get the process group ID of the foreground process group on
+    // this terminal.
+    // no fuck off bash
+    return ENOSYS;
+    break;
+  case TIOCSPGRP:
+
+    return ENOSYS;
     break;
   default:
     sprintf("tty(): unsupported tty request 0x%lx\r\n", request);
     break;
   }
+
   return ENOSYS;
 }
-struct tty *curtty;
+static struct tty *curtty = NULL;
 extern bool serial_data_ready();
 void serial_put_input() {
   while (true) {
     if (serial_data_ready()) {
       char got = (char)inb(0x3F8);
-      if (curtty && curtty->rx) {
-        put_ringbuf(curtty->rx, (uint64_t)got);
+      if (curtty) {
+
+        if (curtty->rx && curtty->rxlock) {
+          spinlock_lock(&curtty->rxlock);
+          put_ringbuf(curtty->rx, (uint64_t)got);
+          spinlock_unlock(&curtty->rxlock);
+        }
       }
     }
   }
   exit_thread();
 }
 void devtty_init(struct vfs *curvfs) {
-  struct vnode *res;
+  kpribnt struct vnode *res;
   struct devfsinfo *info = kmalloc(sizeof(struct devfsinfo));
   struct tty *newtty = kmalloc(sizeof(struct tty));
   // dont fucking ask
@@ -126,6 +164,7 @@ void devtty_init(struct vfs *curvfs) {
   hnd1->node = res;
   hnd2->node = res;
   hnd3->node = res;
+  kprintf("address is %p", curtty);
   struct process_t *p = get_process_start();
   create_kthread((uint64_t)serial_put_input, p, 4);
   get_process_finish(p);

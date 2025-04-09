@@ -18,6 +18,7 @@ extern syscall_getpid
 extern syscall_free
 extern syscall_execve
 extern syscall_faccessat
+extern syscall_dup2
 global syscall_entry
 section .data
 syscallarray:
@@ -41,6 +42,7 @@ syscallarray:
     dq syscall_free ; 17
     dq syscall_execve ; 18
     dq syscall_faccessat ; 19
+    dq syscall_dup2 ; 20
 
 .length: dq ($ - syscallarray) / 8
 section .text

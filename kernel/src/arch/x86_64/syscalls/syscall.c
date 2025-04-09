@@ -75,7 +75,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 
   } else {
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
-    if (hnd == NULL || hnd->node == NULL) {
+    if (hnd == NULL) {
       return (struct __syscall_ret){.ret = -1, .errno = EBADF};
     }
     node = hnd->node;
@@ -137,7 +137,7 @@ struct __syscall_ret syscall_isatty(int fd) {
 
   struct FileDescriptorHandle *hnd = get_fd(fd);
 
-  if (hnd == NULL || hnd->node == NULL) {
+  if (hnd == NULL) {
     sprintf("syscall_isatty(): fd %d not a tty\r\n", fd);
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -151,7 +151,7 @@ struct __syscall_ret syscall_isatty(int fd) {
 }
 struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  if (hnd == NULL || hnd->node == NULL) {
+  if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
 
@@ -161,7 +161,7 @@ struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
 }
 struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  if (hnd == NULL || hnd->node == NULL) {
+  if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   sprintf("syscall_ioctl(): ioctling fd %d\r\n", fd);
@@ -171,7 +171,7 @@ struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {
 }
 struct __syscall_ret syscall_dup(int fd, int flags) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  if (hnd == NULL || hnd->node == NULL) {
+  if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   int newfd = fddup(fd);
@@ -179,9 +179,22 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
 
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
+struct __syscall_ret syscall_dup2(int oldfd, int newfd) {
+  struct FileDescriptorHandle *check = get_fd(oldfd);
+  if (check == NULL || check->node == NULL) {
+    return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+  struct FileDescriptorHandle *hnd = get_fd(newfd);
+
+  if (hnd != NULL) {
+    syscall_close(newfd); // do it sliently as per man page
+  }
+  fdmake(oldfd, newfd);
+  return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
+}
 struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  if (hnd == NULL || hnd->node == NULL) {
+  if (hnd == NULL) {
     sprintf("syscall_fstat(): bad file descriptor\r\n");
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -199,7 +212,7 @@ struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
     get_process_finish(proc);
     return (struct __syscall_ret){.ret = -1, .errno = ERANGE};
   }
-  memcpy(buffer, proc->cwd, len);
+  memcpy(buffer, proc->cwdpath, len);
   get_process_finish(proc);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }

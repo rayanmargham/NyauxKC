@@ -23,7 +23,7 @@ struct process_t {
   spinlock_t lock; // lock for accessing this
   refcount_t cnt;
   struct hashmap *fds;
-  int fdalloc[255];
+  int fdalloc[256];
   uint64_t exit_code;
   struct vnode *root;
   struct vnode *cwd; // current working directory

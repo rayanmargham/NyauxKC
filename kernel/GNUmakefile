@@ -24,7 +24,7 @@ CC := clang
 AR := ar
 
 # User controllable C flags.
-CFLAGS := -g -O2 -pipe -I src/uACPI/include -DUACPI_SIZED_FREES
+CFLAGS := -g -pipe -I src/uACPI/include -DUACPI_SIZED_FREES
 
 # User controllable C preprocessor flags. We set none by default.
 CPPFLAGS :=

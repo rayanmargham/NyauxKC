@@ -19,5 +19,6 @@ uint64_t fd_hash(const void *item, uint64_t seed0, uint64_t seed1);
 int fddalloc(struct vnode *node);
 void fddfree(int fd);
 int fddup(int fromfd);
+int fdmake(int oldfd, int fd);
 struct FileDescriptorHandle *get_fd(int fd);
 void duplicate_process_fd(struct process_t *from, struct process_t *to);
