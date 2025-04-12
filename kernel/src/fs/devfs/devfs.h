@@ -1,4 +1,5 @@
 #pragma once
+#include "fs/vfs/fd.h"
 #include <fs/vfs/vfs.h>
 #include <mem/kmem.h>
 #include <stddef.h>
@@ -7,7 +8,7 @@
 
 struct devfsops {
   size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
-               void *buffer, int rw);
+               void *buffer, int rw, struct FileDescriptorHandle *hnd);
   int (*ioctl)(struct vnode *curvnode, void *data, unsigned long request,
                void *arg, void *result);
 };

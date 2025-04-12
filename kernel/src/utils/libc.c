@@ -171,3 +171,4 @@ void resize_ringbuf(struct ring_buf *buf, size_t resize) {
   buf->size = resize;
   buf->buf = new;
 }
+size_t ringbuf_size(struct ring_buf *buf) { return buf->size; }

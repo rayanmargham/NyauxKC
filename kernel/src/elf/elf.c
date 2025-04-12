@@ -102,7 +102,7 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
   size_t sizeofelf = node->stat.size;
   void *buffer = kmalloc(sizeofelf);
   Elf64_Ehdr *hdr = buffer;
-  node->ops->rw(node, 0, sizeofelf, buffer, 0);
+  node->ops->rw(node, 0, sizeofelf, buffer, 0, NULL);
   kprintf("load_elf(): found elf signature %c%c%c%c\r\n", hdr->e_ident[0],
           hdr->e_ident[1], hdr->e_ident[2], hdr->e_ident[3]);
   struct ElfInfo info = {};
@@ -115,7 +115,7 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
     sizeofelf = node->stat.size;
     buffer = kmalloc(sizeofelf);
     hdr = buffer;
-    node->ops->rw(node, 0, sizeofelf, buffer, 0);
+    node->ops->rw(node, 0, sizeofelf, buffer, 0, NULL);
     struct ElfInfo interpinfo = {};
     load_elf_pie(usrmap, hdr, &interpinfo);
     entrypoint = interpinfo.entrypoint;

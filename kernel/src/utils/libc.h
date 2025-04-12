@@ -15,3 +15,4 @@ int put_ringbuf(struct ring_buf *buf, uint64_t data);
 bool empty_ringbuf(struct ring_buf *buf);
 void resize_ringbuf(struct ring_buf *buf, size_t resize);
 struct ring_buf *init_ringbuf(size_t thesize);
+size_t ringbuf_size(struct ring_buf *buf);

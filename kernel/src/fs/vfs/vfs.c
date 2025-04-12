@@ -95,7 +95,7 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
           memcpy(buffer, buf, filesize + 1);
           next_node->data = buffer;
         } else {
-          assert(next_node->ops->rw(next_node, 0, filesize, buf, 1) ==
+          assert(next_node->ops->rw(next_node, 0, filesize, buf, 1, NULL) ==
                  filesize);
         }
       }

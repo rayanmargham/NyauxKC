@@ -11,12 +11,12 @@
 #include <stdint.h>
 
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw);
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
 struct devfsops ttyops = {.rw = rw, .ioctl = ioctl};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw) {
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd) {
   if (rw == 0) {
     struct tty *tty = data;
     // TODO check non blocking
@@ -28,7 +28,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 
         spinlock_lock(&tty->rxlock);
         int res = get_ringbuf(tty->rx, (uint64_t *)&val);
-        if (res == 0) {
+        if (res == 0 && !(hnd->flags & O_NONBLOCK)) {
           spinlock_unlock(&tty->rxlock);
           sched_yield();
           goto restart;
@@ -54,7 +54,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 
       spinlock_lock(&tty->rxlock);
       int res = get_ringbuf(tty->rx, (uint64_t *)&val);
-      if (res == 0) {
+      if (res == 0 && !(hnd->flags & O_NONBLOCK)) {
         spinlock_unlock(&tty->rxlock);
         sched_yield();
         goto restart1;
@@ -68,11 +68,22 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     return i;
   } else {
     // MOST BASIC AH TTY
+    sprintf("wrinting to tty with offset %lx and buffer size %lx", offset,
+            size);
+    struct tty *tty = data;
+    if (hnd->flags & O_APPEND) {
+      offset = ringbuf_size(tty->tx);
+      resize_ringbuf(tty->tx, offset + size);
+    }
+    char *him = buffer;
+
     flanterm_write(get_fctx(), buffer, size);
     sprintf_write(buffer, size);
+
     return offset + size;
   }
 }
+
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
   sprintf("tty(): request is 0x%lx\r\n", request);

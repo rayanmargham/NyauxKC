@@ -65,8 +65,8 @@ struct __syscall_ret syscall_free(void *pointer, size_t size) {
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
-  sprintf("syscall_openat(): opening %s from thread %lu\r\n", path,
-          arch_get_per_cpu_data()->cur_thread->tid);
+  sprintf("syscall_openat(): opening %s from thread %lu with flags %d\r\n",
+          path, arch_get_per_cpu_data()->cur_thread->tid, flags);
   struct vnode *node = NULL;
   if (dirfd == AT_FDCWD) {
     struct process_t *proc = get_process_start();
@@ -86,6 +86,9 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
     return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
   }
   int outfd = fddalloc(retur);
+  struct FileDescriptorHandle *setup = get_fd(outfd);
+  setup->flags = flags;
+  setup->mode = mode;
   return (struct __syscall_ret){.ret = outfd, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
@@ -100,7 +103,8 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
       hnd->node->stat.size != 0 && hnd->node->v_type != VCHRDEVICE) {
     count = hnd->node->stat.size - hnd->offset;
   }
-  size_t bytes_read = hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0);
+  size_t bytes_read =
+      hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0, hnd);
   hnd->offset += bytes_read;
   return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }
@@ -156,7 +160,7 @@ struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
   }
 
   size_t written =
-      hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1);
+      hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1, hnd);
   return (struct __syscall_ret){.ret = written, .errno = 0};
 }
 struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {

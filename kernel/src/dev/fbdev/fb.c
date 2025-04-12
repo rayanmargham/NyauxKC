@@ -1,12 +1,13 @@
 #include "fb.h"
+#include "fs/vfs/fd.h"
 #include <arch/x86_64/syscalls/syscall.h>
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw);
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
 struct devfsops fbdevops = {.rw = rw, .ioctl = ioctl};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw) {
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd) {
   sprintf("fbdev: wants to write\r\n");
   if (rw) {
     return 0;

@@ -6,6 +6,7 @@
 #include "dev/fbdev/fb.h"
 #include "dev/null/null.h"
 #include "dev/tty/tty.h"
+#include "fs/vfs/fd.h"
 #include "fs/vfs/vfs.h"
 
 static int create(struct vnode *curvnode, char *name, enum vtype type,
@@ -13,7 +14,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnode *todifferentnode);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
-                  void *buffer, int rw);
+                  void *buffer, int rw, struct FileDescriptorHandle *hnd);
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int readdir(struct vnode *curvnode, int offset, char **name);
@@ -128,10 +129,10 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
   return -1;
 }
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
-                  void *buffer, int rw) {
+                  void *buffer, int rw, struct FileDescriptorHandle *hnd) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
   return devnode->info->ops->rw(curvnode, devnode->info->data, offset, size,
-                                buffer, rw);
+                                buffer, rw, hnd);
 }
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   struct devfsnode *node = (struct devfsnode *)curvnode->data;
