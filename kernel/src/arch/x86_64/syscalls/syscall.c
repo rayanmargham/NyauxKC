@@ -163,13 +163,14 @@ struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
-  }
+  };
   sprintf("syscall_ioctl(): ioctling fd %d\r\n", fd);
   void *result;
   int res = hnd->node->ops->ioctl(hnd->node, request, arg, &result);
   return (struct __syscall_ret){.ret = (uint64_t)result, .errno = res};
 }
 struct __syscall_ret syscall_dup(int fd, int flags) {
+
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -180,6 +181,7 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
 struct __syscall_ret syscall_dup2(int oldfd, int newfd) {
+  sprintf("syscall_dup2\r\n");
   struct FileDescriptorHandle *check = get_fd(oldfd);
   if (check == NULL || check->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -208,7 +210,7 @@ struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
   sprintf("syscall_getcwd(): size: %lu, len of buf %lu\r\n",
           strlen(proc->cwdpath), len);
   if (len < strlen(proc->cwdpath) + 1) {
-    sprintf("nope\r\n");
+    sprintf("\e[0;34mnope\r\n");
     get_process_finish(proc);
     return (struct __syscall_ret){.ret = -1, .errno = ERANGE};
   }
@@ -255,7 +257,6 @@ neverstop:
     }
     us = us->children;
   }
-  // TODO: fix syscall to save user rsp
   sched_yield();
 
   cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
@@ -263,6 +264,7 @@ neverstop:
 }
 struct __syscall_ret syscall_faccessat(int dirfd, const char *pathname,
                                        int mode, int flags) {
+  sprintf("syscall_faccessat\r\n");
   if (flags & AT_SYMLINK_NOFOLLOW) {
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }

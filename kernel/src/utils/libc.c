@@ -139,9 +139,9 @@ struct ring_buf *init_ringbuf(size_t thesize) {
 int put_ringbuf(struct ring_buf *buf, uint64_t data) {
   assert(buf != NULL || buf->buf != NULL);
   if ((buf->write_idx + 1) % buf->size == buf->read_idx) {
+
     return 0;
   }
-
   buf->buf[buf->write_idx] = data;
   buf->write_idx = (buf->write_idx + 1) % buf->size;
   return 1;
@@ -154,6 +154,13 @@ int get_ringbuf(struct ring_buf *buf, uint64_t *value) {
   *value = buf->buf[buf->read_idx];
   buf->read_idx = (buf->read_idx + 1) % buf->size;
   return 1;
+}
+bool empty_ringbuf(struct ring_buf *buf) {
+  if (buf->read_idx == buf->write_idx) {
+    return true;
+  } else {
+    return false;
+  }
 }
 void resize_ringbuf(struct ring_buf *buf, size_t resize) {
   assert(buf != NULL || buf->buf != NULL);

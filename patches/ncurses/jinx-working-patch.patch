@@ -125,6 +125,108 @@ index c9f1cf8..51798da 100644
  do
  	case $opt in
  	-specs*) # ignore linker specs-files which were used to build library
+diff --git ncurses-clean/ncurses/base/lib_getch.c ncurses-workdir/ncurses/base/lib_getch.c
+index 8e47679..8ec433e 100644
+--- ncurses-clean/ncurses/base/lib_getch.c
++++ ncurses-workdir/ncurses/base/lib_getch.c
+@@ -453,17 +453,19 @@ _nc_wgetch(WINDOW *win,
+ #endif
+ 
+     T((T_CALLED("_nc_wgetch(%p)"), (void *) win));
+-
++	
+     *result = 0;
+ 
+     sp = _nc_screen_of(win);
+     if (win == 0 || sp == 0) {
+ 	returnCode(ERR);
+     }
+-
++	
+     if (cooked_key_in_fifo()) {
++		
+ 	recur_wrefresh(win);
+ 	*result = fifo_pull(sp);
++	
+ 	returnCode(*result >= KEY_MIN ? KEY_CODE_YES : OK);
+     }
+ #ifdef NCURSES_WGETCH_EVENTS
+@@ -483,7 +485,7 @@ _nc_wgetch(WINDOW *win,
+ 	!IsCbreak(sp) &&
+ 	!sp->_called_wgetch) {
+ 	char buf[MAXCOLUMNS], *bufp;
+-
++	
+ 	TR(TRACE_IEVENT, ("filling queue in cooked mode"));
+ 
+ 	/* ungetch in reverse order */
+@@ -505,6 +507,7 @@ _nc_wgetch(WINDOW *win,
+ 	} else
+ #endif
+ 	    *result = fifo_pull(sp);
++		
+ 	returnCode(*result >= KEY_MIN ? KEY_CODE_YES : OK);
+     }
+ 
+@@ -512,11 +515,12 @@ _nc_wgetch(WINDOW *win,
+ 	_nc_keypad(sp, win->_use_keypad);
+ 
+     recur_wrefresh(win);
+-
++	
+     if (win->_notimeout || (win->_delay >= 0) || (IsCbreak(sp) > 1)) {
++		
+ 	if (head == -1) {	/* fifo is empty */
+ 	    int delay;
+-
++		
+ 	    TR(TRACE_IEVENT, ("timed delay in wgetch()"));
+ 	    if (IsCbreak(sp) > 1)
+ 		delay = (IsCbreak(sp) - 1) * 100;
+@@ -543,8 +547,9 @@ _nc_wgetch(WINDOW *win,
+ 	    }
+ 	}
+ 	/* else go on to read data available */
++	
+     }
+-
++	
+     if (win->_use_keypad) {
+ 	/*
+ 	 * This is tricky.  We only want to get special-key
+@@ -598,8 +603,9 @@ _nc_wgetch(WINDOW *win,
+ 	    fifo_push(sp EVENTLIST_2nd(evl));
+ 	ch = fifo_pull(sp);
+     }
+-
++	fprintf(stderr, "ncurses: %d", ch);
+     if (ch == ERR) {
++		
+       check_sigwinch:
+ #if USE_SIZECHANGE
+ 	if (_nc_handle_sigwinch(sp)) {
+@@ -720,17 +726,20 @@ kgetch(SCREEN *sp, bool forever EVENTLIST_2nd(_nc_eventlist * evl))
+     TRIES *ptr;
+     int ch = 0;
+     int timeleft = forever ? 9999999 : GetEscdelay(sp);
+-
++	
+     TR(TRACE_IEVENT, ("kgetch() called"));
+ 
+     ptr = sp->_keytry;
+ 
+     for (;;) {
+ 	if (cooked_key_in_fifo() && sp->_fifo[head] >= KEY_MIN) {
++
+ 	    break;
+ 	} else if (!raw_key_in_fifo()) {
++		
+ 	    ch = fifo_push(sp EVENTLIST_2nd(evl));
+ 	    if (ch == ERR) {
++			fprintf(stderr, "ncurses: kill me\r\n");
+ 		peek = head;	/* the keys stay uninterpreted */
+ 		return ERR;
+ 	    }
 diff --git ncurses-clean/panel/Makefile.in ncurses-workdir/panel/Makefile.in
 index 380f80c..a77ef15 100644
 --- ncurses-clean/panel/Makefile.in

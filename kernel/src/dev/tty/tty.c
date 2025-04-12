@@ -19,25 +19,51 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw) {
   if (rw == 0) {
     struct tty *tty = data;
-    int i = 0;
+    // TODO check non blocking
     if (tty->termi.c_lflag & ICANON) {
-
+      int i = 0;
       for (; i < (int)size; i++) {
+      restart:
         uint64_t val = 0;
-        get_ringbuf(tty->rx, (uint64_t *)&val);
+
+        spinlock_lock(&tty->rxlock);
+        int res = get_ringbuf(tty->rx, (uint64_t *)&val);
+        if (res == 0) {
+          spinlock_unlock(&tty->rxlock);
+          sched_yield();
+          goto restart;
+        }
         ((char *)buffer)[i] = (char)val;
+        spinlock_unlock(&tty->rxlock);
         if ((char)val == '\n') {
           break;
         }
       }
+      if (tty->termi.c_lflag & ECHO) {
+        flanterm_write(get_fctx(), buffer, size);
+      }
       return i;
     }
+
     // return a character
     int ok = size < VMIN ? size : VMIN;
+    int i = 0;
     for (; i < (int)ok; i++) {
+    restart1:
       uint64_t val = 0;
-      get_ringbuf(tty->rx, (uint64_t *)&val);
+
+      spinlock_lock(&tty->rxlock);
+      int res = get_ringbuf(tty->rx, (uint64_t *)&val);
+      if (res == 0) {
+        spinlock_unlock(&tty->rxlock);
+        sched_yield();
+        goto restart1;
+      }
       ((char *)buffer)[i] = (char)val;
+      spinlock_unlock(&tty->rxlock);
+    }
+    if (tty->termi.c_lflag & ECHO) {
+      flanterm_write(get_fctx(), buffer, size);
     }
     return i;
   } else {
@@ -110,7 +136,7 @@ void serial_put_input() {
       char got = (char)inb(0x3F8);
       if (curtty) {
 
-        if (curtty->rx && curtty->rxlock) {
+        if (curtty->rx) {
           spinlock_lock(&curtty->rxlock);
           put_ringbuf(curtty->rx, (uint64_t)got);
           spinlock_unlock(&curtty->rxlock);
@@ -124,7 +150,7 @@ void devtty_init(struct vfs *curvfs) {
   struct vnode *res;
   struct devfsinfo *info = kmalloc(sizeof(struct devfsinfo));
   struct tty *newtty = kmalloc(sizeof(struct tty));
-  // dont fucking ask
+  // dont fucking as
   newtty->termi.c_cc[VINTR] = VINTR;
   newtty->termi.c_cc[VQUIT] = VQUIT;
   newtty->termi.c_cc[VERASE] = VERASE;
