@@ -1,0 +1,12 @@
+diff --git bash-clean/input.c bash-workdir/input.c
+index 7b439f8..12e4cff 100644
+--- bash-clean/input.c
++++ bash-workdir/input.c
+@@ -75,7 +75,6 @@ getc_with_restart (stream)
+   unsigned char uc;
+ 
+   CHECK_TERMSIG;
+-
+   /* Try local buffering to reduce the number of read(2) calls. */
+   if (local_index == local_bufused || local_bufused == 0)
+     {

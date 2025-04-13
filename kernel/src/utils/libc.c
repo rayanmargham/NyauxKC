@@ -138,6 +138,7 @@ struct ring_buf *init_ringbuf(size_t thesize) {
 // referenced from wikipedia but i sorta undestand it
 int put_ringbuf(struct ring_buf *buf, uint64_t data) {
   assert(buf != NULL || buf->buf != NULL);
+  sprintf("bro %lu\r\n", data);
   if ((buf->write_idx + 1) % buf->size == buf->read_idx) {
 
     return 0;

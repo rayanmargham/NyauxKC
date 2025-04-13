@@ -20,30 +20,6 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
   if (rw == 0) {
     struct tty *tty = data;
     // TODO check non blocking
-    if (tty->termi.c_lflag & ICANON) {
-      int i = 0;
-      for (; i < (int)size; i++) {
-      restart:
-        uint64_t val = 0;
-
-        spinlock_lock(&tty->rxlock);
-        int res = get_ringbuf(tty->rx, (uint64_t *)&val);
-        if (res == 0 && !(hnd->flags & O_NONBLOCK)) {
-          spinlock_unlock(&tty->rxlock);
-          sched_yield();
-          goto restart;
-        }
-        ((char *)buffer)[i] = (char)val;
-        spinlock_unlock(&tty->rxlock);
-        if ((char)val == '\n') {
-          break;
-        }
-      }
-      if (tty->termi.c_lflag & ECHO) {
-        flanterm_write(get_fctx(), buffer, size);
-      }
-      return i;
-    }
 
     // return a character
     int ok = size < VMIN ? size : VMIN;
@@ -59,17 +35,20 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
         sched_yield();
         goto restart1;
       }
+      if ((char)val == '\n' && tty->termi.c_lflag & ICANON) {
+        break;
+      }
+      sprintf("got %c at idx %d\r\n", (char)val, i);
       ((char *)buffer)[i] = (char)val;
       spinlock_unlock(&tty->rxlock);
     }
     if (tty->termi.c_lflag & ECHO) {
       flanterm_write(get_fctx(), buffer, size);
     }
+    sprintf("idx: %d\r\n", i);
     return i;
   } else {
     // MOST BASIC AH TTY
-    sprintf("wrinting to tty with offset %lx and buffer size %lx", offset,
-            size);
     struct tty *tty = data;
     if (hnd->flags & O_APPEND) {
       offset = ringbuf_size(tty->tx);
@@ -142,9 +121,10 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
 static struct tty *curtty = NULL;
 extern bool serial_data_ready();
 void serial_put_input() {
+  inb(0x3F8);
   while (true) {
     if (serial_data_ready()) {
-      char got = (char)inb(0x3F8);
+      unsigned char got = (unsigned char)inb(0x3F8);
       if (curtty) {
 
         if (curtty->rx) {
