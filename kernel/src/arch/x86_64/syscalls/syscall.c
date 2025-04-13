@@ -180,7 +180,8 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   int newfd = fddup(fd);
-  sprintf("syscall_dup(): duping fd %d to fd %d\r\n", fd, newfd);
+  sprintf("syscall_dup(): duping fd %d to fd %d and flags %d\r\n", fd, newfd,
+          flags);
 
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
