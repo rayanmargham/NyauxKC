@@ -19,7 +19,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd) {
   if (rw == 0) {
     struct tty *tty = data;
-    // TODO check non blocking
+    // TODO check non blockingw
     // kprintf("vmin is %d and vtime is %d\r\n", tty->termi.c_cc[VMIN],
     //         tty->termi.c_cc[VTIME]);
     // return a character
@@ -30,12 +30,12 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
       uint64_t val = 0;
 
       spinlock_lock(&tty->rxlock);
-      int res = get_ringbuf(tty->rx, (uint64_t *)&val);
+      int res = get_ringbuf(tty->rx, &val);
       sprintf("flags is %d, vmin is %d, vtime is %d\r\n", hnd->flags,
               tty->termi.c_cc[VMIN], tty->termi.c_cc[VTIME]);
       if (res == 0 &&
-          ((hnd->flags & !O_NONBLOCK) ||
-           (tty->termi.c_cc[VMIN] != 0 || tty->termi.c_cc[VTIME] != 0))) {
+          !((hnd->flags & O_NONBLOCK) ||
+           (tty->termi.c_cc[VMIN] == 0 || tty->termi.c_cc[VTIME] == 0))) {
         // kprintf("blocking\r\n");
         spinlock_unlock(&tty->rxlock);
         sched_yield();
@@ -154,7 +154,6 @@ void devtty_init(struct vfs *curvfs) {
   newtty->termi.c_cc[VKILL] = VKILL;
   newtty->termi.c_cc[VEOF] = VEOF;
   newtty->termi.c_cc[VMIN] = VMIN;
-  newtty->termi.c_cc[VTIME] = VTIME;
   newtty->termi.c_cc[VSWTC] = VSWTC;
   newtty->termi.c_cc[VSTART] = VSTART;
   newtty->termi.c_cc[VSTOP] = VSTOP;
