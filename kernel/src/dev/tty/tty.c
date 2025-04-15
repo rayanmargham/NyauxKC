@@ -20,8 +20,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
   if (rw == 0) {
     struct tty *tty = data;
     // TODO check non blockingw
-    kprintf("vmin is %d and vtime is %d\r\n", tty->termi.c_cc[VMIN],
-            tty->termi.c_cc[VTIME]);
+    // // kprintf("vmin is %d and vtime is %d\r\n", tty->termi.c_cc[VMIN],
+    //         tty->termi.c_cc[VTIME]);
     // return a character
     int ok = size < VMIN ? size : VMIN;
     int i = 0;
@@ -39,7 +39,6 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
         sched_yield();
         goto restart1;
       } else if (res == 0 && i == 0) {
-        sprintf("what\r\n");
         spinlock_unlock(&tty->rxlock);
         *ret = EAGAIN;
         break;
@@ -57,7 +56,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     if (tty->termi.c_lflag & ECHO) {
       flanterm_write(get_fctx(), buffer, size);
     }
-    sprintf("idx: %d\r\n", i);
+    // sprintf("idx: %d\r\n", i);
     return i;
   } else {
     // MOST BASIC AH TTY

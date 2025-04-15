@@ -126,7 +126,7 @@ index c9f1cf8..51798da 100644
  	case $opt in
  	-specs*) # ignore linker specs-files which were used to build library
 diff --git ncurses-clean/ncurses/base/lib_getch.c ncurses-workdir/ncurses/base/lib_getch.c
-index 8e47679..c30af47 100644
+index 8e47679..2c59393 100644
 --- ncurses-clean/ncurses/base/lib_getch.c
 +++ ncurses-workdir/ncurses/base/lib_getch.c
 @@ -453,17 +453,18 @@ _nc_wgetch(WINDOW *win,
@@ -221,7 +221,7 @@ index 8e47679..c30af47 100644
      code = _nc_wgetch(win,
  		      &value,
  		      _nc_use_meta(win)
-@@ -720,17 +727,20 @@ kgetch(SCREEN *sp, bool forever EVENTLIST_2nd(_nc_eventlist * evl))
+@@ -720,15 +727,17 @@ kgetch(SCREEN *sp, bool forever EVENTLIST_2nd(_nc_eventlist * evl))
      TRIES *ptr;
      int ch = 0;
      int timeleft = forever ? 9999999 : GetEscdelay(sp);
@@ -239,11 +239,8 @@ index 8e47679..c30af47 100644
 +		
  	    ch = fifo_push(sp EVENTLIST_2nd(evl));
  	    if (ch == ERR) {
-+			fprintf(stderr, "ncurses: kill me\r\n");
  		peek = head;	/* the keys stay uninterpreted */
- 		return ERR;
- 	    }
-@@ -753,7 +763,7 @@ kgetch(SCREEN *sp, bool forever EVENTLIST_2nd(_nc_eventlist * evl))
+@@ -753,7 +762,7 @@ kgetch(SCREEN *sp, bool forever EVENTLIST_2nd(_nc_eventlist * evl))
  	    t_dec();		/* remove the key */
  	    return ch;
  	}

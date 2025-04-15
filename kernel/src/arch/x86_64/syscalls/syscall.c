@@ -107,7 +107,6 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   size_t bytes_read =
       hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0, hnd, &res);
   if (res != 0) {
-    kprintf("doing\r\n");
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
   hnd->offset += bytes_read;
@@ -220,8 +219,11 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
 }
 struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
   struct process_t *proc = get_process_start();
-  sprintf("syscall_getcwd(): size: %lu, len of buf %lu\r\n",
-          strlen(proc->cwdpath), len);
+  if (proc->cwdpath == NULL) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
+  }
+  // sprintf("syscall_getcwd(): size: %lu, len of buf %lu\r\n",
+  //         strlen(proc->cwdpath), len);
   if (len < strlen(proc->cwdpath) + 1) {
     sprintf("\e[0;34mnope\r\n");
     get_process_finish(proc);
