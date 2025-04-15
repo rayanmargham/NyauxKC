@@ -14,7 +14,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnode *todifferentnode);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
-                  void *buffer, int rw, struct FileDescriptorHandle *hnd);
+                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int readdir(struct vnode *curvnode, int offset, char **name);
@@ -129,10 +129,10 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
   return -1;
 }
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
-                  void *buffer, int rw, struct FileDescriptorHandle *hnd) {
+                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
   return devnode->info->ops->rw(curvnode, devnode->info->data, offset, size,
-                                buffer, rw, hnd);
+                                buffer, rw, hnd, res);
 }
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   struct devfsnode *node = (struct devfsnode *)curvnode->data;

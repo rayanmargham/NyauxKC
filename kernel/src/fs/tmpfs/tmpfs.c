@@ -20,7 +20,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnode *todifferentnode);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd);
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int mount(struct vfs *curvfs, char *path, void *data);
@@ -187,7 +187,7 @@ static int mount(struct vfs *curvfs, char *path, void *data) {
   return 0;
 }
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd) {
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
   struct tmpfsnode *bro = curvnode->data;
   if (rw == 0) {
     if (offset >= bro->size) {

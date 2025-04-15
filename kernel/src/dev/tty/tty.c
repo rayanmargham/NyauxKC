@@ -11,17 +11,17 @@
 #include <stdint.h>
 
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd);
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *ret);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
 struct devfsops ttyops = {.rw = rw, .ioctl = ioctl};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd) {
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *ret) {
   if (rw == 0) {
     struct tty *tty = data;
     // TODO check non blockingw
-    // kprintf("vmin is %d and vtime is %d\r\n", tty->termi.c_cc[VMIN],
-    //         tty->termi.c_cc[VTIME]);
+    kprintf("vmin is %d and vtime is %d\r\n", tty->termi.c_cc[VMIN],
+            tty->termi.c_cc[VTIME]);
     // return a character
     int ok = size < VMIN ? size : VMIN;
     int i = 0;
@@ -31,15 +31,21 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 
       spinlock_lock(&tty->rxlock);
       int res = get_ringbuf(tty->rx, &val);
-      sprintf("flags is %d, vmin is %d, vtime is %d\r\n", hnd->flags,
-              tty->termi.c_cc[VMIN], tty->termi.c_cc[VTIME]);
       if (res == 0 &&
-          !((hnd->flags & O_NONBLOCK) ||
-           (tty->termi.c_cc[VMIN] == 0 || tty->termi.c_cc[VTIME] == 0))) {
-        // kprintf("blocking\r\n");
+          ((hnd->flags & O_NONBLOCK) ||
+           (tty->termi.c_cc[VMIN] == 0 || tty->termi.c_cc[VTIME] == 0)) == false) {
+        kprintf("blocking\r\n");
         spinlock_unlock(&tty->rxlock);
         sched_yield();
         goto restart1;
+      } else if (res == 0 && i == 0) {
+        sprintf("what\r\n");
+        spinlock_unlock(&tty->rxlock);
+        *ret = EAGAIN;
+        break;
+      } else if (res == 0) {
+        spinlock_unlock(&tty->rxlock);
+        break;
       }
       if ((char)val == '\n' && tty->termi.c_lflag & ICANON) {
         break;
@@ -51,7 +57,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     if (tty->termi.c_lflag & ECHO) {
       flanterm_write(get_fctx(), buffer, size);
     }
-    // sprintf("idx: %d\r\n", i);
+    sprintf("idx: %d\r\n", i);
     return i;
   } else {
     // MOST BASIC AH TTY

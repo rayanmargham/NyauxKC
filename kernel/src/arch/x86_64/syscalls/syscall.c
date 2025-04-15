@@ -103,8 +103,13 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
       hnd->node->stat.size != 0 && hnd->node->v_type != VCHRDEVICE) {
     count = hnd->node->stat.size - hnd->offset;
   }
+  int res = 0;
   size_t bytes_read =
-      hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0, hnd);
+      hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0, hnd, &res);
+  if (res != 0) {
+    kprintf("doing\r\n");
+    return (struct __syscall_ret){.ret = -1, .errno = res};
+  }
   hnd->offset += bytes_read;
   return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }
@@ -158,9 +163,12 @@ struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
-
+  int res = 0;
   size_t written =
-      hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1, hnd);
+      hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1, hnd, &res);
+  if (res) {
+    return (struct __syscall_ret){.ret = -1, .errno = res};
+  }
   return (struct __syscall_ret){.ret = written, .errno = 0};
 }
 struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {

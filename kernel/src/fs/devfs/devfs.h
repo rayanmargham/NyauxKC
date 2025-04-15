@@ -8,7 +8,7 @@
 
 struct devfsops {
   size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
-               void *buffer, int rw, struct FileDescriptorHandle *hnd);
+               void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
   int (*ioctl)(struct vnode *curvnode, void *data, unsigned long request,
                void *arg, void *result);
 };

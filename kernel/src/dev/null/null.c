@@ -5,12 +5,12 @@
 
 // impl open() later on
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd);
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
 struct devfsops nullops = {.rw = rw, .ioctl = ioctl};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd) {
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
   if (rw) {
     return 0;
   } else {

@@ -218,8 +218,15 @@ void kentry() {
   get_time();
   struct vnode *node;
   int res = vfs_lookup(NULL, "/root/nyaux.sixel", &node);
+  if (res) {
+    panic("wahhh\r\n");
+  }
   char *sexial = kmalloc(node->stat.size);
-  node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0, NULL);
+  int ress = 0;
+  node->ops->rw(node, 0, node->stat.size, (void *)sexial, 0, NULL, &ress);
+  if (ress) {
+    panic("dies\r\n");
+  }
 
   flanterm_write(get_fctx(), (const char *)sexial, node->stat.size);
 

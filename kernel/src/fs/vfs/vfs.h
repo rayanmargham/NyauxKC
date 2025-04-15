@@ -57,7 +57,7 @@ struct vnodeops {
                 struct vnode *todifferentnode);
   // curvnode, offset, size, buffer, rw
   size_t (*rw)(struct vnode *curvnode, size_t offset, size_t size, void *buffer,
-               int rw, struct FileDescriptorHandle *hnd);
+               int rw, struct FileDescriptorHandle *hnd, int *res);
   int (*readdir)(struct vnode *curvnode, int offset, char **out);
   int (*ioctl)(struct vnode *curvnode, unsigned long request, void *arg,
                void *result);
