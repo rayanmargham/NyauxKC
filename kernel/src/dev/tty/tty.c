@@ -38,7 +38,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
         spinlock_unlock(&tty->rxlock);
         sched_yield();
         goto restart1;
-      } else if (res == 0 && i == 0) {
+      } else if (res == 0 && i == 0 && !(tty->termi.c_lflag & ICANON)) {
+        kprintf("ok\r\n");
         spinlock_unlock(&tty->rxlock);
         *ret = EAGAIN;
         break;
@@ -103,11 +104,11 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
   case TCSETS:
     assert(data != NULL);
     struct tty *ttyy = data;
-    sprintf("tty(): before c_lflags 0x%x, c_iflag 0x%x\r\n",
-            ttyy->termi.c_lflag, ttyy->termi.c_iflag);
+    sprintf("tty(): before c_lflags 0x%x, c_iflag 0x%x c_oflags 0x%x c_cflags 0x%x\r\n", ttyy->termi.c_lflag,
+            ttyy->termi.c_iflag, ttyy->termi.c_oflag, ttyy->termi.c_cflag);
     ttyy->termi = *(struct termios *)arg;
-    sprintf("tty(): after c_lflags 0x%x, c_iflag 0x%x\r\n", ttyy->termi.c_lflag,
-            ttyy->termi.c_iflag);
+    sprintf("tty(): after c_lflags 0x%x, c_iflag 0x%x c_oflags 0x%x c_cflags 0x%x\r\n", ttyy->termi.c_lflag,
+            ttyy->termi.c_iflag, ttyy->termi.c_oflag, ttyy->termi.c_cflag);
     sprintf("tty(): set values :)\r\n");
     return 0;
     break;
