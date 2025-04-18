@@ -99,6 +99,8 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   if (hnd->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EIO};
   }
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
   if (count > (hnd->node->stat.size - hnd->offset) &&
       hnd->node->stat.size != 0 && hnd->node->v_type != VCHRDEVICE) {
     count = hnd->node->stat.size - hnd->offset;
@@ -109,6 +111,7 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   if (res != 0) {
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
+  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
   hnd->offset += bytes_read;
   return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }

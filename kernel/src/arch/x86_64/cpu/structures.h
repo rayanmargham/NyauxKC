@@ -22,3 +22,5 @@ struct arch_per_cpu_data {
   uint32_t lapic_id;
   struct TSS tss;
 };
+#define x86_KERNEL_GS_BASE 0xC0000101
+#define x86_FS_BASE 0xC0000100

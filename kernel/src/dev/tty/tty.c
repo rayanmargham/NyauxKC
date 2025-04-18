@@ -33,8 +33,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
       int res = get_ringbuf(tty->rx, &val);
       if (res == 0 &&
           ((hnd->flags & O_NONBLOCK) ||
-           (tty->termi.c_cc[VMIN] == 0 || tty->termi.c_cc[VTIME] == 0)) == false) {
-        kprintf("blocking\r\n");
+           (tty->termi.c_cc[VMIN] == 0 && tty->termi.c_cc[VTIME] == 0)) == false) {
+        // kprintf("blocking\r\n");
         spinlock_unlock(&tty->rxlock);
         sched_yield();
         goto restart1;

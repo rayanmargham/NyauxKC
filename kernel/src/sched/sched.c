@@ -24,12 +24,12 @@ struct per_cpu_data bsp = {.run_queue = NULL};
 #endif
 struct per_cpu_data *arch_get_per_cpu_data() {
 #if defined(__x86_64__)
-  struct per_cpu_data *hi = (struct per_cpu_data *)rdmsr(0xC0000101);
+  struct per_cpu_data *hi = (struct per_cpu_data *)rdmsr(x86_KERNEL_GS_BASE);
   return hi;
 #endif
 }
 
-void arch_create_bsp_per_cpu_data() { wrmsr(0xC0000101, (uint64_t)&bsp); }
+void arch_create_bsp_per_cpu_data() { wrmsr(x86_KERNEL_GS_BASE, (uint64_t)&bsp); }
 void arch_create_per_cpu_data() {
 #if defined(__x86_64__)
   struct per_cpu_data *hey =
@@ -356,7 +356,9 @@ void schedd(struct StackFrame *frame) {
     return;
   }
   if (cpu->cur_thread) {
-    cpu->cur_thread->arch_data.fs_base = rdmsr(0xC0000100);
+    #if defined(__x86_64__)
+    cpu->cur_thread->arch_data.fs_base = rdmsr(x86_FS_BASE);
+    #endif
   }
   if (frame) {
     if (frame->cs & 3) /* if usermode */ {

@@ -121,6 +121,7 @@ struct termios {
   tcflag_t c_oflag; /* output modes */
   tcflag_t c_cflag; /* control modes */
   tcflag_t c_lflag; /* local modes */
+  cc_t c_line; // dunno what this is but, its like this or the slaughterhouse
   cc_t c_cc[NCCS];  /* special characters */
   speed_t ibaud;    // input baud rate
   speed_t obaud;    // output baud rate

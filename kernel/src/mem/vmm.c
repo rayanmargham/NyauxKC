@@ -141,6 +141,7 @@ bool iswithinvmmregion(pagemap *map, uint64_t virt) {
     }
     cur = (VMMRegion *)cur->next;
   }
+  return false; // dont want this to be ub lol
 }
 void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount) {
   assert(ker_map.userhead != NULL);
