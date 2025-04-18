@@ -23,7 +23,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     // // kprintf("vmin is %d and vtime is %d\r\n", tty->termi.c_cc[VMIN],
     //         tty->termi.c_cc[VTIME]);
     // return a character
-    int ok = size < VMIN ? size : VMIN;
+    int ok = size < 1 ? size : 1;
     int i = 0;
     for (; i < (int)ok; i++) {
     restart1:
@@ -39,9 +39,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
         sched_yield();
         goto restart1;
       } else if (res == 0 && i == 0 && !(tty->termi.c_lflag & ICANON)) {
-        kprintf("ok\r\n");
         spinlock_unlock(&tty->rxlock);
-        *ret = EAGAIN;
+        return 1;
         break;
       } else if (res == 0) {
         spinlock_unlock(&tty->rxlock);
@@ -159,7 +158,7 @@ void devtty_init(struct vfs *curvfs) {
   newtty->termi.c_cc[VERASE] = VERASE;
   newtty->termi.c_cc[VKILL] = VKILL;
   newtty->termi.c_cc[VEOF] = VEOF;
-  newtty->termi.c_cc[VMIN] = VMIN;
+  newtty->termi.c_cc[VMIN] = 1;
   newtty->termi.c_cc[VSWTC] = VSWTC;
   newtty->termi.c_cc[VSTART] = VSTART;
   newtty->termi.c_cc[VSTOP] = VSTOP;
