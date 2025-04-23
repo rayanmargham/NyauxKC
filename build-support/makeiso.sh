@@ -5,6 +5,7 @@ set -ex
 # Build the sysroot with jinx and build limine.
 rm -rf sysroot
 set -f
+./jinx build-if-needed base base-files kernel $PKGS_TO_INSTALL
 ./jinx install "sysroot" base base-files kernel $PKGS_TO_INSTALL
 set +f
 if ! [ -d host-pkgs/limine ]; then

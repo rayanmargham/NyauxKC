@@ -121,7 +121,7 @@ static uacpi_status map_one(
     if (spec->kind == REGISTER_KIND_GAS) {
         struct acpi_gas *gas = spec->accessors[idx];
 
-        if (gas->address == 0) {
+        if (gas == UACPI_NULL || gas->address == 0) {
             mapping->states[idx] = REGISTER_MAPPING_STATE_NOT_NEEDED;
             return ret;
         }
@@ -453,7 +453,7 @@ static const struct register_field g_fields[UACPI_REGISTER_FIELD_MAX + 1] = {
     },
 };
 
-uacpi_status uacpi_ininitialize_registers(void)
+uacpi_status uacpi_initialize_registers(void)
 {
     g_reg_lock = uacpi_kernel_create_spinlock();
     if (uacpi_unlikely(g_reg_lock == UACPI_NULL))

@@ -27,7 +27,6 @@ void devnull_init(struct vfs *curvfs) {
   info->major = 1;
   info->minor = 0;
   info->ops = &nullops;
-  kprintf("chilling\r\n");
   curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "null", VCHRDEVICE,
                                  &vnode_devops, &res, info, NULL);
 }

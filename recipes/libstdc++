@@ -2,6 +2,7 @@
 
 name=libstdc++
 revision=1
+version="$(. "${base_dir}"/source-recipes/gcc-host && echo $version)"
 hostdeps="gcc autoconf-2.69 automake libtool pkg-config"
 imagedeps="build-essential"
 deps="mlibc libgcc"

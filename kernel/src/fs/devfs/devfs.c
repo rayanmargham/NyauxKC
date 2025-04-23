@@ -137,6 +137,7 @@ static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   struct devfsnode *node = (struct devfsnode *)curvnode->data;
   if (node == NULL) {
+    // todo: change this later
     panic("devfs(): node is null");
   }
   if (curvnode->v_type == VREG) {
@@ -144,9 +145,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   } else if (curvnode->v_type == VDIR) {
     struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
     for (size_t i = 0; i < entry->cnt; i++) {
-      kprintf("address %p, %p, cnt %lu\r\n", entry->nodes[i], res, entry->cnt);
       if (strcmp(entry->nodes[i]->name, name) == 0) {
-        kprintf("okay\r\n");
         *res = entry->nodes[i]->curvnode;
         return 0;
       }

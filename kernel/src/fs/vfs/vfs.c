@@ -137,15 +137,8 @@ void vfs_scan() {
 }
 void vfs_init() {
   vfs_mount(tmpfs_vfsops, NULL, NULL);
-  struct vnode *fein;
-  vfs_scan();
+  // vfs_scan();
 
   populate_tmpfs_from_tar();
-  struct vnode *node;
-  int res = vfs_lookup(NULL, "/var/run/.keep", &node);
-  if (res != 0) {
-    panic("yes");
-  }
-  kprintf("size of .keep in bytes %lu\r\n", node->stat.size);
   devfs_init(vfs_list);
 }

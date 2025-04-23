@@ -10,6 +10,8 @@
 /initramfs.tar
 /.vscode
 /.jinx-cache
+/.cache
+/compile_commands.json
 /ovmf
 *.hdd
 *.elf

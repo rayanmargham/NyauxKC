@@ -206,7 +206,7 @@ endif
 # Remove object files and the final executable.
 .PHONY: clean
 clean:
-	rm -rf bin-$(ARCH) obj-$(ARCH) cc-runtime-$(ARCH)
+	rm -rf bin-$(ARCH) obj-$(ARCH)
 
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean

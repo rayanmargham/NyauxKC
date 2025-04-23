@@ -211,8 +211,14 @@ typedef struct uacpi_resource_fixed_io {
 #define UACPI_CONSUMER 1
 
 // decode_type
-#define UACPI_POISITIVE_DECODE 0
+#define UACPI_POSITIVE_DECODE 0
 #define UACPI_SUBTRACTIVE_DECODE 1
+
+/*
+ * DO NOT USE! SLATED FOR REMOVAL AT 3.0
+ * See the version without the typo above (UACPI_POSITIVE_DECODE)
+ */
+#define UACPI_POISITIVE_DECODE 0
 
 // fixed_min_address & fixed_max_address
 #define UACPI_ADDRESS_NOT_FIXED 0

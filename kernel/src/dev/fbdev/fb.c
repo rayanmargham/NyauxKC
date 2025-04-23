@@ -25,7 +25,7 @@ void devfbdev_init(struct vfs *curvfs) {
   info->major = 1;
   info->minor = 1;
   info->ops = &fbdevops;
-  kprintf("fbdev: init\r\n");
+  kprintf("fbdev(): init\r\n");
   curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "fb0", VCHRDEVICE,
                                  &vnode_devops, &res, info, NULL);
 }

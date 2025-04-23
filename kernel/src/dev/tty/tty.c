@@ -192,7 +192,6 @@ void devtty_init(struct vfs *curvfs) {
   hnd1->node = res;
   hnd2->node = res;
   hnd3->node = res;
-  kprintf("address is %p", curtty);
   struct process_t *p = get_process_start();
   create_kthread((uint64_t)serial_put_input, p, 4);
   get_process_finish(p);

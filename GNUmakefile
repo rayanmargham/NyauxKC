@@ -17,7 +17,7 @@ debug:
 	JINX_CONFIG_FILE=jinx-config-debug $(MAKE) all
 
 jinx:
-	curl -Lo jinx https://github.com/mintsuki/jinx/raw/7a101a39eb061713f9c50ceafa1d713f35f17a3b/jinx
+	curl -Lo jinx https://codeberg.org/mintsuki/jinx/raw/commit/41e0ebe7b90d5a719dfe725552f657aca7aa7044/jinx
 	chmod +x jinx
 
 .PHONY: run-kvm
@@ -63,7 +63,12 @@ run-debug: nyaux.iso
 .PHONY: clean
 clean:
 	rm -rf iso_root sysroot nyaux.iso initramfs.tar
-
+.PHONY: cleankernel
+cleankernel:
+	rm -rf iso_root sysroot nyaux.iso initramfs.tar
+	rm -rf builds/kernel/
+	make -C kernel clean
+	rm -rf pkgs/kernel*
 .PHONY: distclean
 distclean: clean
 	make -C kernel distclean
