@@ -93,6 +93,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
+  sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -196,7 +197,7 @@ struct __syscall_ret syscall_dup(int fd, int flags) {
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
 struct __syscall_ret syscall_dup2(int oldfd, int newfd) {
-  sprintf("syscall_dup2\r\n");
+  sprintf("syscall_dup2(): oldfd %d, newfd %d\r\n", oldfd, newfd);
   struct FileDescriptorHandle *check = get_fd(oldfd);
   if (check == NULL || check->node == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
