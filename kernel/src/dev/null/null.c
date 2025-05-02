@@ -8,7 +8,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
-struct devfsops nullops = {.rw = rw, .ioctl = ioctl};
+static int poll(struct vnode *curvnode, struct pollfd *requested);
+struct devfsops nullops = {.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
   if (rw) {
@@ -29,4 +30,8 @@ void devnull_init(struct vfs *curvfs) {
   info->ops = &nullops;
   curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "null", VCHRDEVICE,
                                  &vnode_devops, &res, info, NULL);
+}
+static int poll(struct vnode *curvnode, struct pollfd *requested) {
+  requested->revents = requested->events;
+  return 0;
 }

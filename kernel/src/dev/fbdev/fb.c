@@ -5,7 +5,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
-struct devfsops fbdevops = {.rw = rw, .ioctl = ioctl};
+static int poll(struct vnode *curvnode, struct pollfd *requested);
+struct devfsops fbdevops = {.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
   sprintf("fbdev: wants to write\r\n");
@@ -18,6 +19,10 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
   return ENOSYS;
+}
+static int poll(struct vnode *curvnode, struct pollfd *requested) {
+  requested->revents = requested->events;
+  return 0;
 }
 void devfbdev_init(struct vfs *curvfs) {
   struct vnode *res;

@@ -12,6 +12,18 @@ enum vtype {
   VDIR,
   VSYMLINK // symlink
 };
+struct pollfd {
+  int fd; /* file descriptor*/
+  short events; /* requested events */
+  short revents; /* returned events */
+};
+typedef unsigned long int nfds_t;
+#define POLLIN		0x001		/* There is data to read.  */
+#define POLLPRI		0x002		/* There is urgent data to read.  */
+#define POLLOUT		0x004		/* Writing now will not block.  */
+#define POLLERR		0x008		/* Error condition.  */
+#define POLLHUP		0x010		/* Hung up.  */
+#define POLLNVAL	0x020		/* Invalid polling request.  */
 extern struct vfs *vfs_list;
 struct timespec {
 
@@ -55,6 +67,7 @@ struct vnodeops {
   int (*create)(struct vnode *curvnode, char *name, enum vtype type,
                 struct vnodeops *ops, struct vnode **res, void *data,
                 struct vnode *todifferentnode);
+  int (*poll) (struct vnode *curvnode, struct pollfd *requested);
   // curvnode, offset, size, buffer, rw
   size_t (*rw)(struct vnode *curvnode, size_t offset, size_t size, void *buffer,
                int rw, struct FileDescriptorHandle *hnd, int *res);

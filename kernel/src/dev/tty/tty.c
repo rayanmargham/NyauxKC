@@ -14,7 +14,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *ret);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
-struct devfsops ttyops = {.rw = rw, .ioctl = ioctl};
+static int poll(struct vnode *curvnode, struct pollfd *requested);
+struct devfsops ttyops = {.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *ret) {
   if (rw == 0) {
@@ -129,8 +130,14 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
 
   return ENOSYS;
 }
+
 static struct tty *curtty = NULL;
 extern bool serial_data_ready();
+static int poll(struct vnode *curvnode, struct pollfd *requested) {
+  sprintf("tty(): poll() called on me, events are %d\r\n", requested->events);
+  requested->revents = requested->events; // for now
+  return 0;
+}
 void serial_put_input() {
   inb(0x3F8);
   while (true) {
@@ -148,6 +155,7 @@ void serial_put_input() {
   }
   exit_thread();
 }
+
 void devtty_init(struct vfs *curvfs) {
   struct vnode *res;
   struct devfsinfo *info = kmalloc(sizeof(struct devfsinfo));

@@ -25,7 +25,8 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int mount(struct vfs *curvfs, char *path, void *data);
 static int readdir(struct vnode *curvnode, int offset, char **name);
-struct vnodeops tmpfs_ops = {lookup, create, rw, readdir, .ioctl = ioctl};
+static int poll(struct vnode *curvnode, struct pollfd *requested);
+struct vnodeops tmpfs_ops = {lookup, create, poll, rw, readdir, .ioctl = ioctl};
 struct vfs_ops tmpfs_vfsops = {mount};
 static int readdir(struct vnode *curvnode, int offset, char **name) {
   if (curvnode->v_type == VDIR) {
@@ -217,4 +218,9 @@ static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result) {
   return ENOSYS;
+}
+static int poll(struct vnode *curvnode, struct pollfd *requested) {
+  requested->revents = requested->events; // we are able to be read without blocking
+  // cause i am literarly in ram :skull:
+  return 0;
 }

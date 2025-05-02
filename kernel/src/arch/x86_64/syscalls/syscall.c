@@ -91,6 +91,26 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   setup->mode = mode;
   return (struct __syscall_ret){.ret = outfd, .errno = 0};
 }
+struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds, int timeout) {
+  
+  sprintf("poll(): fuck you! number of fds: %lu, events: %d, targetted fd: %d, timeout: %d\r\n", nfds, fds->events, fds->fd, timeout);
+  if (timeout != -1) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
+  }
+  if (nfds > 1) {
+    return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
+  }
+  if (!fds) {
+    return (struct __syscall_ret){.ret = -1, .errno = EINVAL};
+  }
+  struct FileDescriptorHandle *hnd = get_fd(fds->fd);
+  int ret = hnd->node->ops->poll(hnd->node, fds);
+  if (ret != 0) {
+    return (struct __syscall_ret){.ret = -1, .errno = ret};
+  }
+  
+  return (struct __syscall_ret){.ret = 1, .errno = 0};
+}
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
   sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);

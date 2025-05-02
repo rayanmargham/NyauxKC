@@ -11,6 +11,7 @@ struct devfsops {
                void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
   int (*ioctl)(struct vnode *curvnode, void *data, unsigned long request,
                void *arg, void *result);
+  int (*poll)(struct vnode *curvnode, struct pollfd *requested);
 };
 struct devfsinfo {
   uint8_t major;

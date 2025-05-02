@@ -19,8 +19,9 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int readdir(struct vnode *curvnode, int offset, char **name);
 static int mount(struct vfs *curvfs, char *path, void *data);
+static int poll (struct vnode *curvnode, struct pollfd *requested);
 struct vnodeops vnode_devops = {
-    .lookup = lookup, .create = create, .rw = rww, readdir, .ioctl = ioctl};
+    .lookup = lookup, .create = create, .rw = rww, readdir, .ioctl = ioctl, .poll = poll};
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
@@ -162,4 +163,8 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
   return devnode->info->ops->ioctl(curvnode, devnode->info->data, request, arg,
                                    result);
+}
+static int poll(struct vnode *curvnode, struct pollfd *requested) {
+  struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
+  return devnode->info->ops->poll(curvnode, requested);
 }

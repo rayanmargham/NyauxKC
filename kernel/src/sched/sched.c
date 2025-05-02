@@ -241,7 +241,7 @@ void do_funny() {
   get_process_finish(fun->proc);
   pagemap *curpagemap = fun->proc->cur_map;
   load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/bash", NULL},
-           (char *[]){"TERM=vt100", NULL}, &fun->arch_data.frame);
+           (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame);
   ThreadReady(fun);
 }
 int scheduler_fork() {
