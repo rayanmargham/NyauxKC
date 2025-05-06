@@ -2,17 +2,19 @@
 
 #include <mem/kmem.h>
 
+
 #include "fs/devfs/devfs.h"
 #include "fs/tmpfs/tmpfs.h"
 #include "fs/ustar/ustar.h"
+#include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
 #include "utils/libc.h"
 
 struct vfs *vfs_list = NULL;
-int vfs_mount(struct vfs_ops ops, char *path, void *data) {
+int vfs_mount(struct vfs_ops *ops, char *path, void *data) {
   struct vfs *o = kmalloc(sizeof(struct vfs));
-  o->vfs_ops = &ops;
+  o->vfs_ops = ops;
   o->vfs_ops->mount(o, path, data);
   if (vfs_list == NULL) {
     vfs_list = o;
@@ -24,6 +26,35 @@ int vfs_mount(struct vfs_ops ops, char *path, void *data) {
 
 int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   struct vnode *starter = start;
+  sprintf("vfs_lookup(): looking up \"%s\"\r\n", path);
+  if (path[1] == '\0' && path[0] != '/') {
+    if (path[0] == '.') {
+      //
+      struct process_t *a = get_process_start();
+      assert(a->cwd);
+      *node = a->cwd;
+      get_process_finish(a);
+      return 0;
+    }
+    if (starter != NULL) {
+      struct vnode *result = NULL;
+      int res = starter->ops->lookup(starter, (char*)path, &result);
+      if (res != 0) {
+        kprintf("vfs(): file not found\r\n");
+        return res;
+      }
+      if (result->v_type == VSYMLINK) {
+        panic("vfs(): not supported");
+      }
+      *node = starter;
+      return 0;
+    } else {
+      kprintf("vfs(): file not found\r\n");
+      return -1;
+    }
+    
+    
+  }
   if (path[0] == '/' || starter == NULL) {
     // assume root
     starter = vfs_list->cur_vnode;
@@ -137,9 +168,13 @@ void vfs_scan() {
   vf_scan(fein);
 }
 void vfs_init() {
-  vfs_mount(tmpfs_vfsops, NULL, NULL);
+  vfs_mount(&tmpfs_vfsops, NULL, NULL);
   // vfs_scan();
 
   populate_tmpfs_from_tar();
   devfs_init(vfs_list);
+  // doing this manually cause f you
+  struct process_t *m = get_process_start();
+  m->cwd = vfs_list->cur_vnode;
+  get_process_finish(m);
 }

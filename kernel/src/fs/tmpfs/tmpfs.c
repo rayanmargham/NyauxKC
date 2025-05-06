@@ -211,7 +211,7 @@ static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
       bro->size = offset + size;
       bro->node->stat.size = offset + size;
     }
-    memcpy((void *)(bro->data + offset), buffer, size);
+    memcpy((void *)((uint64_t)bro->data + offset), buffer, size);
     return size;
   }
 }

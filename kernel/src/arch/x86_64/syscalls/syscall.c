@@ -72,7 +72,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
     struct process_t *proc = get_process_start();
     node = proc->cwd;
     get_process_finish(proc);
-
+    
   } else {
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
     if (hnd == NULL) {
