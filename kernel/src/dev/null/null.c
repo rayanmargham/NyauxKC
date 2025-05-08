@@ -13,9 +13,9 @@ struct devfsops nullops = {.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
   if (rw) {
-    return 0;
-  } else {
     return size;
+  } else {
+    return 0;
   }
 }
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
