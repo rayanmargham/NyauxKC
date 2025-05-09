@@ -369,7 +369,7 @@ void syscall_init() {
   if (edx & (1 << 11)) {
     uint64_t IA_32_STAR = 0;
     IA_32_STAR |= ((uint64_t)0x28 << 32);
-    IA_32_STAR |= ((uint64_t)0x30 << 48);
+    IA_32_STAR |= ((uint64_t)0x33 << 48);
     wrmsr(0xC0000081, IA_32_STAR);
     wrmsr(0xC0000082, (uint64_t)syscall_entry);
     wrmsr(0xC0000084, (1 << 9));

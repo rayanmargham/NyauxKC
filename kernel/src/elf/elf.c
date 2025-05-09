@@ -7,6 +7,7 @@
 #include <limine.h>
 #include <mem/kmem.h>
 #include <stdint.h>
+#define ET_DYN 3
 #define PT_LOAD 1
 #define PT_INTERP 3
 #define PT_PHDR 6
@@ -61,8 +62,10 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
       highest_address = t;
     }
   }
-  size_t sizeofexecutable = highest_address + lowest_address;
-  void *feet = uvmm_region_alloc(usrmap, sizeofexecutable, 0);
+  size_t sizeofexecutable = highest_address - lowest_address;
+  void *feet;
+  if (hdr->e_type == ET_DYN) feet = uvmm_region_alloc(usrmap, sizeofexecutable, 0);
+  else feet = uvmm_region_alloc_fixed(usrmap, lowest_address, sizeofexecutable, false);
   kprintf("elf: loaded elf at %p, with entry point %p\r\n",
           (void *)((uint64_t)feet - lowest_address), (void*)((uint64_t)feet - lowest_address + hdr->e_entry));
   out->entrypoint = (uint64_t)feet - lowest_address + hdr->e_entry;
