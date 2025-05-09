@@ -6,7 +6,7 @@ deps="core-libs"
 
 build() {
 	cp -rp ${source_dir}/doomgeneric/* .
-	make
+	make CFLAGS=-std=gnu17
 }
 
 package() {

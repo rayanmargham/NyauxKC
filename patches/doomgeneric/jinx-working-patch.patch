@@ -1,7 +1,6 @@
 diff --git doomgeneric-workdir/doom1.wad doomgeneric-workdir/doom1.wad
 new file mode 100644
-index 0000000..1a58f66
-Binary files /dev/null and doomgeneric-workdir/doom1.wad differ
+index 0000000..e69de29
 diff --git doomgeneric-clean/doomgeneric/Makefile doomgeneric-workdir/doomgeneric/Makefile
 index ceecc57..f4f52f2 100644
 --- doomgeneric-clean/doomgeneric/Makefile
@@ -99,10 +98,10 @@ index 0000000..1cf8592
 +
 diff --git doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c
 new file mode 100644
-index 0000000..8c060c9
+index 0000000..ed62ae3
 --- /dev/null
 +++ doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c
-@@ -0,0 +1,195 @@
+@@ -0,0 +1,196 @@
 +#include "doomkeys.h"
 +
 +#include "doomgeneric.h"
@@ -113,6 +112,7 @@ index 0000000..8c060c9
 +#include <linux/fb.h>
 +#include <stdio.h>
 +#include <string.h>
++#include <sys/ioctl.h>
 +#include <sys/time.h>
 +#include <termios.h>
 +#include <unistd.h>
@@ -298,3 +298,16 @@ index 0000000..8c060c9
 +}
 +
 +void DG_SetWindowTitle(const char *title) {}
+diff --git doomgeneric-clean/doomgeneric/i_video.h doomgeneric-workdir/doomgeneric/i_video.h
+index 3c7db19..902a062 100644
+--- doomgeneric-clean/doomgeneric/i_video.h
++++ doomgeneric-workdir/doomgeneric/i_video.h
+@@ -136,6 +136,8 @@ void I_StartTic (void);
+ 
+ void I_EnableLoadingDisk(void);
+ 
++void I_EndRead(void);
++
+ extern char *video_driver;
+ extern boolean screenvisible;
+ 

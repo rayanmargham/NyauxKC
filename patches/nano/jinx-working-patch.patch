@@ -1,0 +1,12 @@
+diff --git nano-clean/src/nano.c nano-workdir/src/nano.c
+index 39b9352..6bbf363 100644
+--- nano-clean/src/nano.c
++++ nano-workdir/src/nano.c
+@@ -1059,6 +1059,7 @@ void regenerate_screen(void)
+ 
+ 	/* Leave and immediately reenter curses mode, so that ncurses notices
+ 	 * the new screen dimensions and sets LINES and COLS accordingly. */
++	fprintf(stderr, "nano: KANKER KANKER %d %d", LINES, COLS);
+ 	endwin();
+ 	refresh();
+ 

@@ -78,6 +78,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
   sprintf("tty(): request is 0x%lx\r\n", request);
+  *(void **)result = NULL;
   switch (request) {
   case TIOCGWINSZ:
     // usermode is requesting to get the window size of the tty
@@ -86,6 +87,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     size_t rows = 0;
     struct flanterm_context *ctx = get_fctx();
     flanterm_get_dimensions(ctx, &cols, &rows);
+    sprintf("tty(): cols %lu rows %lu\r\n", cols, rows);
     struct winsize size = {.ws_row = rows, .ws_col = cols};
     *(struct winsize *)arg = size;
     return 0;

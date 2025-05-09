@@ -83,6 +83,7 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     memcpy(name, start, len);
     name[len] = 0;
     struct vnode *res = NULL;
+    sprintf("vfs_lookup(): iteration component \"%s\"\r\n", name);
     int ress = starter->ops->lookup(starter, name, &res);
     kfree(name, len + 1);
     if (ress != 0) {
