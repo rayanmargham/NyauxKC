@@ -1,5 +1,6 @@
 #include "sched.h"
 
+#include <elf/elf.h>
 #include <mem/kmem.h>
 #include <stdint.h>
 
@@ -14,10 +15,10 @@
 #include "sched/reaper.h"
 #include "smp/smp.h"
 #include "utils/basic.h"
-#include <elf/elf.h>
 // ARCH STUFF
-#include "arch/x86_64/cpu/structures.h"
 #include <arch/x86_64/fpu/xsave.h>
+
+#include "arch/x86_64/cpu/structures.h"
 
 #if defined(__x86_64__)
 struct per_cpu_data bsp = {.run_queue = NULL};
@@ -29,7 +30,9 @@ struct per_cpu_data *arch_get_per_cpu_data() {
 #endif
 }
 
-void arch_create_bsp_per_cpu_data() { wrmsr(x86_KERNEL_GS_BASE, (uint64_t)&bsp); }
+void arch_create_bsp_per_cpu_data() {
+  wrmsr(x86_KERNEL_GS_BASE, (uint64_t)&bsp);
+}
 void arch_create_per_cpu_data() {
 #if defined(__x86_64__)
   struct per_cpu_data *hey =
@@ -38,7 +41,7 @@ void arch_create_per_cpu_data() {
   hey->arch_data.lapic_id = get_lapic_id();
   hey->arch_data.kernel_stack_ptr = 0;
   hey->arch_data.syscall_stack_ptr_tmp = 0;
-  wrmsr(0xC0000101, (uint64_t)hey);
+  wrmsr(x86_KERNEL_GS_BASE, (uint64_t)hey);
 #endif
 }
 uint64_t pidalloc = 0;
@@ -57,7 +60,6 @@ struct process_t *create_process(pagemap *map) {
   him->fdalloc[2] = 1;
   him->children = NULL;
   if (vfs_list) {
-
     him->root = vfs_list->cur_vnode;
     him->cwd = him->root;
     him->cwdpath = "/";
@@ -346,7 +348,6 @@ void save_ctx(struct StackFrame *dest, struct StackFrame *src);
 #endif
 
 void schedd(struct StackFrame *frame) {
-
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (!cpu) {
     return;
@@ -356,12 +357,13 @@ void schedd(struct StackFrame *frame) {
     return;
   }
   if (cpu->cur_thread) {
-    #if defined(__x86_64__)
+#if defined(__x86_64__)
     cpu->cur_thread->arch_data.fs_base = rdmsr(x86_FS_BASE);
-    #endif
+#endif
   }
   if (frame) {
-    if (frame->cs & 3) /* if usermode */ {
+    if (frame->cs & 3) /* if usermode */
+    {
 #if defined(__x86_64__)
       if (cpu->cur_thread) {
         fpu_save(cpu->cur_thread->fpu_state);
@@ -374,14 +376,14 @@ void schedd(struct StackFrame *frame) {
   struct thread_t *old = switch_queue(cpu);
 #if defined(__x86_64__)
   if (old != NULL && frame != NULL) {
-
     save_ctx(&old->arch_data.frame, frame);
   }
   cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
-  wrmsr(0xC0000100, cpu->cur_thread->arch_data.fs_base);
+  wrmsr(x86_FS_BASE, cpu->cur_thread->arch_data.fs_base);
   change_rsp0(cpu->cur_thread->kernel_stack_base); // do this unconditally
-  if (cpu->cur_thread->arch_data.frame.cs & 3) /* if usermode */ {
+  if (cpu->cur_thread->arch_data.frame.cs & 3)     /* if usermode */
+  {
 #if defined(__x86_64__)
     fpu_store(cpu->cur_thread->fpu_state);
 

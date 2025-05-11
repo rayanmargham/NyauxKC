@@ -1,27 +1,32 @@
 #include "devfs.h"
 
-#include <fs/tmpfs/tmpfs.h>
-#include <utils/libc.h>
-
 #include "dev/fbdev/fb.h"
 #include "dev/null/null.h"
 #include "dev/tty/tty.h"
 #include "fs/vfs/fd.h"
 #include "fs/vfs/vfs.h"
+#include <arch/x86_64/syscalls/syscall.h>
+#include <fs/tmpfs/tmpfs.h>
+#include <utils/libc.h>
 
 static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnodeops *ops, struct vnode **res, void *data,
                   struct vnode *todifferentnode);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
-                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
+                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
+                  int *res);
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int readdir(struct vnode *curvnode, int offset, char **name);
 static int mount(struct vfs *curvfs, char *path, void *data);
-static int poll (struct vnode *curvnode, struct pollfd *requested);
-struct vnodeops vnode_devops = {
-    .lookup = lookup, .create = create, .rw = rww, readdir, .ioctl = ioctl, .poll = poll};
+static int poll(struct vnode *curvnode, struct pollfd *requested);
+struct vnodeops vnode_devops = {.lookup = lookup,
+                                .create = create,
+                                .rw = rww,
+                                readdir,
+                                .ioctl = ioctl,
+                                .poll = poll};
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
@@ -52,10 +57,25 @@ void devfs_init(struct vfs *curvfs) {
   struct vnode *replacement = kmalloc(sizeof(struct vnode));
   replacement->data = kmalloc(sizeof(struct devfsnode));
   struct devfsnode *node = replacement->data;
+
   node->name = "dev";
   node->direntry = kmalloc(sizeof(struct devfsdirentry));
+  struct devfsdirentry *direntry = node->direntry;
+  struct devfsnode *dot = (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+  dot->name = ".";
+  dot->curvnode = replacement;
+  dot->direntry = direntry;
+  struct devfsnode *dotdot =
+      (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+  dotdot->name = "..";
+
   replacement->ops = &vnode_devops;
   replacement->v_type = VDIR;
+  dotdot->curvnode = starter;
+  dotdot->direntry =
+      NULL; // this is fine as long as it is not accessed, which it will not be
+  insert_into_list(dot, direntry);
+  insert_into_list(dotdot, direntry);
   starter->ops->create(starter, "dev", VDIR, &vnode_devops, &replacement, NULL,
                        replacement);
   struct vfs *old = curvfs;
@@ -130,7 +150,12 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
   return -1;
 }
 static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
-                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
+                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
+                  int *res) {
+  if (curvnode->v_type == VDIR) {
+    *res = EISDIR;
+    return 0;
+  }
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
   return devnode->info->ops->rw(curvnode, devnode->info->data, offset, size,
                                 buffer, rw, hnd, res);
@@ -146,6 +171,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   } else if (curvnode->v_type == VDIR) {
     struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
     for (size_t i = 0; i < entry->cnt; i++) {
+      sprintf("dev: found component \"%s\"\r\n", entry->nodes[i]->name);
       if (strcmp(entry->nodes[i]->name, name) == 0) {
         *res = entry->nodes[i]->curvnode;
         return 0;

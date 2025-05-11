@@ -20,7 +20,8 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnode *todifferentnode);
 static int lookup(struct vnode *curvnode, char *name, struct vnode **res);
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd,
+                 int *res);
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int mount(struct vfs *curvfs, char *path, void *data);
@@ -56,25 +57,29 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnodeops *ops, struct vnode **res, void *data,
                   struct vnode *todifferentnode) {
   if (curvnode->v_type == VDIR) {
+    // if (strcmp(name, "dev") == 0) {
+    //   panic("holy shit im doing this with tmpfs (which would make
+    //   sense?)\r\n");
+    // }
     struct tmpfsnode *node = (struct tmpfsnode *)curvnode->data;
     struct direntry *entry = (struct direntry *)node->data;
     if (type == VDIR) {
 
       struct tmpfsnode *dir =
           (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
-      struct direntry *direntry =
-          (struct direntry *)kmalloc(sizeof(struct direntry));
-      dir->direntry = direntry;
-
-      dir->name = name;
-      dir->size = 0;
-      struct tmpfsnode *dot =
-          (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
-      dot->name = ".";
-      dot->size = 0;
-
-      dot->direntry = direntry;
       if (!todifferentnode) {
+        struct direntry *direntry =
+            (struct direntry *)kmalloc(sizeof(struct direntry));
+        dir->direntry = direntry;
+
+        dir->name = name;
+        dir->size = 0;
+        struct tmpfsnode *dot =
+            (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
+        dot->name = ".";
+        dot->size = 0;
+
+        dot->direntry = direntry;
 
         struct vnode *newnode = (struct vnode *)kmalloc(sizeof(struct vnode));
         newnode->stat.st_mode |= S_IFDIR;
@@ -96,17 +101,10 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
         *res = newnode;
         return 0;
       } else {
-        dot->node = todifferentnode;
         dir->node = todifferentnode;
-        struct tmpfsnode *dotdot =
-            (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
-        dotdot->name = "..";
-        dotdot->size = 0;
-        dotdot->node = curvnode;
-        dotdot->direntry = entry;
+        dir->name = name;
         todifferentnode->stat.st_mode = S_IFDIR;
-        insert_into_list(dot, direntry);
-        insert_into_list(dotdot, direntry);
+        sprintf("tmpfs(): different node data %p\r\n", todifferentnode->data);
         insert_into_list(dir, entry);
         *res = todifferentnode;
         return 0;
@@ -144,6 +142,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   } else if (curvnode->v_type == VDIR) {
     struct direntry *entry = (struct direntry *)node->direntry;
     for (size_t i = 0; i < entry->cnt; i++) {
+      assert(entry->nodes[i]->name);
       if (strcmp(entry->nodes[i]->name, name) == 0) {
         *res = entry->nodes[i]->node;
         return 0;
@@ -184,11 +183,13 @@ static int mount(struct vfs *curvfs, char *path, void *data) {
   insert_into_list(dot, direntry);
   insert_into_list(dotdot, direntry);
   curvfs->cur_vnode = newnode;
+  dir->node = newnode;
   kprintf("tmpfs(): created and mounted\r\n");
   return 0;
 }
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
-                 void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res) {
+                 void *buffer, int rw, struct FileDescriptorHandle *hnd,
+                 int *res) {
   struct tmpfsnode *bro = curvnode->data;
   if (rw == 0) {
     if (offset >= bro->size) {
@@ -220,7 +221,8 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
   return ENOSYS;
 }
 static int poll(struct vnode *curvnode, struct pollfd *requested) {
-  requested->revents = requested->events; // we are able to be read without blocking
+  requested->revents =
+      requested->events; // we are able to be read without blocking
   // cause i am literarly in ram :skull:
   return 0;
 }
