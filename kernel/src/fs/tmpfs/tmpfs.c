@@ -190,6 +190,10 @@ static int mount(struct vfs *curvfs, char *path, void *data) {
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
                  int *res) {
+  if (curvnode->v_type == VDIR) {
+    *res = EISDIR;
+    return 0;
+  }
   struct tmpfsnode *bro = curvnode->data;
   if (rw == 0) {
     if (offset >= bro->size) {
