@@ -18,7 +18,12 @@ int oct2bin(unsigned char *str, int size) {
   }
   return n;
 }
-
+void advance(struct tar_header **ptr) {
+  *ptr = (void *)*ptr + 512 +
+         align_up(oct2bin((unsigned char *)(*ptr)->filesize_octal,
+                          strlen((*ptr)->filesize_octal)),
+                  512);
+}
 void populate_tmpfs_from_tar() {
   if (modules.response == NULL) {
     panic("populate_tmpfs_from_tar(): Nyaux Cannot Continue without a "
@@ -45,10 +50,7 @@ void populate_tmpfs_from_tar() {
       case '5':
         // kprintf("found directory with path: %s\r\n", ptr->name);
         vfs_create_from_tar(name, VDIR, 0, NULL);
-        ptr = (void *)ptr + 512 +
-              align_up(oct2bin((unsigned char *)ptr->filesize_octal,
-                               strlen(ptr->filesize_octal)),
-                       512);
+        advance(&ptr);
         break;
       case '0':
         // kprintf("found file with path: %s\r\n", ptr->name);
@@ -62,24 +64,23 @@ void populate_tmpfs_from_tar() {
         // kprintf("size %d\r\n", oct2bin((unsigned char*)ptr->filesize_octal,
         // strlen(ptr->filesize_octal)));
 
-        ptr = (void *)ptr + 512 +
-              align_up(oct2bin((unsigned char *)ptr->filesize_octal,
-                               strlen(ptr->filesize_octal)),
-                       512);
+        advance(&ptr);
+        break;
+      case '1':
+        sprintf("ustar(): hard link :c\r\n");
+        advance(&ptr);
         break;
       case '2':
         vfs_create_from_tar(name, VSYMLINK, strlen(ptr->name_linked_file),
                             (unsigned char *)ptr->name_linked_file);
-        ptr = (void *)ptr + 512 +
-              align_up(oct2bin((unsigned char *)ptr->filesize_octal,
-                               strlen(ptr->filesize_octal)),
-                       512);
+        advance(&ptr);
         break;
       default:
-        ptr = (void *)ptr + 512 +
-              align_up(oct2bin((unsigned char *)ptr->filesize_octal,
-                               strlen(ptr->filesize_octal)),
-                       512);
+        // ptr = (void *)ptr + 512 +
+        //       align_up(oct2bin((unsigned char *)ptr->filesize_octal,
+        //                        strlen(ptr->filesize_octal)),
+        //                512);
+        advance(&ptr);
         break;
       }
     }

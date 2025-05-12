@@ -2,7 +2,6 @@
 
 #include <mem/kmem.h>
 
-
 #include "fs/devfs/devfs.h"
 #include "fs/tmpfs/tmpfs.h"
 #include "fs/ustar/ustar.h"
@@ -38,7 +37,7 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     }
     if (starter != NULL) {
       struct vnode *result = NULL;
-      int res = starter->ops->lookup(starter, (char*)path, &result);
+      int res = starter->ops->lookup(starter, (char *)path, &result);
       if (res != 0) {
         kprintf("vfs(): file not found\r\n");
         return res;
@@ -52,15 +51,13 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
       kprintf("vfs(): file not found\r\n");
       return -1;
     }
-    
-    
   }
   if (path[0] == '/' || starter == NULL) {
     // assume root
     starter = vfs_list->cur_vnode;
     path += 1;
   }
-  
+
   while (*path) {
     if (starter->v_type != VDIR) {
       kprintf("vfs(): starter is NOT a dir!!! %d\r\n", starter->v_type);
@@ -78,7 +75,7 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     if (len == 0) {
       continue;
     }
-    
+
     char *name = kmalloc(len + 1);
     memcpy(name, start, len);
     name[len] = 0;
@@ -87,7 +84,7 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     int ress = starter->ops->lookup(starter, name, &res);
     kfree(name, len + 1);
     if (ress != 0) {
-      kprintf("vfs(): file not found\r\n");
+      sprintf("vfs(): file not found\r\n");
       return ress;
     }
     if (res->v_type == VSYMLINK) {
@@ -129,8 +126,8 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
           next_node->data = buffer;
         } else {
           int res = 0;
-          assert(next_node->ops->rw(next_node, 0, filesize, buf, 1, NULL, &res) ==
-                 filesize);
+          assert(next_node->ops->rw(next_node, 0, filesize, buf, 1, NULL,
+                                    &res) == filesize);
           // asseration will fail so yk
         }
       }
