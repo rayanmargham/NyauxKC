@@ -64,10 +64,14 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
   }
   size_t sizeofexecutable = highest_address - lowest_address;
   void *feet;
-  if (hdr->e_type == ET_DYN) feet = uvmm_region_alloc(usrmap, sizeofexecutable, 0);
-  else feet = uvmm_region_alloc_fixed(usrmap, lowest_address, sizeofexecutable, false);
+  if (hdr->e_type == ET_DYN)
+    feet = uvmm_region_alloc(usrmap, sizeofexecutable, 0);
+  else
+    feet = uvmm_region_alloc_fixed(usrmap, lowest_address, sizeofexecutable,
+                                   false);
   kprintf("elf: loaded elf at %p, with entry point %p\r\n",
-          (void *)((uint64_t)feet - lowest_address), (void*)((uint64_t)feet - lowest_address + hdr->e_entry));
+          (void *)((uint64_t)feet - lowest_address),
+          (void *)((uint64_t)feet - lowest_address + hdr->e_entry));
   out->entrypoint = (uint64_t)feet - lowest_address + hdr->e_entry;
   out->phent = hdr->e_phentsize;
   out->phnum = hdr->e_phnum;
@@ -129,6 +133,7 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
     }
     struct ElfInfo interpinfo = {};
     load_elf_pie(usrmap, hdr, &interpinfo);
+    kfree(buffer, sizeofelf);
     entrypoint = interpinfo.entrypoint;
   }
   int argc = 0;
@@ -185,4 +190,6 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
   *--stack = argc;
   frame->rsp = (uint64_t)stack;
   frame->rip = entrypoint;
+  kfree(argv_user, argc * sizeof(uint64_t));
+  kfree(envp_user, g * sizeof(uint64_t));
 }

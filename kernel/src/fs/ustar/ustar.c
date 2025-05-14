@@ -68,6 +68,19 @@ void populate_tmpfs_from_tar() {
         break;
       case '1':
         sprintf("ustar(): hard link :c\r\n");
+        sprintf("hard link %s -> %s\r\n", name, ptr->name_linked_file);
+        struct vnode *destination = NULL;
+        struct vnode *src = NULL;
+        vfs_lookup(NULL, ptr->name_linked_file, &destination);
+        vfs_lookup(NULL, name, &src);
+        if (!destination) {
+          panic("USTAR has invalid hard link point to a file that does not "
+                "exist\r\n");
+        }
+        if (src) {
+          panic("thats crazy");
+        }
+
         advance(&ptr);
         break;
       case '2':

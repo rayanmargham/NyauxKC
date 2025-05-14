@@ -55,7 +55,9 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   if (path[0] == '/' || starter == NULL) {
     // assume root
     starter = vfs_list->cur_vnode;
-    path += 1;
+    if (path[0] == '/') {
+      path += 1;
+    }
   }
 
   while (*path) {

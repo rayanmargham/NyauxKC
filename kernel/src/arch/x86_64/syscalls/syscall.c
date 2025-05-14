@@ -72,7 +72,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
     struct process_t *proc = get_process_start();
     node = proc->cwd;
     get_process_finish(proc);
-    
+
   } else {
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
     if (hnd == NULL) {
@@ -91,9 +91,12 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   setup->mode = mode;
   return (struct __syscall_ret){.ret = outfd, .errno = 0};
 }
-struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds, int timeout) {
-  
-  sprintf("poll(): fuck you! number of fds: %lu, events: %d, targetted fd: %d, timeout: %d\r\n", nfds, fds->events, fds->fd, timeout);
+struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
+                                  int timeout) {
+
+  sprintf("poll(): fuck you! number of fds: %lu, events: %d, targetted fd: %d, "
+          "timeout: %d\r\n",
+          nfds, fds->events, fds->fd, timeout);
   if (timeout != -1) {
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
@@ -108,7 +111,7 @@ struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds, int timeout) 
   if (ret != 0) {
     return (struct __syscall_ret){.ret = -1, .errno = ret};
   }
-  
+
   return (struct __syscall_ret){.ret = 1, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
@@ -187,8 +190,8 @@ struct __syscall_ret syscall_write(int fd, const void *buf, size_t count) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   int res = 0;
-  size_t written =
-      hnd->node->ops->rw(hnd->node, hnd->offset, count, (void *)buf, 1, hnd, &res);
+  size_t written = hnd->node->ops->rw(hnd->node, hnd->offset, count,
+                                      (void *)buf, 1, hnd, &res);
   if (res) {
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
@@ -357,8 +360,15 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
     sprintf("syscall_execve(): Ready To Execute\r\n");
     load_elf(cpu->cur_thread->proc->cur_map, kernelpath, newargv, newenvp,
              &cpu->cur_thread->arch_data.frame);
-    sprintf("okay\r\n");
+    kfree(newenvp, (g + 1) * 8);
+    kfree(newargv, (argc + 1) * 8);
     schedd(NULL);
+    panic("hello?\r\n");
+    // is anyone there?
+    // its dark..
+    // its so dark..
+    // can anyone hear me?
+    // anyone?...
   }
 }
 extern void syscall_entry();

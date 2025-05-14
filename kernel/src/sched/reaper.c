@@ -51,12 +51,13 @@ void reaper() {
 
         free_pagemap(proc->cur_map);
       }
+      hashmap_free(proc->fds); // this was a memory leak i forgot existed :sob:
       kfree(proc, sizeof(struct process_t));
 
       cpu->to_be_reapered = reaper->next;
 
       kfree(reaper, sizeof(struct thread_t));
-      kprintf("reaper(): thread killed\r\n");
+      sprintf("reaper(): thread killed\r\n");
     }
   }
 }
