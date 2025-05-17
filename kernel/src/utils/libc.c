@@ -28,7 +28,7 @@
 // ----------------------------------------------------------------------
 
 #define ALIGN (sizeof(size_t))
-#define ONES ((size_t) - 1 / UCHAR_MAX)
+#define ONES ((size_t)-1 / UCHAR_MAX)
 #define HIGHS (ONES * (UCHAR_MAX / 2 + 1))
 #define HASZERO(x) ((x) - ONES & ~(x) & HIGHS)
 
@@ -120,6 +120,19 @@ char *strtok(char *restrict s, const char *restrict sep) {
     p = 0;
   return s;
 }
+// Copyright (C) 2024-2024 Rayan Margham
+
+// Permission to use, copy, modify, and/or distribute this software for any
+// purpose with or without fee is hereby granted.
+
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+// REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+// INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+// LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+// OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
 char *strdup(const char *str) {
   size_t length = strlen(str);
   char *new_string = kmalloc(length + 1);
@@ -172,3 +185,62 @@ void resize_ringbuf(struct ring_buf *buf, size_t resize) {
   buf->buf = new;
 }
 size_t ringbuf_size(struct ring_buf *buf) { return buf->size; }
+
+size_t find_second_component_of_path(const char *path, char **out) {
+  const char *keep = path;
+  size_t funkybeat = 0;
+  while (*path) {
+    if (*path == '/') {
+      funkybeat += 1; // don't forget, im with you in the dark
+      path += 1;
+      continue;
+    }
+    const char *start = path;
+    while (*path && *path != '/') {
+      path += 1;
+    }
+    size_t len = path - start;
+    if (len == 0) {
+      continue;
+    }
+    funkybeat += len;
+    const char *check = start + len + 1;
+    while (*check && *check != '/') {
+      check += 1;
+    }
+    if ((*check == '/' && *(check + 1) == '\0') || *(check) == '\0') {
+      char *bigballs = kmalloc(funkybeat + 1);
+      memcpy(bigballs, keep, funkybeat);
+      bigballs[funkybeat] = '\0';
+      sprintf("bigballs: %s\r\n", bigballs);
+      *out = bigballs;
+      return funkybeat + 1; // now it is up to the user to kfree this shit
+    }
+  }
+  return 0;
+}
+size_t find_last_component_of_path(const char *path, char **out) {
+  while (*path) {
+    if (*path == '/') {
+      path += 1;
+      continue;
+    }
+    const char *start = path;
+    while (*path && *path != '/') {
+      path += 1;
+    }
+    size_t len = path - start;
+    if (len == 0) {
+      continue;
+    }
+    char *component = kmalloc(len + 1);
+    memcpy(component, start, len);
+    component[len] = 0;
+    if (!*path) {
+      *out = component;
+      return len;
+    }
+    kfree(component, len + 1);
+  }
+  return 0;
+}

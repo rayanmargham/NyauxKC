@@ -16,3 +16,5 @@ bool empty_ringbuf(struct ring_buf *buf);
 void resize_ringbuf(struct ring_buf *buf, size_t resize);
 struct ring_buf *init_ringbuf(size_t thesize);
 size_t ringbuf_size(struct ring_buf *buf);
+size_t find_second_component_of_path(const char *path, char **out);
+size_t find_last_component_of_path(const char *path, char **out);

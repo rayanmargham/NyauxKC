@@ -3,10 +3,12 @@
 #include <stdint.h>
 
 #include "fs/vfs/vfs.h"
+#include "libc.h"
 #include "limine.h"
 #include "term/term.h"
 #include "utils/basic.h"
 
+#include <mem/kmem.h>
 // stolen from https://wiki.osdev.org/USTAR :trl:
 int oct2bin(unsigned char *str, int size) {
   int n = 0;
@@ -53,7 +55,6 @@ void populate_tmpfs_from_tar() {
         advance(&ptr);
         break;
       case '0':
-        // kprintf("found file with path: %s\r\n", ptr->name);
         uint64_t size = (uint64_t)oct2bin((unsigned char *)ptr->filesize_octal,
                                           strlen(ptr->filesize_octal));
         if (size != 0) {
@@ -71,16 +72,47 @@ void populate_tmpfs_from_tar() {
         sprintf("hard link %s -> %s\r\n", name, ptr->name_linked_file);
         struct vnode *destination = NULL;
         struct vnode *src = NULL;
+        char *lookup = NULL;
+        size_t lookup_len = find_second_component_of_path(name, &lookup);
+        char *last = NULL;
+        size_t last_len = find_last_component_of_path(name, &last);
+
+        if (!lookup || !last) {
+          panic("???");
+        }
+        sprintf("last component: %s, len: %lu\r\n", last, last_len);
         vfs_lookup(NULL, ptr->name_linked_file, &destination);
-        vfs_lookup(NULL, name, &src);
+        vfs_lookup(NULL, lookup, &src);
+
         if (!destination) {
           panic("USTAR has invalid hard link point to a file that does not "
                 "exist\r\n");
         }
-        if (src) {
+        if (!src) {
+          // we should get panic
           panic("thats crazy");
         }
+        if (src->v_type != VDIR || destination->v_type != VREG) {
+          sprintf("what?\r\n");
+          panic("bruh");
+        }
+        // create a vnode link between src -> destination
+        // create src
+        // now how do we create src without parent vnode ???
+        // this is a good question
+        // we could a: manipulate the path to get the last compoent removed
+        // then get that vnode and use ->create to make it
+        // or we could impl a parent vnode field
+        // hmmmmm
+        // SANS WHY AM I IN A CODE BLOCK, WHERES MY SPAGGTHETI I NEED TO CAPTURE
+        // THE HUMAN uhhhhh.... maybe we're here because the guy writing this is
+        // braindead WHAT...??? just kidding! uh i dunno bro WHERE IS THE HUMAN
+        // ?????
+        src->ops->hardlink(src, destination, last);
 
+        kfree(lookup, lookup_len);
+        kfree(last, last_len + 1);
+        sprintf("made hardlink\r\n");
         advance(&ptr);
         break;
       case '2':

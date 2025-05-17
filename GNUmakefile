@@ -17,7 +17,7 @@ debug:
 	JINX_CONFIG_FILE=jinx-config-debug $(MAKE) all
 
 jinx:
-	curl -Lo jinx https://codeberg.org/mintsuki/jinx/raw/commit/41e0ebe7b90d5a719dfe725552f657aca7aa7044/jinx
+	curl -Lo jinx https://codeberg.org/mintsuki/jinx/raw/commit/49be94c4592d40259e190416945f6aac3692b0c1/jinx
 	chmod +x jinx
 
 .PHONY: run-kvm

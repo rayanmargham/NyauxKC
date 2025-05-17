@@ -21,12 +21,15 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
 static int readdir(struct vnode *curvnode, int offset, char **name);
 static int mount(struct vfs *curvfs, char *path, void *data);
 static int poll(struct vnode *curvnode, struct pollfd *requested);
+static int hardlink(struct vnode *curvnode, struct vnode *with,
+                    const char *name);
 struct vnodeops vnode_devops = {.lookup = lookup,
                                 .create = create,
                                 .rw = rww,
                                 readdir,
                                 .ioctl = ioctl,
-                                .poll = poll};
+                                .poll = poll,
+                                .hardlink = hardlink};
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
@@ -193,4 +196,17 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
 static int poll(struct vnode *curvnode, struct pollfd *requested) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
   return devnode->info->ops->poll(curvnode, requested);
+}
+int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
+  if (curvnode->v_type != VDIR) {
+    return EINVAL;
+  }
+  struct devfsnode *node = (struct devfsnode *)curvnode->data;
+  assert(node);
+  struct devfsdirentry *entry = (struct devfsdirentry *)node->direntry;
+  struct devfsnode *new = (struct devfsnode *)kmalloc(sizeof(struct devfsnode));
+  new->name = (char *)name;
+  new->curvnode = with;
+  insert_into_list(new, entry);
+  return 0;
 }

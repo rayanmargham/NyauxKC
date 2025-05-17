@@ -4,13 +4,10 @@ name=base-files
 version=0.0
 revision=1
 source_dir="base-files"
-
+skip_pkg_check=yes
 package() {
      cp -r ${source_dir}/. "${dest_dir}"/
  
 
 
- 
-
-    
 }

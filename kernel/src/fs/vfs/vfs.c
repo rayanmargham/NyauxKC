@@ -139,6 +139,7 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
     if (res != 0)
       assert(current_node->ops->create(current_node, token, VDIR, &tmpfs_ops,
                                        &next_node, NULL, NULL) == 0);
+
     assert(next_node->v_type == VDIR);
 
     current_node = next_node;
@@ -167,6 +168,7 @@ void vfs_scan() {
   struct vnode *fein = vfs_list->cur_vnode;
   vf_scan(fein);
 }
+
 void vfs_init() {
   vfs_mount(&tmpfs_vfsops, NULL, NULL);
   // vfs_scan();
