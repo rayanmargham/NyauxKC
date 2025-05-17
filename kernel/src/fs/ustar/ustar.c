@@ -108,7 +108,7 @@ void populate_tmpfs_from_tar() {
         // THE HUMAN uhhhhh.... maybe we're here because the guy writing this is
         // braindead WHAT...??? just kidding! uh i dunno bro WHERE IS THE HUMAN
         // ?????
-        src->ops->hardlink(src, destination, last);
+        src->ops->hardlink(src, destination, strdup(last));
 
         kfree(lookup, lookup_len);
         kfree(last, last_len + 1);
