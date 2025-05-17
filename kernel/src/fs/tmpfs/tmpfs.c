@@ -144,6 +144,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
     return -1;
   } else if (curvnode->v_type == VDIR) {
     struct direntry *entry = (struct direntry *)node->direntry;
+    assert(entry);
     for (size_t i = 0; i < entry->cnt; i++) {
       assert(entry->nodes[i]->name);
       if (strcmp(entry->nodes[i]->name, name) == 0) {
