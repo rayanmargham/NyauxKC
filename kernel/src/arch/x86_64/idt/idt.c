@@ -153,7 +153,7 @@ void RegisterHandler(int interrupt,
 int AllocateIrq() {
   for (int i = 33; i < 256; i++) {
     if (idt_handlers[i] == default_handler) {
-      kprintf("AllocateIrq(): Found irq vector %d\r\n", i);
+      kprintf(__func__ "(): Found irq vector %d\r\n", i);
       return i;
     }
   }

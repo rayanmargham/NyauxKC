@@ -190,13 +190,13 @@ void populate_ioapic()
 				struct acpi_madt_interrupt_source_override* ohcool = (struct acpi_madt_interrupt_source_override*)ent;
 				assert(isocount < 16);
 				isos[isocount] = *ohcool;
-				kprintf("populate_ioapic(): isa override from isa %d to gsi %d\r\n", ohcool->source, ohcool->gsi);
+				kprintf(__func__ "(): isa override from isa %d to gsi %d\r\n", ohcool->source, ohcool->gsi);
 				break;
 			case ACPI_MADT_ENTRY_TYPE_IOAPIC:
 				struct acpi_madt_ioapic* blah = (struct acpi_madt_ioapic*)ent;
-				kprintf("populate_ioapic(): found ioapic %d, manages from gsi %d, phys address %lx\r\n", ioapiccount,
+				kprintf(__func__ "(): found ioapic %d, manages from gsi %d, phys address %lx\r\n", ioapiccount,
 						blah->gsi_base, (uint64_t)blah->address);
-				kprintf("populate_ioapic(): ioapic version is %d. max gsi is %d\r\n",
+				kprintf(__func__ "(): ioapic version is %d. max gsi is %d\r\n",
 						0xF & (24 >> (uint64_t)ioapic_read(blah, 0)), 0xFF & (((uint64_t)ioapic_read(blah, 1)) >> 16));
 				assert(ioapiccount < 20);
 				apics[ioapiccount] = *blah;

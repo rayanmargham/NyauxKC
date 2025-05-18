@@ -104,7 +104,7 @@ static void ec_wait_for_bit(struct acpi_gas *reg, uint8_t mask,
   do {
     uacpi_status status = uacpi_gas_read(reg, &val);
     if (uacpi_unlikely_error(status)) {
-      panic("ec(): encountered an error reading the ec, uacpi_status_reason: "
+      panic(__func__ "(): encountered an error reading the ec, uacpi_status_reason: "
             "%s\r\n");
     }
   } while ((val & mask) != desired_mask);
@@ -149,7 +149,7 @@ static bool ec_burst_time() {
   ec_write(&ec_control_register, BE_EC); // enables burst mode lol
   uint8_t response = ec_read(&ec_data_register);
   if (response != BURST_ACK) {
-    kprintf("ec(): burst enable didnt get listened to by ec because its racist "
+    kprintf(__func__ "(): burst enable didnt get listened to by ec because its racist "
             "towards nyaux\r\n");
     return false;
   }
@@ -297,18 +297,18 @@ static void install_ec_handlers() {
   }
 }
 void ec_init() {
-  kprintf("ec(): initing from namespace\r\n");
+  kprintf(__func__ "(): initing from namespace\r\n");
   if (ec_inited) {
     return;
   }
-  kprintf("ec(): finding device\r\n");
+  kprintf(__func__ "(): finding device\r\n");
   uacpi_find_devices("PNP0C09", ec_match, NULL);
   if (ec_inited) {
     kprintf("installing handlers\r\n");
     install_ec_handlers();
     uint8_t val = ec_read(&ec_control_register);
     kprintf("in %s: ec status reg: %b\r\n", __func__, val);
-    kprintf("ec(): device has ec!!\r\n");
+    kprintf(__func__ "(): device has ec!!\r\n");
     uacpi_status stat = uacpi_enable_gpe(ec_gpe_node, ec_gpe_idx);
     if (stat != UACPI_STATUS_OK) {
       kprintf("failed to enable gpe: %s\r\n", uacpi_status_to_string(stat));
@@ -316,7 +316,7 @@ void ec_init() {
     }
     return;
   } else {
-    kprintf("ec(): device does not have ec\r\n");
+    kprintf(__func__ "(): device does not have ec\r\n");
     return;
   }
 }
@@ -324,7 +324,7 @@ void initecfromecdt() {
   struct uacpi_table chat = {};
   uacpi_status stat = uacpi_table_find_by_signature("ECDT", &chat);
   if (stat != UACPI_STATUS_OK) {
-    kprintf("ec(): no ecdt table found, will init from namespace\r\n");
+    kprintf(__func__ "(): no ecdt table found, will init from namespace\r\n");
     return;
   }
   struct acpi_ecdt *ok = (struct acpi_ecdt *)chat.virt_addr;
@@ -334,7 +334,7 @@ void initecfromecdt() {
   uacpi_namespace_node_find(NULL, ok->ec_id, &ec_node);
   ec_inited = true;
   install_ec_handlers();
-  kprintf("ec(): found ecdt table, installed and inited ec successfully\r\n");
+  kprintf(__func__ "(): found ecdt table, installed and inited ec successfully\r\n");
   stat = uacpi_enable_gpe(ec_node, ec_gpe_idx);
   assert(stat == UACPI_STATUS_OK);
   return;

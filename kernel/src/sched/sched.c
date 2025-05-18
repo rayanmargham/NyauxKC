@@ -200,7 +200,7 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   build_fpu_state(newthread->fpu_state);
   refcount_inc(&proc->cnt);
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
-  kprintf("user thread creation(): giving %lu for the stack\r\n",
+  kprintf(__func__ "(): giving %lu for the stack\r\n",
           (size_t)USTACKSIZE);
   uint64_t ustack =
       (uint64_t)uvmm_region_alloc(proc->cur_map, USTACKSIZE, 0) + USTACKSIZE;
@@ -353,7 +353,7 @@ void schedd(struct StackFrame *frame) {
     return;
   }
   if (cpu->cur_thread == NULL && cpu->run_queue == NULL) {
-    // kprintf("schedd(): no threads to run\r\n");
+    // kprintf(__func__ "(): no threads to run\r\n");
     return;
   }
   if (cpu->cur_thread) {

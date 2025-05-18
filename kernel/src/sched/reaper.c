@@ -57,7 +57,7 @@ void reaper() {
       cpu->to_be_reapered = reaper->next;
 
       kfree(reaper, sizeof(struct thread_t));
-      sprintf("reaper(): thread killed\r\n");
+      sprintf(__func__ "(): thread killed\r\n");
     }
   }
 }

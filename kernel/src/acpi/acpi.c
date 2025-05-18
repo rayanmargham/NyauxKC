@@ -13,7 +13,7 @@
 void init_acpi_early()
 {
 	uint64_t rsdp = (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
-	kprintf("init_acpi(): initing uacpi\n");
+	kprintf(__func__ "(): initing uacpi\n");
 	// uacpi_context_set_log_level(UACPI_LOG_TRACE);
 	uacpi_status st = uacpi_initialize(0);
 	init_hpet();
@@ -24,14 +24,14 @@ void init_acpi_early()
 	ec_init();
 	st = uacpi_finalize_gpe_initialization();
 
-	kprintf("init_acpi(): now loading namespace\n");
+	kprintf(__func__ "(): now loading namespace\n");
 	if (st == UACPI_STATUS_OK)
 	{
-		kprintf("init_acpi(): uacpi early init finished\n");
+		kprintf(__func__ "(): uacpi early init finished\n");
 		return;
 	}
 	else
 	{
-		panic("init_acpi(): Failed\n");
+		panic(__func__ "(): Failed\n");
 	}
 }

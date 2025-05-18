@@ -72,14 +72,14 @@ void vmm_init() {
   arch_init_pagemap(&ker_map);
   hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
   hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
-  kprintf("vmm(): HDDM Pages %lu\r\n", hhdm_pages);
+  kprintf(__func__ "(): HDDM Pages %lu\r\n", hhdm_pages);
   // panic("h");
   arch_switch_pagemap(&ker_map);
-  kprintf("vmm(): Creating Regions...\r\n");
+  kprintf(__func__ "(): Creating Regions...\r\n");
   result res = region_setup(&ker_map, hhdm_pages);
   unwrap_or_panic(res);
-  kprintf("vmm(): Kernel is now in its own pagemap :)\r\n");
-  kprintf("vmm(): Region is setup!\r\n");
+  kprintf(__func__ "(): Kernel is now in its own pagemap :)\r\n");
+  kprintf(__func__ "(): Region is setup!\r\n");
 }
 uint64_t kvmm_region_bytesused() {
   VMMRegion *cur = (VMMRegion *)ker_map.head;
@@ -128,8 +128,8 @@ void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       continue;
     }
   };
-  kprintf("vmm(): No free Regions, Too Much Memory being used!!!\r\n");
-  panic("vmm(): Sir madamm this should never occur");
+  kprintf(__func__ "(): No free Regions, Too Much Memory being used!!!\r\n");
+  panic(__func__ "(): Sir madamm this should never occur");
   return NULL;
 }
 bool iswithinvmmregion(pagemap *map, uint64_t virt) {
@@ -167,8 +167,8 @@ void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount) {
       continue;
     }
   };
-  kprintf("vmm(): No free Regions, Too Much Memory being used!!!\r\n");
-  panic("vmm(): Sir madamm this should never occur");
+  kprintf(__func__ "(): No free Regions, Too Much Memory being used!!!\r\n");
+  panic(__func__ "(): Sir madamm this should never occur");
   return NULL;
 }
 void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
@@ -188,7 +188,7 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       prev->next = (struct VMMRegion *)new;
       new->next = (struct VMMRegion *)cur;
       arch_map_vmm_region(map, new->base, new->length, true);
-      sprintf("uvm_region_alloc(): returning %p\r\n", (void *)new->base);
+      sprintf(__func__ "(): returning %p\r\n", (void *)new->base);
       return (void *)new->base;
     } else {
       prev = cur;
@@ -196,8 +196,8 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
       continue;
     }
   };
-  kprintf("vmm(): No free Regions, Too Much Memory being used!!!\r\n");
-  panic("vmm(): Sir madamm this should never occur");
+  kprintf(__func__ "(): No free Regions, Too Much Memory being used!!!\r\n");
+  panic(__func__ "(): Sir madamm this should never occur");
   return NULL;
 }
 void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,

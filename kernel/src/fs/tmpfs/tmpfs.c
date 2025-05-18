@@ -107,13 +107,13 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
         dir->node = todifferentnode;
         dir->name = name;
         todifferentnode->stat.st_mode = S_IFDIR;
-        sprintf("tmpfs(): different node data %p\r\n", todifferentnode->data);
+        sprintf(__func__ "(): different node data %p\r\n", todifferentnode->data);
         insert_into_list(dir, entry);
         *res = todifferentnode;
         return 0;
       }
 
-      // kprintf("tmpfs(): created\r\n");
+      // kprintf(__func__ "(): created\r\n");
       return 0;
     } else if (type == VREG || type == VSYMLINK) {
       struct tmpfsnode *file =
@@ -188,7 +188,7 @@ static int mount(struct vfs *curvfs, char *path, void *data) {
   insert_into_list(dotdot, direntry);
   curvfs->cur_vnode = newnode;
   dir->node = newnode;
-  kprintf("tmpfs(): created and mounted\r\n");
+  kprintf(__func__ "(): created and mounted\r\n");
   return 0;
 }
 static size_t rw(struct vnode *curvnode, size_t offset, size_t size,

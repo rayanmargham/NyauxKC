@@ -8,7 +8,7 @@
 void acquire_kmutex(struct KMutex* mutex)
 {
 	spinlock_lock(&mutex->protectionlock);
-	// kprintf("acquire_kmutex(): lock is %d\n", mutex->lock);
+	// kprintf(__func__ "(): lock is %d\n", mutex->lock);
 	if (!mutex->lock)
 	{
 		mutex->lock = true;

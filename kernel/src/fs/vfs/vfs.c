@@ -25,7 +25,7 @@ int vfs_mount(struct vfs_ops *ops, char *path, void *data) {
 
 int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   struct vnode *starter = start;
-  sprintf("vfs_lookup(): looking up \"%s\"\r\n", path);
+  sprintf(__func__ "(): looking up \"%s\"\r\n", path);
   if (path[1] == '\0' && path[0] != '/') {
     if (path[0] == '.') {
       //
@@ -39,16 +39,16 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
       struct vnode *result = NULL;
       int res = starter->ops->lookup(starter, (char *)path, &result);
       if (res != 0) {
-        kprintf("vfs(): file not found\r\n");
+        kprintf(__func__ "(): file not found\r\n");
         return res;
       }
       if (result->v_type == VSYMLINK) {
-        panic("vfs(): not supported");
+        panic(__func__ "(): not supported");
       }
       *node = starter;
       return 0;
     } else {
-      kprintf("vfs(): file not found\r\n");
+      kprintf(__func__ "(): file not found\r\n");
       return -1;
     }
   }
@@ -62,7 +62,7 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
 
   while (*path) {
     if (starter->v_type != VDIR) {
-      kprintf("vfs(): starter is NOT a dir!!! %d\r\n", starter->v_type);
+      kprintf(__func__ "(): starter is NOT a dir!!! %d\r\n", starter->v_type);
       return -1;
     }
     if (*path == '/') {
@@ -82,17 +82,17 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     memcpy(name, start, len);
     name[len] = 0;
     struct vnode *res = NULL;
-    sprintf("vfs_lookup(): iteration component \"%s\"\r\n", name);
+    sprintf(__func__ "(): iteration component \"%s\"\r\n", name);
     int ress = starter->ops->lookup(starter, name, &res);
     kfree(name, len + 1);
     if (ress != 0) {
-      sprintf("vfs(): file not found\r\n");
+      sprintf(__func__ "(): file not found\r\n");
       return ress;
     }
     if (res->v_type == VSYMLINK) {
       ress = vfs_lookup(starter, res->data, &res);
       if (ress != 0) {
-        kprintf("vfs(): symlink not found\r\n");
+        kprintf(__func__ "(): symlink not found\r\n");
         return ress;
       }
     }

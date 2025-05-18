@@ -156,7 +156,7 @@ void kmain(void) {
 	init_term(framebuffer);
 	get_symbols();
 	init_acpi_early();
-	kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\r\n",
+	kprintf(__func__ "(): Total Memory in Use: %lu Bytes or %lu MB\r\n",
 			total_memory(), total_memory() / 1048576);
 	create_kentry();
 	hashmap_set_allocator(kmalloc, kfree);
@@ -172,14 +172,14 @@ void kmain(void) {
 	// {
 	// 	kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
 	// }
-	kprintf("kmain(): We are chilling i guess\n");
+	kprintf(__func__ "(): We are chilling i guess\n");
 	hcf(); // We just chill.
 }
 extern void do_funny();
 void kentry() {
 	// init vfs, load font from initramfs, change font or smthin for flanterm or
 	// use a custom made terminal idk, lots of things to do
-	kprintf("kentry(): Hello World from a scheduled thread\r\n");
+	kprintf(__func__ "(): Hello World from a scheduled thread\r\n");
 	vfs_init();
 	get_time();
 	// struct ring_buf *funnytest = init_ringbuf(10);
@@ -188,7 +188,7 @@ void kentry() {
 	// ;
 	// uint64_t ret = 0;
 	// while (get_ringbuf(funnytest, (uint64_t *)&ret)) {
-	//   kprintf("ringbuf(): %d\r\n", (int)ret);
+	//   kprintf(__func__ "(): %d\r\n", (int)ret);
 	// }
 	// pagemap *test = new_pagemap();
 	// kprintf("%p\r\n", test);

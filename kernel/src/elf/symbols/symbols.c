@@ -8,7 +8,7 @@
 #include "term/term.h"
 void kprintf_elfsect(Elf64_Shdr* hdr)
 {
-	kprintf("kprintf_elfsect(): Elf Section Header: type %u\r\n", hdr->sh_type);
+	kprintf(__func__ "(): Elf Section Header: type %u\r\n", hdr->sh_type);
 }
 nyauxsymbol find_from_rip(uint64_t rip)
 {
@@ -44,7 +44,7 @@ void bubblesort(int length)
 void get_symbols()
 {
 	Elf64_Ehdr* hdr = get_kernel_elfheader();
-	kprintf("get_symbols(): found elf signature %c%c%c%c\r\n", hdr->e_ident[0], hdr->e_ident[1], hdr->e_ident[2],
+	kprintf(__func__ "(): found elf signature %c%c%c%c\r\n", hdr->e_ident[0], hdr->e_ident[1], hdr->e_ident[2],
 			hdr->e_ident[3]);
 	Elf64_Shdr* sections = ((Elf64_Shdr*)(get_kerneL_address() + hdr->e_shoff));
 	Elf64_Shdr* strtab = NULL;
@@ -90,11 +90,11 @@ void get_symbols()
 		symbolarray = h;
 		bubblesort(h->size);
 
-		kprintf("get_symbols(): Nyaux Symbol Resource Created and Stored on "
+		kprintf(__func__ "(): Nyaux Symbol Resource Created and Stored on "
 				"Heap\r\n");
 	}
 	else
 	{
-		panic("get_symbols(): Couldn't Read Symbols");
+		panic(__func__ "(): Couldn't Read Symbols");
 	}
 }

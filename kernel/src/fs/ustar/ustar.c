@@ -28,15 +28,15 @@ void advance(struct tar_header **ptr) {
 }
 void populate_tmpfs_from_tar() {
   if (modules.response == NULL) {
-    panic("populate_tmpfs_from_tar(): Nyaux Cannot Continue without a "
+    panic(__func__ "(): Nyaux Cannot Continue without a "
           "initramfs...\r\n");
   } else if (modules.response->module_count == 0) {
-    panic("populate_tmpfs_from_tar(): Nyaux Cannot Continue without a "
+    panic(__func__ "(): Nyaux Cannot Continue without a "
           "initramfs...\r\n");
   }
   struct tar_header *ptr = modules.response->modules[0]->address;
   if (strcmp((char *)(ptr->ustar), "ustar") == 0) {
-    kprintf("populate_tmpfs_from_tar(): this is a ustar archive, unpacking and "
+    kprintf(__func__ "(): this is a ustar archive, unpacking and "
             "populating the vfs\r\n");
     while ((void *)ptr < (modules.response->modules[0]->address +
                           modules.response->modules[0]->size) -
@@ -68,7 +68,7 @@ void populate_tmpfs_from_tar() {
         advance(&ptr);
         break;
       case '1':
-        sprintf("ustar(): hard link :c\r\n");
+        sprintf(__func__ "(): hard link :c\r\n");
         sprintf("hard link %s -> %s\r\n", name, ptr->name_linked_file);
         struct vnode *destination = NULL;
         struct vnode *src = NULL;
@@ -130,6 +130,6 @@ void populate_tmpfs_from_tar() {
       }
     }
   } else {
-    panic("populate_tmpfs_from_tar(): Invalid tar format...\r\n");
+    panic(__func__ "(): Invalid tar format...\r\n");
   }
 }

@@ -54,7 +54,7 @@ static void insert_into_list(struct devfsnode *node,
 void devfs_init(struct vfs *curvfs) {
   struct vnode *starter = NULL;
   vfs_lookup(NULL, "/", &starter);
-  kprintf("devfs(): init\r\n");
+  kprintf(__func__ "(): init\r\n");
   struct vfs *new = kmalloc(sizeof(struct vfs));
   new->vfs_ops = &vfs_devops;
   struct vnode *replacement = kmalloc(sizeof(struct vnode));
@@ -167,7 +167,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   struct devfsnode *node = (struct devfsnode *)curvnode->data;
   if (node == NULL) {
     // todo: change this later
-    panic("devfs(): node is null");
+    panic(__func__ "(): node is null");
   }
   if (curvnode->v_type == VREG) {
     return -1;

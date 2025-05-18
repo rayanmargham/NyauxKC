@@ -34,9 +34,9 @@ result pmm_init() {
   spinlock_lock(&pmmlock);
   pnode *cur = &head;
   result ok = {.type = ERR, .err_msg = "pmm_init() failed"};
-  kprintf("pmm_init(): entry count %lu\r\n",
+  kprintf(__func__ "(): entry count %lu\r\n",
           memmap_request.response->entry_count);
-  kprintf("%s(): The HHDM is 0x%lx\r\n", __FUNCTION__,
+  kprintf(__func__ "(): The HHDM is 0x%lx\r\n", __FUNCTION__,
           hhdm_request.response->offset);
   for (uint64_t i = 0; i < memmap_request.response->entry_count; i++) {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
@@ -51,8 +51,8 @@ result pmm_init() {
       break;
     }
   }
-  kprintf("pmm_init(): FreeList Created\r\n");
-  kprintf("pmm_init(): Free Pages %ju\r\n", get_free_pages());
+  kprintf(__func__ "(): FreeList Created\r\n");
+  kprintf(__func__ "(): Free Pages %ju\r\n", get_free_pages());
   spinlock_unlock(&pmmlock);
   result ress = init_kmalloc();
   unwrap_or_panic(ress);
@@ -79,7 +79,7 @@ void *pmm_alloc() {
   }
   pnode *him = (pnode *)head.next;
   if ((uint64_t)him < hhdm_request.response->offset) {
-    sprintf("pmm(): addr is %p\r\n", him);
+    sprintf(__func__ "(): addr is %p\r\n", him);
   }
   assert((uint64_t)him >= hhdm_request.response->offset);
   head.next = (struct pnode *)him->next;
@@ -123,7 +123,7 @@ void init_cache(cache *mod, uint64_t size) {
   mod->slabs = (struct slab *)init_slab(size);
 }
 result init_kmalloc() {
-  result ok = {.type = ERR, .err_msg = "init_kmalloc(): failed"};
+  result ok = {.type = ERR, .err_msg = __func__ "(): failed"};
   init_cache(&caches[0], 16);
   init_cache(&caches[1], 32);
   init_cache(&caches[2], 64);

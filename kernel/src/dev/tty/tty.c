@@ -77,7 +77,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
-  sprintf("tty(): request is 0x%lx\r\n", request);
+  sprintf(__func__ "(): request is 0x%lx\r\n", request);
   *(void **)result = NULL;
   switch (request) {
   case TIOCGWINSZ:
@@ -87,7 +87,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     size_t rows = 0;
     struct flanterm_context *ctx = get_fctx();
     flanterm_get_dimensions(ctx, &cols, &rows);
-    sprintf("tty(): cols %lu rows %lu\r\n", cols, rows);
+    sprintf(__func__ "(): cols %lu rows %lu\r\n", cols, rows);
     struct winsize size = {.ws_row = rows, .ws_col = cols};
     *(struct winsize *)arg = size;
     return 0;
@@ -98,7 +98,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     assert(data != NULL);
     struct tty *tty = data;
     if (tty->termi.c_lflag & ICANON) {
-      sprintf("tty(): canonical mode is enabled\r\n");
+      sprintf(__func__ "(): canonical mode is enabled\r\n");
     }
     *(struct termios *)arg = tty->termi;
     return 0;
@@ -106,12 +106,12 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
   case TCSETS:
     assert(data != NULL);
     struct tty *ttyy = data;
-    sprintf("tty(): before c_lflags 0x%x, c_iflag 0x%x c_oflags 0x%x c_cflags 0x%x\r\n", ttyy->termi.c_lflag,
+    sprintf(__func__ "(): before c_lflags 0x%x, c_iflag 0x%x c_oflags 0x%x c_cflags 0x%x\r\n", ttyy->termi.c_lflag,
             ttyy->termi.c_iflag, ttyy->termi.c_oflag, ttyy->termi.c_cflag);
     ttyy->termi = *(struct termios *)arg;
-    sprintf("tty(): after c_lflags 0x%x, c_iflag 0x%x c_oflags 0x%x c_cflags 0x%x\r\n", ttyy->termi.c_lflag,
+    sprintf(__func__ "(): after c_lflags 0x%x, c_iflag 0x%x c_oflags 0x%x c_cflags 0x%x\r\n", ttyy->termi.c_lflag,
             ttyy->termi.c_iflag, ttyy->termi.c_oflag, ttyy->termi.c_cflag);
-    sprintf("tty(): set values :)\r\n");
+    sprintf(__func__ "(): set values :)\r\n");
     return 0;
     break;
   case TIOCGPGRP:
@@ -126,7 +126,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
     return ENOSYS;
     break;
   default:
-    sprintf("tty(): unsupported tty request 0x%lx\r\n", request);
+    sprintf(__func__ "(): unsupported tty request 0x%lx\r\n", request);
     break;
   }
 
@@ -136,7 +136,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
 static struct tty *curtty = NULL;
 extern bool serial_data_ready();
 static int poll(struct vnode *curvnode, struct pollfd *requested) {
-  sprintf("tty(): poll() called on me, events are %d\r\n", requested->events);
+  sprintf(__func__ "(): poll() called on me, events are %d\r\n", requested->events);
   requested->revents = requested->events; // for now
   return 0;
 }

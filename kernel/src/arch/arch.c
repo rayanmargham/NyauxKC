@@ -71,7 +71,7 @@ uint64_t arch_raw_io_in(volatile uint64_t address,
 #endif
     break;
   default:
-    panic("raw_io_in(): not a valid byte width");
+    panic(__func__ "(): not a valid byte width");
     break;
   }
 }
@@ -105,9 +105,9 @@ void arch_init() {
   kprintf("Welcome to Nyaux on x86_64!\r\n");
   arch_create_bsp_per_cpu_data();
   init_gdt();
-  kprintf("arch_init(): gdt loaded.\r\n");
+  kprintf(__func__ "(): gdt loaded.\r\n");
   init_idt();
-  kprintf("arch_init(): idt loaded.\r\n");
+  kprintf(__func__ "(): idt loaded.\r\n");
   fpu_init();
   syscall_init();
 
@@ -125,7 +125,7 @@ void arch_late_init() {
   fpu_init();
   syscall_init();
 
-  kprintf("arch_late_init(): CPU %d is \e[0;32mOnline\e[0;37m!\r\n",
+  kprintf(__func__ "(): CPU %d is \e[0;32mOnline\e[0;37m!\r\n",
           get_lapic_id());
   init_lapic();
 #endif

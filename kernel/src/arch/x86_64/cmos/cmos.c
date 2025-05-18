@@ -29,5 +29,5 @@ void get_time()
 	volatile uint8_t val5 = read_cmos_reg(0x04);
 	volatile uint8_t val6 = read_cmos_reg(0x02);
 	volatile uint8_t val7 = read_cmos_reg(0x00);
-	kprintf("get_time(): [%d%d/%d/%d--%d:%d:%d]\n", val, val2, val3, val4, val5, val6, val7);
+	kprintf(__func__ "(): [%d%d/%d/%d--%d:%d:%d]\n", val, val2, val3, val4, val5, val6, val7);
 }
