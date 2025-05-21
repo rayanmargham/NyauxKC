@@ -177,7 +177,7 @@ endif
 
 # Internal C flags that should not be changed by the user.
 override CFLAGS += \
-    -std=gnu23 \
+    -std=gnu2x \
     $(SHARED_FLAGS)
 
 # Internal C++ flags that should not be changed by the user.
