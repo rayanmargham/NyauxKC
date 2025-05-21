@@ -8,6 +8,7 @@ test -z "$srcdir" && srcdir=.
 cd "$srcdir"
 
 clone_repo_commit() {
+    
     if test -d "$2/.git"; then
         git -C "$2" reset --hard
         git -C "$2" clean -fd
@@ -17,6 +18,9 @@ clone_repo_commit() {
     else
         if test -d "$2"; then
             set +x
+            if [ -v $GITHUB_CI ]; then
+                break # reason being github is a bitch
+            fi
             echo "error: '$2' is not a Git repository"
             exit 1
         fi
