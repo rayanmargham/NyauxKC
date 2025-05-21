@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <uacpi/acpi.h>
 #include <uacpi/event.h>
 #include <uacpi/io.h>
@@ -14,3 +17,6 @@
 #include "term/term.h"
 void initecfromecdt();
 void ec_init();
+#ifdef __cplusplus
+}
+#endif

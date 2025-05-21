@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "fs/vfs/fd.h"
 #include <stddef.h>
 #include <term/term.h>
@@ -160,3 +163,6 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node);
 #define F_RDLCK 0
 #define F_WRLCK 1
 #define F_UNLCK 2
+#ifdef __cplusplus
+}
+#endif

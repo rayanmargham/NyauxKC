@@ -30,44 +30,42 @@
 //     return UACPI_STATUS_INVALID_ARGUMENT;
 //     break;
 //   }
-void arch_raw_io_write(volatile uint64_t address, volatile uint64_t data,
-                       volatile uint8_t byte_width) {
+void arch_raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width) {
   switch (byte_width) {
   case 1:
 #if defined(__x86_64__)
-    outb((volatile uint16_t)address, (volatile uint8_t)data);
+    outb((uint16_t)address, (uint8_t)data);
 #endif
     break;
   case 2:
 #if defined(__x86_64__)
-    outw((volatile uint16_t)address, (volatile uint16_t)data);
+    outw((uint16_t)address, (uint16_t)data);
 #endif
     break;
   case 4:
 #if defined(__x86_64__)
-    outd((volatile uint16_t)address, (volatile uint32_t)data);
+    outd((uint16_t)address, (uint32_t)data);
 #endif
     break;
   default:
     break;
   }
 }
-uint64_t arch_raw_io_in(volatile uint64_t address,
-                        volatile uint8_t byte_width) {
+uint64_t arch_raw_io_in(uint64_t address, uint8_t byte_width) {
   switch (byte_width) {
   case 1:
 #if defined(__x86_64__)
-    return (volatile uint64_t)inb((volatile uint16_t)address);
+    return (uint64_t)inb((uint16_t)address);
 #endif
     break;
   case 2:
 #if defined(__x86_64__)
-    return (volatile uint64_t)inw((volatile uint16_t)address);
+    return (uint64_t)inw((uint16_t)address);
 #endif
     break;
   case 4:
 #if defined(__x86_64__)
-    return (volatile uint64_t)ind((volatile uint32_t)address);
+    return (uint64_t)ind((uint32_t)address);
 #endif
     break;
   default:

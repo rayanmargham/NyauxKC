@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 #include "fs/vfs/vfs.h"
-#include "libc.h"
 #include "limine.h"
 #include "term/term.h"
 #include "utils/basic.h"
@@ -68,8 +67,7 @@ void populate_tmpfs_from_tar() {
         advance(&ptr);
         break;
       case '1':
-        sprintf("ustar(): hard link :c\r\n");
-        sprintf("hard link %s -> %s\r\n", name, ptr->name_linked_file);
+        sprintf("ustar: hard link %s -> %s\r\n", name, ptr->name_linked_file);
         struct vnode *destination = NULL;
         struct vnode *src = NULL;
         char *lookup = NULL;
@@ -80,7 +78,6 @@ void populate_tmpfs_from_tar() {
         if (!lookup || !last) {
           panic("???");
         }
-        sprintf("last component: %s, len: %lu\r\n", last, last_len);
         vfs_lookup(NULL, ptr->name_linked_file, &destination);
         vfs_lookup(NULL, lookup, &src);
 
@@ -93,7 +90,6 @@ void populate_tmpfs_from_tar() {
           panic("thats crazy");
         }
         if (src->v_type != VDIR || destination->v_type != VREG) {
-          sprintf("what?\r\n");
           panic("bruh");
         }
         // create a vnode link between src -> destination
@@ -112,7 +108,6 @@ void populate_tmpfs_from_tar() {
 
         kfree(lookup, lookup_len);
         kfree(last, last_len + 1);
-        sprintf("made hardlink\r\n");
         advance(&ptr);
         break;
       case '2':

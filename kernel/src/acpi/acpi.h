@@ -1,3 +1,7 @@
+#pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdint.h>
 #include <utils/basic.h>
 
@@ -6,3 +10,6 @@
 #include "uacpi/uacpi.h"
 extern volatile struct limine_rsdp_request rsdp_request;
 void init_acpi_early();
+#ifdef __cplusplus
+}
+#endif

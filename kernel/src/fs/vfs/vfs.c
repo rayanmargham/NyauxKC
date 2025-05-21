@@ -82,7 +82,6 @@ int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
     memcpy(name, start, len);
     name[len] = 0;
     struct vnode *res = NULL;
-    sprintf("vfs_lookup(): iteration component \"%s\"\r\n", name);
     int ress = starter->ops->lookup(starter, name, &res);
     kfree(name, len + 1);
     if (ress != 0) {
@@ -137,8 +136,9 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
     }
 
     if (res != 0)
-      assert(current_node->ops->create(current_node, strdup(token), VDIR, &tmpfs_ops,
-                                       &next_node, NULL, NULL) == 0);
+      assert(current_node->ops->create(current_node, strdup(token), VDIR,
+                                       &tmpfs_ops, &next_node, NULL,
+                                       NULL) == 0);
 
     assert(next_node->v_type == VDIR);
 

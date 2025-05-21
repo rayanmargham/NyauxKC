@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <limine.h>
 #include <stdint.h>
 #include <utils/basic.h>
@@ -22,19 +25,20 @@ uint64_t kvmm_region_bytesused();
 extern void *memset(void *s, int c, size_t n);
 
 void per_cpu_vmm_init();
-typedef struct {
-  uint64_t *root;
-  struct VMMRegion *head;
-  struct VMMRegion *userhead;
-} pagemap;
-extern pagemap ker_map;
-typedef struct {
+typedef struct _VMMRegion {
   uint64_t base;
   uint64_t length;
   bool nocopy;
   bool demand_paged;
-  struct VMMRegion *next;
+  struct _VMMRegion *next;
 } VMMRegion;
+typedef struct {
+  uint64_t *root;
+  VMMRegion *head;
+  VMMRegion *userhead;
+} pagemap;
+extern pagemap ker_map;
+
 void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags);
 void kvmm_region_dealloc(pagemap *map, void *addr);
 void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags);
@@ -49,3 +53,6 @@ void deallocate_all_user_regions(pagemap *target);
 void free_pagemap(pagemap *take);
 bool iswithinvmmregion(pagemap *map, uint64_t virt);
 void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount);
+#ifdef __cplusplus
+}
+#endif

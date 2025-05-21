@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
@@ -17,3 +20,6 @@ struct direntry {
 };
 extern struct vnodeops tmpfs_ops;
 extern struct vfs_ops tmpfs_vfsops;
+#ifdef __cplusplus
+}
+#endif

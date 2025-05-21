@@ -106,7 +106,7 @@ size_t strspn(const char *s, const char *c) {
     ;
   return s - a;
 }
-char *strtok(char *restrict s, const char *restrict sep) {
+char *strtok(char *s, const char *sep) {
   static char *p;
   if (!s && !(s = p))
     return NULL;

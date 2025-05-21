@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <limine.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -7,3 +10,6 @@
 extern volatile struct limine_mp_request smp_request;
 void init_smp();
 extern uint32_t bsp_id;
+#ifdef __cplusplus
+}
+#endif

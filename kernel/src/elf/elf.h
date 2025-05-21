@@ -1,3 +1,7 @@
+#pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "arch/x86_64/cpu/structures.h"
 #include "mem/vmm.h"
 #include <limine.h>
@@ -76,3 +80,6 @@ extern volatile struct limine_executable_file_request kernelfile;
 Elf64_Ehdr *get_kernel_elfheader();
 uint64_t get_kerneL_address();
 void test_elf();
+#ifdef __cplusplus
+}
+#endif

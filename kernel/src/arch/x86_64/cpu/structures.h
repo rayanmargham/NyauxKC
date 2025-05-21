@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdint.h>
 
 #include "arch/x86_64/gdt/gdt.h"
@@ -24,3 +27,6 @@ struct arch_per_cpu_data {
 };
 #define x86_KERNEL_GS_BASE 0xC0000101
 #define x86_FS_BASE 0xC0000100
+#ifdef __cplusplus
+}
+#endif

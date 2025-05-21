@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <stdint.h>
@@ -25,3 +28,7 @@ uint64_t x86_64_get_phys(pagemap *take, uint64_t virt);
 #define PAGE2MB (1ul << 7)
 #define WRITETHROUGH (1ul << 3)
 #define PAGESIZE 4096
+#ifdef __cplusplus
+extern "C"
+}
+#endif

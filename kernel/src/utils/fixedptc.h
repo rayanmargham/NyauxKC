@@ -67,7 +67,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef FIXEDPT_BITS
 #define FIXEDPT_BITS 32
 #endif
@@ -377,5 +379,7 @@ static inline fixedpt fixedpt_pow(fixedpt n, fixedpt exp) {
     return 0;
   return (fixedpt_exp(fixedpt_mul(fixedpt_ln(n), exp)));
 }
-
+#ifdef __cplusplus
+}
+#endif
 #endif

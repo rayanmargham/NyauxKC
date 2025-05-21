@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "arch/x86_64/cpu/structures.h"
 #include <stddef.h>
 void RegisterSyscall(void (*ptr)(struct StackFrame *frame), size_t offset);
@@ -202,3 +205,6 @@ struct __syscall_ret {
 #define F_OK 0 /* Test for existence.  */
 /* glibc extension, but also useful for kernels */
 #define W_EXITCODE(ret, sig) (((ret) << 8) | (sig))
+#ifdef __cplusplus
+}
+#endif

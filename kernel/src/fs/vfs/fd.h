@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "utils/hashmap.h"
 #include <sched/sched.h>
 #include <stddef.h>
@@ -24,3 +27,6 @@ int fddup(int fromfd);
 int fdmake(int oldfd, int fd);
 struct FileDescriptorHandle *get_fd(int fd);
 void duplicate_process_fd(struct process_t *from, struct process_t *to);
+#ifdef __cplusplus
+}
+#endif

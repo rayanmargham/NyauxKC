@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <term/term.h>
 void init_gdt();
 struct TSS {
@@ -11,3 +14,6 @@ struct TSS {
   uint16_t IOPB;
 } __attribute__((packed));
 void change_rsp0(uint64_t stackaddr);
+#ifdef __cplusplus
+}
+#endif

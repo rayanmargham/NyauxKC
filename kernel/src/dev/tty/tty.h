@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <fs/devfs/devfs.h>
 #include <fs/vfs/vfs.h>
 #include <stddef.h>
@@ -122,9 +125,9 @@ struct termios {
   tcflag_t c_cflag; /* control modes */
   tcflag_t c_lflag; /* local modes */
   cc_t c_line; // dunno what this is but, its like this or the slaughterhouse
-  cc_t c_cc[NCCS];  /* special characters */
-  speed_t ibaud;    // input baud rate
-  speed_t obaud;    // output baud rate
+  cc_t c_cc[NCCS]; /* special characters */
+  speed_t ibaud;   // input baud rate
+  speed_t obaud;   // output baud rate
 };
 struct winsize {
   unsigned short ws_row;
@@ -146,3 +149,6 @@ struct tty {
 };
 void devtty_init(struct vfs *curvfs);
 void tty_install_device(struct tty *tty, struct tty_device *device);
+#ifdef __cplusplus
+}
+#endif

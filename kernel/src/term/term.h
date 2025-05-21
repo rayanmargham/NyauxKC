@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <limine.h>
 
 #include "../flanterm/backends/fb.h"
@@ -18,3 +21,6 @@ __attribute__((format(printf, 1, 2))) void sprintf(const char *format, ...);
 int is_transmit_empty();
 void sprintf_write(char *buf, size_t size);
 struct flanterm_context *get_fctx();
+#ifdef __cplusplus
+}
+#endif

@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <limine.h>
 #include <stdint.h>
 #include <utils/basic.h>
@@ -12,3 +15,6 @@ void *pmm_alloc();
 void pmm_dealloc(void *he);
 uint64_t total_memory();
 void free_unused_slabcaches();
+#ifdef __cplusplus
+}
+#endif

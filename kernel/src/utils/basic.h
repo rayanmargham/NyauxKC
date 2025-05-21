@@ -1,5 +1,7 @@
 #pragma once
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
@@ -141,3 +143,6 @@ static inline uint64_t next_pow2(uint64_t x) {
   return x;
 #endif
 }
+#ifdef __cplusplus
+}
+#endif

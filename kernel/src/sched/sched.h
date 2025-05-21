@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <arch/arch.h>
 #include <stdint.h>
 
@@ -84,3 +87,6 @@ void get_process_finish(struct process_t *proc);
 void arch_create_bsp_per_cpu_data();
 void clear_and_prepare_thread(struct thread_t *t);
 int alloc_pid();
+#ifdef __cplusplus
+}
+#endif

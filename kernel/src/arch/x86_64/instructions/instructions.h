@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "limine.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -59,3 +62,6 @@ static inline bool cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *eax,
                : "a"(leaf), "c"(subleaf));
   return true;
 }
+#ifdef __cplusplus
+}
+#endif

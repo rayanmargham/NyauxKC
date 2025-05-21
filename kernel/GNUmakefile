@@ -18,15 +18,18 @@ ifeq ($(filter $(ARCH),aarch64 loongarch64 riscv64 x86_64),)
 endif
 
 # User controllable C compiler command.
-CC := clang
+CC := cc
 
-# User controllable archiver command.
-AR := ar
+# User controllable C++ compiler command.
+CXX := c++
 
 # User controllable C flags.
-CFLAGS := -g -O2 -pipe -I src/uACPI/include -DUACPI_SIZED_FREES
+CFLAGS := -g -O2 -pipe
 
-# User controllable C preprocessor flags. We set none by default.
+# User controllable C++ flags. We default to same as C flags.
+CXXFLAGS := $(CFLAGS)
+
+# User controllable C/C++ preprocessor flags. We set none by default.
 CPPFLAGS :=
 
 ifeq ($(ARCH),x86_64)
@@ -39,7 +42,7 @@ LDFLAGS :=
 
 # Ensure the dependencies have been obtained.
 ifneq ($(shell ( test '$(MAKECMDGOALS)' = clean || test '$(MAKECMDGOALS)' = distclean ); echo $$?),0)
-    ifeq ($(shell ( ! test -d freestnd-c-hdrs-0bsd || ! test -d cc-runtime || ! test -f src/limine.h ); echo $$?),0)
+    ifeq ($(shell ( ! test -d freestnd-c-hdrs || ! test -d freestnd-cxx-hdrs || ! test -d src/cc-runtime || ! test -f src/limine.h ); echo $$?),0)
         $(error Please run the ./get-deps script first)
     endif
 endif
@@ -47,28 +50,39 @@ endif
 # Check if CC is Clang.
 override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep 'clang' >/dev/null 2>&1; echo $$?)
 
-# Internal C flags that should not be changed by the user.
-override CFLAGS += \
+# Check if CXX is Clang.
+override CXX_IS_CLANG := $(shell ! $(CXX) --version 2>/dev/null | grep 'clang' >/dev/null 2>&1; echo $$?)
+
+# Internal flags shared by both C and C++ compilers.
+override SHARED_FLAGS := \
     -Wall \
     -Wextra \
-    -std=gnu23 \
     -nostdinc \
-    -g \
     -ffreestanding \
     -fno-stack-protector \
-    -fno-omit-frame-pointer \
     -fno-stack-check \
     -fno-PIC \
     -ffunction-sections \
-    -fdata-sections \
-    -fsanitize=undefined \
-    -Wstrict-prototypes \
+    -fdata-sections
 
-# Internal C preprocessor flags that should not be changed by the user.
-override CPPFLAGS := \
+# Internal C/C++ preprocessor flags that should not be changed by the user.
+override CPPFLAGS_C := \
     -I src \
-    -I src/utils/ \
-    -isystem freestnd-c-hdrs-0bsd \
+    -I src/uACPI/include/ \
+    -DUACPI_SIZED_FREES \
+    -isystem freestnd-c-hdrs/$(ARCH)/include \
+    $(CPPFLAGS) \
+    -DLIMINE_API_REVISION=2 \
+    -MMD \
+    -MP
+
+# Internal C++ only preprocessor flags.
+override CPPFLAGS_CXX := \
+    -I src \
+    -I src/uACPI/include/ \
+    -DUACPI_SIZED_FREES \
+    -isystem freestnd-c-hdrs/$(ARCH)/include \
+    -isystem freestnd-cxx-hdrs/$(ARCH)/include \
     $(CPPFLAGS) \
     -DLIMINE_API_REVISION=2 \
     -MMD \
@@ -76,8 +90,8 @@ override CPPFLAGS := \
 
 ifeq ($(ARCH),x86_64)
     # Internal nasm flags that should not be changed by the user.
-    override NASMFLAGS += \
-        -Wall
+    # override NASMFLAGS += \
+    #     # -Wall
 endif
 
 # Architecture specific internal flags.
@@ -86,7 +100,11 @@ ifeq ($(ARCH),x86_64)
         override CC += \
             -target x86_64-unknown-none
     endif
-    override CFLAGS += \
+    ifeq ($(CXX_IS_CLANG),1)
+        override CXX += \
+            -target x86_64-unknown-none
+    endif
+    override SHARED_FLAGS += \
         -m64 \
         -march=x86-64 \
         -mno-80387 \
@@ -105,7 +123,11 @@ ifeq ($(ARCH),aarch64)
         override CC += \
             -target aarch64-unknown-none
     endif
-    override CFLAGS += \
+    ifeq ($(CXX_IS_CLANG),1)
+        override CXX += \
+            -target aarch64-unknown-none
+    endif
+    override SHARED_FLAGS += \
         -mgeneral-regs-only
     override LDFLAGS += \
         -Wl,-m,aarch64elf
@@ -120,7 +142,16 @@ ifeq ($(ARCH),riscv64)
         override CFLAGS += \
             -march=rv64imac_zicsr_zifencei
     endif
-    override CFLAGS += \
+    ifeq ($(CXX_IS_CLANG),1)
+        override CXX += \
+            -target riscv64-unknown-none
+        override CXXFLAGS += \
+            -march=rv64imac
+    else
+        override CXXFLAGS += \
+            -march=rv64imac_zicsr_zifencei
+    endif
+    override SHARED_FLAGS += \
         -mabi=lp64 \
         -mno-relax
     override LDFLAGS += \
@@ -132,13 +163,29 @@ ifeq ($(ARCH),loongarch64)
         override CC += \
             -target loongarch64-unknown-none
     endif
-    override CFLAGS += \
+    ifeq ($(CXX_IS_CLANG),1)
+        override CXX += \
+            -target loongarch64-unknown-none
+    endif
+    override SHARED_FLAGS += \
         -march=loongarch64 \
         -mabi=lp64s
     override LDFLAGS += \
         -Wl,-m,elf64loongarch \
         -Wl,--no-relax
 endif
+
+# Internal C flags that should not be changed by the user.
+override CFLAGS += \
+    -std=gnu23 \
+    $(SHARED_FLAGS)
+
+# Internal C++ flags that should not be changed by the user.
+override CXXFLAGS += \
+    -std=gnu++20 \
+    -fno-rtti \
+    -fno-exceptions \
+    $(SHARED_FLAGS)
 
 # Internal linker flags that should not be changed by the user.
 override LDFLAGS += \
@@ -147,22 +194,22 @@ override LDFLAGS += \
     -static \
     -z max-page-size=0x1000 \
     -Wl,--gc-sections \
-    -z noexecstack \
     -T linker-$(ARCH).ld
 
-# Use "find" to glob all *.c, *.S, and *.asm files in the tree and obtain the
+# Use "find" to glob all *.c, *.cpp, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell cd src && find -L * -type f | LC_ALL=C sort)
+override SRCFILES := $(shell cd src && find -L * -type f -not -path "uACPI/tests/*" | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
+override CXXFILES := $(filter %.cpp,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 ifeq ($(ARCH),x86_64)
 override NASMFILES := $(filter %.asm,$(SRCFILES))
 endif
-override OBJ := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.o) $(ASFILES:.S=.S.o))
+override OBJ := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.o) $(CXXFILES:.cpp=.cpp.o) $(ASFILES:.S=.S.o))
 ifeq ($(ARCH),x86_64)
 override OBJ += $(addprefix obj-$(ARCH)/,$(NASMFILES:.asm=.asm.o))
 endif
-override HEADER_DEPS := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.d) $(ASFILES:.S=.S.d))
+override HEADER_DEPS := $(addprefix obj-$(ARCH)/,$(CFILES:.c=.c.d) $(CXXFILES:.cpp=.cpp.d) $(ASFILES:.S=.S.d))
 
 # Default target. This must come first, before header dependencies.
 .PHONY: all
@@ -171,30 +218,25 @@ all: bin-$(ARCH)/$(OUTPUT)
 # Include header dependencies.
 -include $(HEADER_DEPS)
 
-# Link rules for building the C compiler runtime.
-cc-runtime-$(ARCH)/cc-runtime.a: GNUmakefile cc-runtime/*
-	rm -rf cc-runtime-$(ARCH)
-	cp -r cc-runtime cc-runtime-$(ARCH)
-	$(MAKE) -C cc-runtime-$(ARCH) -f cc-runtime.mk \
-		CC="$(CC)" \
-		AR="$(AR)" \
-		CFLAGS="$(CFLAGS)" \
-		CPPFLAGS='-isystem ../freestnd-c-hdrs-0bsd -DCC_RUNTIME_NO_FLOAT'
-
 # Link rules for the final executable.
-bin-$(ARCH)/$(OUTPUT): GNUmakefile linker-$(ARCH).ld $(OBJ) cc-runtime-$(ARCH)/cc-runtime.a
+bin-$(ARCH)/$(OUTPUT): GNUmakefile linker-$(ARCH).ld $(OBJ)
 	mkdir -p "$$(dirname $@)"
-	$(CC) $(CFLAGS) $(LDFLAGS) -Wl,--start-group $(OBJ) -Wl,--end-group cc-runtime-$(ARCH)/cc-runtime.a -o $@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJ) -o $@
 
 # Compilation rules for *.c files.
 obj-$(ARCH)/%.c.o: src/%.c GNUmakefile
 	mkdir -p "$$(dirname $@)"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS_C) -c $< -o $@
+
+# Compilation rules for *.cpp files.
+obj-$(ARCH)/%.cpp.o: src/%.cpp GNUmakefile
+	mkdir -p "$$(dirname $@)"
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS_CXX) -c $< -o $@
 
 # Compilation rules for *.S files.
 obj-$(ARCH)/%.S.o: src/%.S GNUmakefile
 	mkdir -p "$$(dirname $@)"
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS_C) -c $< -o $@
 
 ifeq ($(ARCH),x86_64)
 # Compilation rules for *.asm (nasm) files.
@@ -211,7 +253,7 @@ clean:
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean
 distclean:
-	rm -rf bin-* obj-* freestnd-c-hdrs-0bsd cc-runtime* src/limine.h
+	rm -rf bin-* obj-* freestnd-c-hdrs freestnd-cxx-hdrs src/cc-runtime src/limine.h
 
 # Install the final built executable to its final on-root location.
 .PHONY: install

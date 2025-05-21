@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "fs/vfs/fd.h"
 #include <fs/vfs/vfs.h>
 #include <mem/kmem.h>
@@ -8,7 +11,8 @@
 
 struct devfsops {
   size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
-               void *buffer, int rw, struct FileDescriptorHandle *hnd, int *res);
+               void *buffer, int rw, struct FileDescriptorHandle *hnd,
+               int *res);
   int (*ioctl)(struct vnode *curvnode, void *data, unsigned long request,
                void *arg, void *result);
   int (*poll)(struct vnode *curvnode, struct pollfd *requested);
@@ -34,3 +38,6 @@ struct devfsdirentry {
   struct devfsnode **nodes;
   size_t cnt;
 };
+#ifdef __cplusplus
+}
+#endif

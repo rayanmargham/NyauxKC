@@ -33,18 +33,18 @@ result region_setup(pagemap *map, uint64_t hddm_in_pages) {
       create_region(kernel_address.response->virtual_base, kernel_size);
   VMMRegion *hhdm =
       create_region(hhdm_request.response->offset, hddm_in_pages * 4096);
-  hhdm->next = (struct VMMRegion *)kernel;
+  hhdm->next = (VMMRegion *)kernel;
   kernel->next = NULL;
   kernel->nocopy = true;
   hhdm->nocopy = true;
-  map->head = (struct VMMRegion *)hhdm;
+  map->head = (VMMRegion *)hhdm;
   VMMRegion *userstart = create_region(0, 0x1000);
   VMMRegion *userend = create_region(0x7fffffffa000, 0x1000);
-  userstart->next = (struct VMMRegion *)userend;
+  userstart->next = (VMMRegion *)userend;
   userend->next = NULL;
   userend->nocopy = true;
   userstart->nocopy = true;
-  map->userhead = (struct VMMRegion *)userstart;
+  map->userhead = (VMMRegion *)userstart;
   kprintf_vmmregion(hhdm);
   kprintf_vmmregion(kernel);
   res.type = OKAY;
@@ -118,8 +118,8 @@ void *kvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
     if ((cur->base - (prev->base + prev->length)) >= ARCH_CHECK_SPACE(amount)) {
       VMMRegion *new =
           create_region((prev->base + prev->length), align_up(amount, 4096));
-      prev->next = (struct VMMRegion *)new;
-      new->next = (struct VMMRegion *)cur;
+      prev->next = (VMMRegion *)new;
+      new->next = (VMMRegion *)cur;
       arch_map_vmm_region(&ker_map, new->base, new->length, false);
       return (void *)new->base;
     } else {
@@ -158,8 +158,8 @@ void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount) {
       VMMRegion *new =
           create_region((prev->base + prev->length), align_up(amount, 4096));
       new->demand_paged = true;
-      prev->next = (struct VMMRegion *)new;
-      new->next = (struct VMMRegion *)cur;
+      prev->next = (VMMRegion *)new;
+      new->next = (VMMRegion *)cur;
       return (void *)new->base;
     } else {
       prev = cur;
@@ -185,8 +185,8 @@ void *uvmm_region_alloc(pagemap *map, uint64_t amount, uint64_t flags) {
     if ((cur->base - (prev->base + prev->length)) >= ARCH_CHECK_SPACE(amount)) {
       VMMRegion *new =
           create_region((prev->base + prev->length), align_up(amount, 4096));
-      prev->next = (struct VMMRegion *)new;
-      new->next = (struct VMMRegion *)cur;
+      prev->next = (VMMRegion *)new;
+      new->next = (VMMRegion *)cur;
       arch_map_vmm_region(map, new->base, new->length, true);
       sprintf("uvm_region_alloc(): returning %p\r\n", (void *)new->base);
       return (void *)new->base;
@@ -215,8 +215,8 @@ void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
     }
     if (cur->base >= (virt + size) && (prev->base + prev->length) <= virt) {
       VMMRegion *new = create_region(virt, align_up(size, 4096));
-      prev->next = (struct VMMRegion *)new;
-      new->next = (struct VMMRegion *)cur;
+      prev->next = (VMMRegion *)new;
+      new->next = (VMMRegion *)cur;
       arch_map_vmm_region(map, new->base, new->length, true);
       return (void *)virt;
     }
@@ -227,8 +227,8 @@ void *uvmm_region_alloc_fixed(pagemap *map, uint64_t virt, size_t size,
 
         slabfree(cur);
         VMMRegion *new = create_region(virt, align_up(size, 4096));
-        prev->next = (struct VMMRegion *)new;
-        new->next = (struct VMMRegion *)tmp;
+        prev->next = (VMMRegion *)new;
+        new->next = (VMMRegion *)tmp;
         arch_map_vmm_region(map, virt, size, true);
         return (void *)virt;
       }
@@ -316,7 +316,7 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     }
     VMMRegion *e = create_region(inital->base, inital->length);
     e->next = to->head;
-    to->head = (struct VMMRegion *)e;
+    to->head = (VMMRegion *)e;
     inital = (VMMRegion *)inital->next;
   }
 
@@ -338,7 +338,7 @@ void duplicate_pagemap(pagemap *maptoduplicatefrom, pagemap *to) {
     }
     VMMRegion *e = create_region(user->base, user->length);
     e->next = to->userhead;
-    to->userhead = (struct VMMRegion *)e;
+    to->userhead = (VMMRegion *)e;
     user = (VMMRegion *)user->next;
   }
 }
@@ -358,11 +358,11 @@ void deallocate_all_user_regions(pagemap *target) {
   assert(cur == NULL);
   VMMRegion *userstart = create_region(0, 0x1000);
   VMMRegion *userend = create_region(0x7fffffffa000, 0x1000);
-  userstart->next = (struct VMMRegion *)userend;
+  userstart->next = (VMMRegion *)userend;
   userend->next = NULL;
   userend->nocopy = true;
   userstart->nocopy = true;
-  target->userhead = (struct VMMRegion *)userstart;
+  target->userhead = (VMMRegion *)userstart;
 }
 void deallocate_all_kernel_regions_and_user(pagemap *target) {
   VMMRegion *cur = (VMMRegion *)target->head;

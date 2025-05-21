@@ -1,4 +1,7 @@
 #pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef enum {
   ERROR,
   CHAR,
@@ -16,3 +19,6 @@ typedef struct {
   OKOR kind;
   Value value;
 } kcresult;
+#ifdef __cplusplus
+}
+#endif

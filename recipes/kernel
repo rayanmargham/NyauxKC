@@ -20,6 +20,7 @@ build() {
     make -j${parallelism} \
         PROD="$PROD" \
         CC=${OS_TRIPLET}-gcc \
+        CXX=${OS_TRIPLET}-g++ \
         LD=${OS_TRIPLET}-ld \
         AR=${OS_TRIPLET}-ar \
         OBJDUMP=${OS_TRIPLET}-objdump
