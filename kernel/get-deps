@@ -17,7 +17,9 @@ clone_repo_commit() {
         fi
     else
         if test -d "$2"; then
-            break # hacky way to fix ci but fuck you personally
+            set +x
+            echo "error: '$2' is not a Git repository"
+            exit 1
         fi
     fi
     if ! test -d "$2"; then

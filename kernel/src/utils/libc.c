@@ -212,7 +212,6 @@ size_t find_second_component_of_path(const char *path, char **out) {
       char *bigballs = kmalloc(funkybeat + 1);
       memcpy(bigballs, keep, funkybeat);
       bigballs[funkybeat] = '\0';
-      sprintf("bigballs: %s\r\n", bigballs);
       *out = bigballs;
       return funkybeat + 1; // now it is up to the user to kfree this shit
     }

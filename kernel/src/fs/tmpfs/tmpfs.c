@@ -244,8 +244,6 @@ int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
   assert(entry);
   struct tmpfsnode *dir = (struct tmpfsnode *)kmalloc(sizeof(struct tmpfsnode));
   dir->node = with;
-  sprintf("name: %s\r\n", name);
-  sprintf("type: %d\r\n", with->v_type);
   dir->name = (char *)name;
   insert_into_list(dir, entry);
   return 0;

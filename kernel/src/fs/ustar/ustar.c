@@ -67,7 +67,6 @@ void populate_tmpfs_from_tar() {
         advance(&ptr);
         break;
       case '1':
-        sprintf("ustar: hard link %s -> %s\r\n", name, ptr->name_linked_file);
         struct vnode *destination = NULL;
         struct vnode *src = NULL;
         char *lookup = NULL;

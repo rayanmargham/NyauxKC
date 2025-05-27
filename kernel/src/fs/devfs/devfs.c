@@ -1,6 +1,6 @@
 #include "devfs.h"
 
-#include "dev/fbdev/fb.h"
+#include "dev/fbdev/fb.hpp"
 #include "dev/null/null.h"
 #include "dev/tty/tty.h"
 #include "fs/vfs/fd.h"
