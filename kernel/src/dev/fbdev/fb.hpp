@@ -12,23 +12,6 @@ extern "C" {
 #include <utils/libc.h>
 extern struct devfsops fbdevops;
 void devfbdev_init(struct vfs *curvfs);
-// this class is per device
-// allocated for each framebuffer
-#ifdef __cplusplus
-class FBDev {
-public:
-  size_t fbnum; // the fb this is
-  devfsinfo *info;
-  FBDev(size_t num, devfsinfo *him) {
-    fbnum = num;
-    kprintf("fbdev%lu(): init\r\n", fbnum);
-    info = him;
-  };
-  ~FBDev() { kprintf("fbdev%lu(): destruction\r\n", fbnum); };
-
-private:
-};
-#endif
 // stolen from linux source
 #define FBIOGET_VSCREENINFO 0x4600
 extern volatile struct limine_framebuffer_request framebuffer_request;
@@ -37,12 +20,17 @@ extern volatile struct limine_framebuffer_request framebuffer_request;
 #define FBIOGETCMAP 0x4604
 #define FBIOPUTCMAP 0x4605
 #define FBIOPAN_DISPLAY 0x4606
+#define thefunny                                                               \
+  void *buffer, size_t offset, size_t size, struct FileDescriptorHandle *hnd,  \
+      int *res
+#define alsofunny buffer, offset, size, hnd, res
 struct fb_bitfield {
   uint32_t offset;    /* beginning of bitfield        */
   uint32_t length;    /* length of bitfield           */
   uint32_t msb_right; /* != 0 : Most significant bit is */
                       /* right */
 };
+
 struct fb_var_screeninfo {
   uint32_t xres; /* visible resolution           */
   uint32_t yres;
@@ -82,6 +70,53 @@ struct fb_var_screeninfo {
   uint32_t colorspace;  /* colorspace for FOURCC-based modes */
   uint32_t reserved[4]; /* Reserved for future compatibility */
 };
-#ifdef __cplusplus
+#ifdef __cplusplus // C should not access gfx devices directly
 }
+
+class GfxDevice {
+public:
+  GfxDevice() { kprintf("gfx(): initing gfx device\r\n"); };
+  virtual size_t read(thefunny) { return 0; };
+  virtual size_t write(thefunny) { return 0; };
+  ~GfxDevice() { kprintf("gfx(): destruction of gfx device\r\n"); };
+};
+class LimineFrameBuffer : public GfxDevice {
+public:
+  LimineFrameBuffer() {
+    kprintf("gfx::LimineFrameBuffer(): yogurt\r\n");
+    kprintf("gfx::LimineFrameBuffer(): gurt: yo\r\n");
+  }
+  size_t read(thefunny) override {
+    kprintf("attempted to read limine framebuffer\r\n");
+    return 0;
+  }
+  size_t write(thefunny) override {
+    kprintf("attempted to write limine framebuffer\r\n");
+    return 0;
+  }
+};
+// this class is allocated per framebuffer
+// each framebuffer owns a gfxdevice to which it uses for reading and writing
+class FBDev {
+public:
+  size_t fbnum; // the fb this is
+  GfxDevice *device;
+  struct fb_var_screeninfo info;
+  // i know CLASSES!!!!!!
+  // since im in c++. anyways all gfx hardware developed for nyaux must be done
+  // with c++ because FUCK YOU what are stars can u eat them? are u a star?
+  // *insert deltarune fan game song*
+  FBDev(size_t num, GfxDevice *dev) : fbnum(num), device(dev) {
+    fbnum = num;
+    kprintf("fbdev%lu(): init\r\n", fbnum);
+  };
+  size_t read(thefunny) { return device->read(alsofunny); }
+  size_t write(thefunny) { return device->write(alsofunny); }
+  ~FBDev() {
+    kprintf("fbdev%lu(): destruction\r\n", fbnum);
+    delete device;
+  };
+
+private:
+};
 #endif

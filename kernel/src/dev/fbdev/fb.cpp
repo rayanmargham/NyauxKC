@@ -4,6 +4,7 @@
 #include "mem/kmem.h"
 #include "term/term.h"
 #include <cppglue/glue.hpp>
+
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
                  int *res);
@@ -14,11 +15,13 @@ struct devfsops fbdevops = {.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
                  int *res) {
-  sprintf("fbdev: wants to write\r\n");
-  if (rw) {
-    return 0;
+  sprintf("fbdev: wants to do somethin %d\r\n", rw);
+
+  FBDev *owner = static_cast<class FBDev *>(data);
+  if (!rw) {
+    return owner->read(buffer, offset, size, hnd, res);
   } else {
-    return size;
+    return owner->write(buffer, offset, size, hnd, res);
   }
 }
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
@@ -47,9 +50,9 @@ void devfbdev_init(struct vfs *curvfs) {
     info->major = i;
     info->minor = i + 1;
     info->ops = &fbdevops;
+    info->data = new FBDev(i, new LimineFrameBuffer());
     char buffer[100];
     npf_snprintf(buffer, 100, "fb%lu", i);
-    kprintf("attempting to create %s\r\n", buffer);
     curvfs->cur_vnode->ops->create(curvfs->cur_vnode, strdup(buffer),
                                    VCHRDEVICE, &vnode_devops, &res,
                                    static_cast<void *>(info), NULL);
