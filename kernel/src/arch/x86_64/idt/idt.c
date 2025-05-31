@@ -34,7 +34,7 @@ typedef struct {
   uint64_t *base_ptr = 0;                                                      \
   uint64_t temp = 0;                                                           \
   temp = frame->rbp;                                                           \
-  kprintf_symbol(h, frame->rip);                                                           \
+  kprintf_symbol(h, frame->rip);                                               \
   base_ptr = (uint64_t *)temp;                                                 \
   while (base_ptr != 0) {                                                      \
     uint64_t *next = (uint64_t *)*(uint64_t *)(base_ptr);                      \
