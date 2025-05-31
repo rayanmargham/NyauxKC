@@ -69,7 +69,7 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
   else
     feet = uvmm_region_alloc_fixed(usrmap, lowest_address, sizeofexecutable,
                                    false);
-  kprintf("elf: loaded elf at %p, with entry point %p\r\n",
+  sprintf("elf: loaded elf at %p, with entry point %p\r\n",
           (void *)((uint64_t)feet - lowest_address),
           (void *)((uint64_t)feet - lowest_address + hdr->e_entry));
   out->entrypoint = (uint64_t)feet - lowest_address + hdr->e_entry;
@@ -86,7 +86,7 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
                          phdr);
       break;
     case PT_INTERP:
-      kprintf("load_elf(): found interp %s\r\n",
+      sprintf("load_elf(): found interp %s\r\n",
               (char *)(buffer + phdr->p_offset));
       out->interpath = strdup((char *)(buffer + phdr->p_offset));
 
@@ -114,7 +114,7 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
   if (res) {
     panic("dead\r\n");
   }
-  kprintf("load_elf(): found elf signature %c%c%c%c\r\n", hdr->e_ident[0],
+  sprintf("load_elf(): found elf signature %c%c%c%c\r\n", hdr->e_ident[0],
           hdr->e_ident[1], hdr->e_ident[2], hdr->e_ident[3]);
   struct ElfInfo info = {};
   load_elf_pie(usrmap, hdr, &info);

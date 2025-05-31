@@ -3,6 +3,7 @@
 #include <arch/x86_64/instructions/instructions.h>
 #include <stdint.h>
 
+#include "flanterm/flanterm.h"
 #include "mem/kmem.h"
 #include "term/term.h"
 #include "utils/basic.h"
@@ -11,17 +12,31 @@ struct flanterm_context *ft_ctx = NULL;
 spinlock_t lock = 0;
 void stolen_osdevwikiserialinit();
 
-void *flanterm_fb_alloc(size_t size) { return kmalloc(size); }
-void flanterm_fb_free(void *ptr) { kfree(ptr, 8); }
+void *flanterm_fb_alloc(size_t size) { 
+  return kmalloc(size);
+}
+void flanterm_fb_free(void *ptr, size_t size) { kfree(ptr, size); }
+// this is done to avoid a page fault
+// reason being flanterm is giving us some shit addresses for some reason and slabfree believes its a slab lol
+void no(void *ptr, size_t size) {
 
+}
 void init_term(struct limine_framebuffer *buf) {
   ft_ctx = flanterm_fb_init(
-      flanterm_fb_alloc, flanterm_fb_free, buf->address, buf->width,
+      NULL, NULL, buf->address, buf->width,
       buf->height, buf->pitch, buf->blue_mask_size, buf->red_mask_shift,
       buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
       buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0,
       0, 1, 0, 0, 0);
   stolen_osdevwikiserialinit();
+}
+void reinit_term(struct limine_framebuffer *buf) {
+  flanterm_deinit(ft_ctx, no);
+  ft_ctx = flanterm_fb_init(flanterm_fb_alloc, flanterm_fb_free, buf->address, buf->width,
+      buf->height, buf->pitch, buf->blue_mask_size, buf->red_mask_shift,
+      buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
+      buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0,
+      0, 1, 0, 0, 0);
 }
 int is_transmit_empty() { return inb(0x3F8 + 5) & 0x20; }
 static char buffer[128];
@@ -57,6 +72,7 @@ void tputc(int ch, void *ctx) {
 struct flanterm_context *get_fctx() { return ft_ctx; }
 void kprintf(const char *format, ...) {
   uint64_t flags;
+  // store the old rflags, disable interrupts and do our print
   asm volatile("pushfq; cli; pop %0" : "=r"(flags));
   spinlock_lock(&lock);
   va_list args;
@@ -69,6 +85,7 @@ void kprintf(const char *format, ...) {
   }
   va_end(args);
   spinlock_unlock(&lock);
+  // if they were originally enabled, re-enable them now
   if (flags & 1 << 9) {
     asm volatile("sti");
   }

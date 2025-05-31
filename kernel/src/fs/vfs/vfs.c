@@ -25,7 +25,6 @@ int vfs_mount(struct vfs_ops *ops, char *path, void *data) {
 
 int vfs_lookup(struct vnode *start, const char *path, struct vnode **node) {
   struct vnode *starter = start;
-  sprintf("vfs_lookup(): looking up \"%s\"\r\n", path);
   if (path[1] == '\0' && path[0] != '/') {
     if (path[0] == '.') {
       //

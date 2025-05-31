@@ -38,7 +38,6 @@
 #define FLANTERM_IN_FLANTERM
 
 #include "flanterm.h"
-#include "sixel/sixel.h"
 
 // Tries to implement this standard for terminfo
 // https://man7.org/linux/man-pages/man4/console_codes.4.html
@@ -111,58 +110,9 @@ void flanterm_context_reinit(struct flanterm_context *ctx) {
     ctx->oob_output = FLANTERM_OOB_OUTPUT_ONLCR;
 }
 
-static bool is_sixel(const char *buf, size_t count, size_t *end) {
-    if (count < 3 || buf[0] != 0x1b || buf[1] != 'P') {
-        return false;
-    }
-
-    size_t i = 0;
-    char *cur = (char *)buf + 2;
-    while (cur < (buf + count) && i <= 30) {
-        if ((*cur < '0' || *cur > '9') && *cur != ';' && *cur != 'q') {
-            return false;
-        }
-        if (*cur == 'q') {
-            goto found;
-        }
-        if (*cur == ';') {
-            i++;
-        }
-        cur++;
-    }
-    return false;
-
-found:
-    while (cur < (buf + count - 1)) {
-        if (*cur == 0x1b && *(cur + 1) == '\\') {
-            *end = cur - buf;
-            return true;
-        }
-        cur++;
-    }
-    *end = 0;
-    return false;
-}
-
 static void flanterm_putchar(struct flanterm_context *ctx, uint8_t c);
 
 void flanterm_write(struct flanterm_context *ctx, const char *buf, size_t count) {
-    size_t sixel_end = 0;
-    if (ctx->sixel_supported && is_sixel(buf, count, &sixel_end)) {
-        unsigned char *pixels, *palette;
-        int width, height, ncolors;
-
-        sixel_decode_raw((unsigned char *)buf, count, &pixels, &width, &height, &palette, &ncolors);
-        ctx->draw_sixel(ctx, pixels, width, height, palette);
-
-        if (!sixel_end) {
-            return;
-        }
-
-        buf += sixel_end;
-        count -= sixel_end;
-    }
-
     for (size_t i = 0; i < count; i++) {
         flanterm_putchar(ctx, buf[i]);
     }
@@ -1412,8 +1362,8 @@ void flanterm_full_refresh(struct flanterm_context *ctx) {
     ctx->full_refresh(ctx);
 }
 
-void flanterm_deinit(struct flanterm_context *ctx) {
-    ctx->deinit(ctx);
+void flanterm_deinit(struct flanterm_context *ctx, void (*_free)(void *, size_t)) {
+    ctx->deinit(ctx, _free);
 }
 
 void flanterm_get_dimensions(struct flanterm_context *ctx, size_t *cols, size_t *rows) {

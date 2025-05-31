@@ -147,12 +147,14 @@ void kmain(void) {
   // Fetch the first framebuffer.
   struct limine_framebuffer *framebuffer =
       framebuffer_request.response->framebuffers[0];
+  init_term(framebuffer);
   arch_init();
   // We're done, just hang...
   result r = pmm_init();
   unwrap_or_panic(r);
   vmm_init();
-  init_term(framebuffer);
+  reinit_term(framebuffer);
+  
   get_symbols();
   init_acpi_early();
   kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\r\n",

@@ -4,6 +4,7 @@
 
 #include "limine.h"
 #include "mem/vmm.h"
+#include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
 
@@ -213,10 +214,12 @@ uint64_t total_memory() {
   return total_bytes;
 }
 void slabfree(void *addr) {
+  
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
     return;
   }
+  
   slab *guy = (slab *)(real_addr & ~0xFFF);
   memset(addr, 0, sizeof(pnode));
   pnode *node = (pnode *)addr;
