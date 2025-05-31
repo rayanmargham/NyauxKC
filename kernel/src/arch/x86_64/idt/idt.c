@@ -34,7 +34,7 @@ typedef struct {
   uint64_t *base_ptr = 0;                                                      \
   uint64_t temp = 0;                                                           \
   temp = frame->rbp;                                                           \
-  kprintf_symbol(h);                                                           \
+  kprintf_symbol(h, frame->rip);                                                           \
   base_ptr = (uint64_t *)temp;                                                 \
   while (base_ptr != 0) {                                                      \
     uint64_t *next = (uint64_t *)*(uint64_t *)(base_ptr);                      \
@@ -44,7 +44,7 @@ typedef struct {
     uint64_t ret_addr = *(uint64_t *)((uint64_t)base_ptr + 8);                 \
     if (ret_addr != 0) {                                                       \
       h = find_from_rip(ret_addr);                                             \
-      kprintf_symbol(h);                                                       \
+      kprintf_symbol(h, ret_addr);                                                       \
     } else {                                                                   \
       kprintf("-> Function: none -- 0x0\r\n");                                 \
     }                                                                          \
@@ -71,9 +71,9 @@ void kernel_interrupt_gate(int idx, uint64_t entry) {
 }
 extern void idt_flush(void *);
 
-void *kprintf_symbol(nyauxsymbol h) {
-  kprintf("-> Function: %s() -- 0x%lx\r\n", h.function_name,
-          h.function_address);
+void *kprintf_symbol(nyauxsymbol h, uint64_t rip) {
+  kprintf("-> Function: %s() -- 0x%lx+0x%lx\r\n", h.function_name,
+          h.function_address, rip - h.function_address);
   return 0;
 }
 
@@ -108,7 +108,7 @@ void *page_fault_handler(struct StackFrame *frame) {
       arch_get_per_cpu_data()->cur_thread->proc == NULL) {
 
     kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
-    kprintf("RIP is 0x%lx. Error Code 0x%lx\r\n", frame->rip,
+    kprintf("RIP is 0x%lx. Error Code 0b%B\r\n", frame->rip,
             frame->error_code);
     STACKTRACE
     panic("Page Fault:c");

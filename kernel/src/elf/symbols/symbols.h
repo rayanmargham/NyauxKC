@@ -13,6 +13,7 @@ void get_symbols();
 typedef struct {
   char *function_name;
   uint64_t function_address;
+  size_t function_size;
 } nyauxsymbol;
 typedef struct {
   nyauxsymbol *array;

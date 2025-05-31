@@ -16,7 +16,7 @@ nyauxsymbol find_from_rip(uint64_t rip)
 	{
 		nyauxsymbol bro = symbolarray->array[i];
 		if (bro.function_address <= rip && bro.function_address != 0 &&
-			kernel_address.response->virtual_base < bro.function_address)
+			kernel_address.response->virtual_base < bro.function_address && rip <= bro.function_address + bro.function_size)
 		{
 			return symbolarray->array[i];
 		}
@@ -80,6 +80,7 @@ void get_symbols()
 
 			char* nameofsym = (char*)((uint64_t)him + symbo->st_name);
 			array[count].function_name = nameofsym;
+			array[count].function_size = symbo->st_size;
 			array[count].function_address = symbo->st_value;
 			count += 1;
 		}
