@@ -5,7 +5,7 @@
 
 #include "mem/pmm.h"
 #include "pci/pci.h"
-#include "timers/hpet.h"
+#include "timers/timer.hpp"
 #include "uacpi/kernel_api.h"
 #include "uacpi/status.h"
 #include "uacpi/types.h"
@@ -212,7 +212,7 @@ uacpi_u64 uacpi_kernel_get_ticks(void)
 
 void uacpi_kernel_stall(uacpi_u8 usec)
 {
-	stall_with_hpetclkmicro(usec);
+	CGenericTimerStallPollus(usec);
 }
 void uacpi_kernel_sleep(uacpi_u64 msec)
 {
@@ -310,5 +310,5 @@ uacpi_status uacpi_kernel_wait_for_work_completion(void)
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 {
-	return read_hpet_counter();
+	return CGenericTimerGetns();
 }

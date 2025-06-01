@@ -22,7 +22,7 @@ jinx:
 
 .PHONY: run-kvm
 run-kvm: nyaux.iso
-	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS)
+	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS) -display gtk
 
 .PHONY: run-hvf
 run-hvf: nyaux.iso

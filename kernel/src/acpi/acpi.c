@@ -4,7 +4,7 @@
 #include "arch/x86_64/interrupt_controllers/ioapic.h"
 #include "mem/pmm.h"
 #include "term/term.h"
-#include "timers/hpet.h"
+#include "timers/timer.hpp"
 #include "uacpi/context.h"
 #include "uacpi/event.h"
 #include "uacpi/types.h"
@@ -16,7 +16,7 @@ void init_acpi_early()
 	kprintf("init_acpi(): initing uacpi\n");
 	// uacpi_context_set_log_level(UACPI_LOG_TRACE);
 	uacpi_status st = uacpi_initialize(0);
-	init_hpet();
+	CGenericTimerInit();
 	populate_ioapic();
 	initecfromecdt();
 	st = uacpi_namespace_load();

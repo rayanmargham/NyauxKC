@@ -4,7 +4,7 @@
 #include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/instructions/instructions.h"
 #include "sched/sched.h"
-#include "timers/hpet.h"
+
 
 void bootstrap(struct limine_mp_info *info) {
   arch_late_init();

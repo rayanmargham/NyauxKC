@@ -3,7 +3,7 @@
 #include <mem/pmm.h>
 #include <stdint.h>
 #include <term/term.h>
-#include <timers/hpet.h>
+#include <timers/timer.hpp>
 // per cpu function call
 void init_lapic() {
   volatile uint64_t lapic = get_lapic_address() + hhdm_request.response->offset;
@@ -19,7 +19,7 @@ void init_lapic() {
   volatile uint32_t *lapic_inital_count = (volatile uint32_t *)(lapic + 0x380);
   volatile uint32_t *lapic_cur_count = (volatile uint32_t *)(lapic + 0x390);
   *lapic_inital_count = 0xffffffff;
-  stall_with_hpetclk(10);
+  CGenericTimerStallPollms(10);
   *lapic_inital_count = 0xffffffff - *lapic_cur_count;
   *lapic_config = 32 | (0 << 16) | (1 << 17);
   __asm__("sti");

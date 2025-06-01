@@ -22,7 +22,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <timers/hpet.h>
 // Set the base revision to 2, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
 // See specification for further info.
@@ -70,7 +69,6 @@ __attribute__((
     // They CAN be moved to a different .c file.
     void *
     memcpy(void *dest, const void *src, size_t n) {
-  assert(dest);
 #ifdef __x86_64__
   void *tmptmp = dest;
   __asm__ __volatile__("rep movsb\n\t"
