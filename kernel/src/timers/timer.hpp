@@ -30,19 +30,12 @@ extern void
 extern "C" {
 #endif
   void GenericTimerInit();
-  void CGenericTimerInit();
   int GenericTimerStallPollps(size_t ps);
-  int CGenericTimerStallPollps(size_t ps);
   int GenericTimerStallPolfs(size_t fs);
-  int CGenericTimerStallPolfs(size_t fs);
   int GenericTimerStallPollms(size_t ms);
-  int CGenericTimerStallPollms(size_t ms);
   int GenericTimerStallPollus(size_t us);
-  int CGenericTimerStallPollus(size_t us);
   int GenericTimerStallPollns(size_t ns);
-  int CGenericTimerStallPollns(size_t ns);
   size_t GenericTimerGetns();
-  size_t CGenericTimerGetns();
 
 #ifdef __cplusplus
 }

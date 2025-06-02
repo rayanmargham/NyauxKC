@@ -80,7 +80,8 @@ uint64_t *find_pte(uint64_t *pt, uint64_t virt) {
       if (i == 0)
         panic("find_pte() error: LargePageSize bit set in PML4 entry");
       else if (i == 1)
-        kprintf("find_pte() warning: Found 1GiB page PDPT entry");
+        kprintf_log(STATUSFAIL,
+                    ("find_pte() warning: Found 1GiB page PDPT entry"));
 
       /* We have reached a valid entry that is present with Page Size
          bit set. We are finished, don't descend further */
@@ -227,12 +228,14 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
     map(take->root, kernel_address.response->physical_base + i,
         kernel_address.response->virtual_base + i, PRESENT | RWALLOWED);
   }
-  kprintf("vmm(x86_64)(): mapped 0x%lx to 0x%lx : from phys 0x%lx to 0x%lx\r\n",
-          kernel_address.response->virtual_base,
-          kernel_address.response->virtual_base + kernel_size,
-          kernel_address.response->physical_base,
-          kernel_address.response->physical_base + kernel_size);
-  kprintf("vmm(x86_64)(): Kernel Mapped!\r\n");
+  kprintf_log(
+      STATUSOK,
+      "vmm(x86_64)(): mapped 0x%lx to 0x%lx : from phys 0x%lx to 0x%lx\r\n",
+      kernel_address.response->virtual_base,
+      kernel_address.response->virtual_base + kernel_size,
+      kernel_address.response->physical_base,
+      kernel_address.response->physical_base + kernel_size);
+  kprintf_log(STATUSOK, "vmm(x86_64)(): Kernel Mapped!\r\n");
   uint64_t hhdm_pages = 0;
   for (uint64_t i = 0; i < 0x100000000; i += MIB(2)) {
     assert(i % MIB(2) == 0);
@@ -241,12 +244,14 @@ uint64_t x86_64_map_kernelhhdmandmemorymap(pagemap *take) {
            PRESENT | RWALLOWED);
     hhdm_pages += 1;
   }
-  kprintf("vmm(x86_64)(): (4 GiB region) mapping 0x%lx to %lx : phys 0x%lx to "
-          "0x%lx",
-          hhdm_request.response->offset,
-          hhdm_request.response->offset + 0x100000000, (uint64_t)0,
-          0x100000000);
-  kprintf("vmm(x86_64)(): Above 4Gib Mapped! Mapping Memory Map!\r\n");
+  kprintf_log(
+      STATUSOK,
+      "vmm(x86_64)(): (4 GiB region) mapping 0x%lx to %lx : phys 0x%lx to "
+      "0x%lx\r\n",
+      hhdm_request.response->offset,
+      hhdm_request.response->offset + 0x100000000, (uint64_t)0, 0x100000000);
+  kprintf_log(STATUSOK,
+              "vmm(x86_64)(): Above 4Gib Mapped! Mapping Memory Map!\r\n");
   for (uint64_t i = 0; i != memmap_request.response->entry_count; i += 1) {
     struct limine_memmap_entry *entry = memmap_request.response->entries[i];
     switch (entry->type) {

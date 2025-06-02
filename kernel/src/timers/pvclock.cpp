@@ -24,8 +24,6 @@ pvclock::pvclock() {
   wrmsr(0x4b564d01,
         ((addr_of_page - (uint64_t)hhdm_request.response->offset) | 1));
   kprintf_log(TRACE, "pvclock has now inited lol\r\n");
-  kprintf_log(TRACE, "pvclock version %u\r\n",
-              vcpu->arch_data.pvclock->version);
 }
 size_t pvclock::get_ms() { return get_ns() / 1000000; }
 

@@ -98,6 +98,7 @@ void prettytime(enum LOGLEVEL lvl) {
     break;
   case STATUSOK:
     friendinsidemewrapper("[ \e[0;92mOK\033[0m ]: ");
+    break;
   case LOG:
     friendinsidemewrapper("[ \e[0;105mLOG\033[0m ]: ");
   default:
