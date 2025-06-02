@@ -179,6 +179,33 @@ void arch_switch_pagemap(pagemap *take) {
   x86_64_switch_pagemap(take);
 #endif
 }
+bool arch_check_kvm_clock() {
+#if defined(__x86_64__)
+  uint32_t eax, ecx, ebx, edx;
+  cpuid(1, 0, &eax, &ebx, &ecx, &edx);
+  if (ecx & (1 << 31)) {
+    kprintf("arch()(x86_64): running in a HyperVisor, checking if kvm clock is "
+            "available\r\n");
+    // check if this is KVM
+
+    if (!checkkvmvendor()) {
+      return false;
+    }
+    // we are in kvm lol lesgo
+    // check if kvm clock is a feature we have
+    cpuid(0x40000001, 0, &eax, &ebx, &ecx, &edx);
+    if (eax & (1 << 3)) { // we only want pvclock
+      kprintf("arch()(x86_64): kvm clock is available, using kvm clock\r\n");
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+#endif
+  return false;
+}
 #if defined(__x86_64__)
 struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func,
                                     uint64_t stack) {
@@ -209,5 +236,17 @@ void arch_init_interruptcontrollers() {
 void arch_map_usersingularpage(pagemap *take, uint64_t virt) {
 #ifdef __x86_64__
   x86_64_map_usersingular_page(take, virt);
+#endif
+}
+bool arch_check_can_pvclock() {
+#ifdef __x86_64__
+  uint32_t eax, ecx, ebx, edx;
+  cpuid(0x4000001, 0, &eax, &ebx, &ecx, &edx);
+  return eax & (1 << 3);
+#endif
+}
+void arch_enable_kvmpvclock() {
+#ifdef __x86_64__
+
 #endif
 }

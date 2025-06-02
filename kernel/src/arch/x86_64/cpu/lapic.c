@@ -19,7 +19,10 @@ void init_lapic() {
   volatile uint32_t *lapic_inital_count = (volatile uint32_t *)(lapic + 0x380);
   volatile uint32_t *lapic_cur_count = (volatile uint32_t *)(lapic + 0x390);
   *lapic_inital_count = 0xffffffff;
-  CGenericTimerStallPollms(10);
+  int ret = GenericTimerStallPollms(10);
+  if (ret == -1) {
+    panic("Cannot Calibrate Lapic Timer Because This Timer does not implment StallPollMS!");
+  }
   *lapic_inital_count = 0xffffffff - *lapic_cur_count;
   *lapic_config = 32 | (0 << 16) | (1 << 17);
   __asm__("sti");

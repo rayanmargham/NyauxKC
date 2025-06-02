@@ -12,11 +12,10 @@
 
 void init_acpi_early()
 {
-	uint64_t rsdp = (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
 	kprintf("init_acpi(): initing uacpi\n");
 	// uacpi_context_set_log_level(UACPI_LOG_TRACE);
 	uacpi_status st = uacpi_initialize(0);
-	CGenericTimerInit();
+	GenericTimerInit();
 	populate_ioapic();
 	initecfromecdt();
 	st = uacpi_namespace_load();

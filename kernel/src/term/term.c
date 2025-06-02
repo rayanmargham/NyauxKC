@@ -7,32 +7,31 @@
 #include "mem/kmem.h"
 #include "term/term.h"
 #include "utils/basic.h"
-
 struct flanterm_context *ft_ctx = NULL;
 spinlock_t lock = 0;
 void stolen_osdevwikiserialinit();
 
-void *flanterm_fb_alloc(size_t size) { 
-  return kmalloc(size);
-}
+void *flanterm_fb_alloc(size_t size) { return kmalloc(size); }
 void flanterm_fb_free(void *ptr, size_t size) { kfree(ptr, size); }
 // this is done to avoid a page fault
-// reason being flanterm is giving us some shit addresses for some reason and slabfree believes its a slab lol
+// reason being flanterm is giving us some shit addresses for some reason and
+// slabfree believes its a slab lol
 void no(void *ptr, size_t size) {
-
+  sprintf("got ptr %p, size: %lu\r\n", ptr, size);
+  /* mrrp :3 */
 }
 void init_term(struct limine_framebuffer *buf) {
   ft_ctx = flanterm_fb_init(
-      NULL, NULL, buf->address, buf->width,
-      buf->height, buf->pitch, buf->blue_mask_size, buf->red_mask_shift,
-      buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
-      buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0,
-      0, 1, 0, 0, 0);
+      NULL, NULL, buf->address, buf->width, buf->height, buf->pitch,
+      buf->blue_mask_size, buf->red_mask_shift, buf->green_mask_size,
+      buf->green_mask_shift, buf->blue_mask_size, buf->blue_mask_shift, NULL,
+      NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
   stolen_osdevwikiserialinit();
 }
 void reinit_term(struct limine_framebuffer *buf) {
   flanterm_deinit(ft_ctx, no);
-  ft_ctx = flanterm_fb_init(flanterm_fb_alloc, flanterm_fb_free, buf->address, buf->width,
+  ft_ctx = flanterm_fb_init(
+      flanterm_fb_alloc, flanterm_fb_free, buf->address, buf->width,
       buf->height, buf->pitch, buf->blue_mask_size, buf->red_mask_shift,
       buf->green_mask_size, buf->green_mask_shift, buf->blue_mask_size,
       buf->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0,
@@ -70,25 +69,88 @@ void tputc(int ch, void *ctx) {
 #endif
 }
 struct flanterm_context *get_fctx() { return ft_ctx; }
-void kprintf(const char *format, ...) {
+void friendinsideme(const char *format, va_list args) {
+  npf_vpprintf(tputc, NULL, format, args);
+  if (idx != 0 && ft_ctx != NULL) {
+    flanterm_write(ft_ctx, buffer, idx);
+    idx = 0;
+  }
+}
+void friendinsidemewrapper(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  friendinsideme(format, args);
+  va_end(args);
+}
+void prettytime(enum LOGLEVEL lvl) {
+  switch (lvl) {
+  case FATAL:
+    friendinsidemewrapper("[ \e[41mFATAL\033[0m ]: ");
+    break;
+  case ERROR:
+    friendinsidemewrapper("[ \e[0;31mERROR\033[0m ]: ");
+    break;
+  case TRACE:
+    friendinsidemewrapper("[ \e[0;93mTRACE\033[0m ]: ");
+    break;
+  case STATUSFAIL:
+    friendinsidemewrapper("[ \e[0;91mFAIL\033[0m ]: ");
+    break;
+  case STATUSOK:
+    friendinsidemewrapper("[ \e[0;92mOK\033[0m ]: ");
+  case LOG:
+    friendinsidemewrapper("[ \e[0;105mLOG\033[0m ]: ");
+  default:
+    break;
+  }
+}
+
+void kprintf_log(enum LOGLEVEL lvl, const char *format, ...) {
+#ifdef __x86_64__
   uint64_t flags;
   // store the old rflags, disable interrupts and do our print
   asm volatile("pushfq; cli; pop %0" : "=r"(flags));
+#endif
   spinlock_lock(&lock);
   va_list args;
   va_start(args, format);
-
+  prettytime(lvl);
   npf_vpprintf(tputc, NULL, format, args);
-  if (idx != 0) {
+  if (idx != 0 && ft_ctx != NULL) {
+    flanterm_write(ft_ctx, buffer, idx);
+    idx = 0;
+  }
+  va_end(args);
+  spinlock_unlock(&lock);
+// if they were originally enabled, re-enable them now
+#ifdef __x86_64__
+  if (flags & 1 << 9) {
+    asm volatile("sti");
+  }
+#endif
+}
+void kprintf(const char *format, ...) {
+#ifdef __x86_64__
+  uint64_t flags;
+  // store the old rflags, disable interrupts and do our print
+  asm volatile("pushfq; cli; pop %0" : "=r"(flags));
+#endif
+  spinlock_lock(&lock);
+  va_list args;
+  va_start(args, format);
+  npf_vpprintf(tputc, NULL, format, args);
+  if (idx != 0 && ft_ctx != NULL) {
     flanterm_write(ft_ctx, buffer, idx);
     idx = 0;
   }
   va_end(args);
   spinlock_unlock(&lock);
   // if they were originally enabled, re-enable them now
+#ifdef __x86_64__
   if (flags & 1 << 9) {
     asm volatile("sti");
   }
+#endif
 }
 
 void sputc(int ch, void *) {
@@ -100,7 +162,7 @@ void sputc(int ch, void *) {
 #endif
 }
 void sprintf_write(char *buf, size_t size) {
-  for (int i = 0; i < size; i++) {
+  for (size_t i = 0; i < size; i++) {
     sputc(buf[i], NULL);
   }
 }

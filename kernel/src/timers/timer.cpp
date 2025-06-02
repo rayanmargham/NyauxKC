@@ -1,66 +1,58 @@
+#include "arch/arch.h"
+
 #include <timers/hpet.hpp>
+#include <timers/pvclock.hpp>
 #include <timers/timer.hpp>
 void *Timer = nullptr;
-void GenericTimerInit() {
-    Timer = static_cast<void*>(new HPET);
-}
-int GenericTimerStallPollps(size_t ps) {
-    if (!Timer) {
-        panic((char*)"Timer wasn't inited");
-    }
-    return static_cast<GenericTimer*>(Timer)->stall_poll_ps(ps);
-}
-int GenericTimerStallPolfs(size_t fs) {
-    if (!Timer) {
-        panic((char*)"Timer wasn't inited");
-    }
-    return static_cast<GenericTimer*>(Timer)->stall_poll_fs(fs);
-}
-int GenericTimerStallPollms(size_t ms) {
-    if (!Timer) {
-        panic((char*)"Timer wasn't inited");
-    }
-    return static_cast<GenericTimer*>(Timer)->stall_poll_ms(ms);
-}
-int GenericTimerStallPollus(size_t us) {
-    if (!Timer) {
-        panic((char*)"Timer wasn't inited");
-    }
-    return static_cast<GenericTimer*>(Timer)->stall_poll_us(us);
-}
-int GenericTimerStallPollns(size_t ns) {
-     if (!Timer) {
-            panic((char*)"Timer wasn't inited");
-        }
-    return static_cast<GenericTimer*>(Timer)->stall_poll_ns(ns);
-}
-size_t GenericTimerGetns() {
-    if (!Timer) {
-        panic((char*)"Timer wasn't inited");
-    }
-    return static_cast<GenericTimer*>(Timer)->get_ns();
-}
 extern "C" {
-    size_t CGenericTimerGetns() {
-        return GenericTimerGetns();
+  bool GenericTimerActive() {
+    if (Timer == nullptr) {
+      return false;
+    } else {
+      return true;
     }
-    int CGenericTimerStallPollns(size_t ns) {
-       return GenericTimerStallPollns(ns);
+  }
+  void GenericTimerInit() {
+    if ((!arch_check_kvm_clock()) && !arch_check_can_pvclock()) {
+      Timer = static_cast<void *>(new HPET);
+    } else {
+      Timer = static_cast<void *>(new pvclock);
     }
-    int CGenericTimerStallPollus(size_t us) {
-        return GenericTimerStallPollus(us);
+  }
+  int GenericTimerStallPollps(size_t ps) {
+    if (!Timer) {
+      panic((char *)"Timer wasn't inited");
     }
-    int CGenericTimerStallPollms(size_t ms) {
-        return GenericTimerStallPollms(ms);
+    return static_cast<GenericTimer *>(Timer)->stall_poll_ps(ps);
+  }
+  int GenericTimerStallPolfs(size_t fs) {
+    if (!Timer) {
+      panic((char *)"Timer wasn't inited");
     }
-    int CGenericTimerStallPolfs(size_t fs) {
-        return GenericTimerStallPolfs(fs);
+    return static_cast<GenericTimer *>(Timer)->stall_poll_fs(fs);
+  }
+  int GenericTimerStallPollms(size_t ms) {
+    if (!Timer) {
+      panic((char *)"Timer wasn't inited");
     }
-    int CGenericTimerStallPollps(size_t ps) {
-        return GenericTimerStallPollps(ps);
+    return static_cast<GenericTimer *>(Timer)->stall_poll_ms(ms);
+  }
+  int GenericTimerStallPollus(size_t us) {
+    if (!Timer) {
+      panic((char *)"Timer wasn't inited");
     }
-    void CGenericTimerInit() {
-        GenericTimerInit();
+    return static_cast<GenericTimer *>(Timer)->stall_poll_us(us);
+  }
+  int GenericTimerStallPollns(size_t ns) {
+    if (!Timer) {
+      panic((char *)"Timer wasn't inited");
     }
-
+    return static_cast<GenericTimer *>(Timer)->stall_poll_ns(ns);
+  }
+  size_t GenericTimerGetns() {
+    if (!Timer) {
+      panic((char *)"Timer wasn't inited");
+    }
+    return static_cast<GenericTimer *>(Timer)->get_ns();
+  }
 }

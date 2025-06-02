@@ -212,7 +212,10 @@ uacpi_u64 uacpi_kernel_get_ticks(void)
 
 void uacpi_kernel_stall(uacpi_u8 usec)
 {
-	CGenericTimerStallPollus(usec);
+	int ret = GenericTimerStallPollus(usec);
+	if (ret == -1) {
+		panic("uacpi_kernel_stall cannot continue further without StallPollus (Perhaps its unimplmented?)");
+	}
 }
 void uacpi_kernel_sleep(uacpi_u64 msec)
 {
@@ -310,5 +313,5 @@ uacpi_status uacpi_kernel_wait_for_work_completion(void)
 }
 uacpi_u64 uacpi_kernel_get_nanoseconds_since_boot(void)
 {
-	return CGenericTimerGetns();
+	return GenericTimerGetns();
 }
