@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "../instructions/instructions.h"
+#include "Mutexes/seqlock.h"
 #include "elf/symbols/symbols.h"
 #include "fs/devfs/devfs.h"
 #include "fs/tmpfs/tmpfs.h"
@@ -9,7 +10,7 @@
 #include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
-
+#include <timers/timer.hpp>
 #include <stdint.h>
 
 struct __syscall_ret syscall_exit(int exit_code) {
@@ -305,6 +306,36 @@ neverstop:
 
   cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
   goto neverstop;
+}
+static void read_shit(void *data, void *variable) {
+  *(__int128_t*)variable = info.timestamp;
+}
+struct __syscall_ret syscall_clockget(int clock, long *time, long *nanosecs) {
+  switch (clock) {
+    case CLOCK_REALTIME:
+      __int128_t timestamp = 0;
+      seq_read(&info.lock, read_shit, NULL, &timestamp);
+      kprintf("TIMESTAMP: from boot: %lld\r\n", (long long)timestamp);
+      timestamp = timestamp + GenericTimerGetns();
+      kprintf("TIMESTAMP: added with getns: %lld\r\n", (long long)timestamp);
+      if (timestamp < 0) {
+          __int128_t seconds = (timestamp - (1000000000 - 1)) / 1000000000;
+        *time = seconds;
+        *nanosecs = timestamp - (seconds * 1000000000);
+        kprintf("TIMESTAMP: time is %ld, nanosecs is: %ld\r\n", *time, *nanosecs);
+        return (struct __syscall_ret){.ret = 0, .errno = 0};
+      } else {
+        *time = timestamp / 1000000000;
+        *nanosecs = timestamp % 1000000000;
+        kprintf("TIMESTAMP: different time is %ld, nanosecs is: %ld\r\n", *time, *nanosecs);
+        return (struct __syscall_ret){.ret = 0, .errno = 0};
+      }
+      
+      break;
+    default:
+      break;
+  }
+  return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
 }
 struct __syscall_ret syscall_faccessat(int dirfd, const char *pathname,
                                        int mode, int flags) {

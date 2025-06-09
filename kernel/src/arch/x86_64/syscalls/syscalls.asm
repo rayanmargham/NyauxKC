@@ -10,6 +10,7 @@ extern syscall_isatty
 extern syscall_write
 extern syscall_ioctl
 extern syscall_dup
+extern syscall_clockget
 extern syscall_fstat
 extern syscall_getcwd
 extern syscall_fork
@@ -45,6 +46,7 @@ syscallarray:
     dq syscall_faccessat ; 19
     dq syscall_dup2 ; 20
     dq syscall_poll ; 21
+    dq syscall_clockget ; 22
 
 .length: dq ($ - syscallarray) / 8
 section .text

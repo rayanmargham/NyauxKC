@@ -4,6 +4,10 @@
 #include <timers/pvclock.hpp>
 #include <timers/timer.hpp>
 void *Timer = nullptr;
+struct nyaux_kernel_info info {
+  .timestamp = 0,
+  .lock = {0},
+};
 extern "C" {
   bool GenericTimerActive() {
     if (Timer == nullptr) {
@@ -18,6 +22,7 @@ extern "C" {
     } else {
       Timer = static_cast<void *>(new pvclock);
     }
+    info.timestamp = limine_boot_time.response->boot_time;
   }
   int GenericTimerStallPollps(size_t ps) {
     if (!Timer) {

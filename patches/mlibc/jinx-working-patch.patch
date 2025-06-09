@@ -1,8 +1,7 @@
-diff --git mlibc-clean/options/rtld/generic/linker.cpp mlibc-workdir/options/rtld/generic/linker.cpp
-index 33cd1b9..0c5277c 100644
+diff -urN --no-dereference mlibc-clean/options/rtld/generic/linker.cpp mlibc-workdir/options/rtld/generic/linker.cpp
 --- mlibc-clean/options/rtld/generic/linker.cpp
 +++ mlibc-workdir/options/rtld/generic/linker.cpp
-@@ -25,9 +25,9 @@ enum {
+@@ -25,9 +25,9 @@
  uintptr_t libraryBase = 0x41000000;
  #endif
  
@@ -14,8 +13,7 @@ index 33cd1b9..0c5277c 100644
  constexpr bool logRpath = false;
  constexpr bool logLdPath = false;
  constexpr bool logSymbolVersions = false;
-diff --git mlibc-clean/options/rtld/generic/main.cpp mlibc-workdir/options/rtld/generic/main.cpp
-index e96df46..40d48e6 100644
+diff -urN --no-dereference mlibc-clean/options/rtld/generic/main.cpp mlibc-workdir/options/rtld/generic/main.cpp
 --- mlibc-clean/options/rtld/generic/main.cpp
 +++ mlibc-workdir/options/rtld/generic/main.cpp
 @@ -24,9 +24,9 @@
@@ -31,11 +29,10 @@ index e96df46..40d48e6 100644
  
  #ifndef MLIBC_STATIC_BUILD
  extern HIDDEN void *_GLOBAL_OFFSET_TABLE_[];
-diff --git mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-index e2c2278..d48672d 100755
+diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 --- mlibc-clean/sysdeps/nyaux/generic/generic.cpp
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -12,394 +12,462 @@
+@@ -12,394 +12,467 @@
  #include <stdlib.h>
  #include <sys/select.h>
  #include <sys/types.h>
@@ -65,7 +62,9 @@ index e2c2278..d48672d 100755
  void sys_libc_panic() {
 -  sys_libc_log("\nMLIBC PANIC\n");
 -  sys_exit(1);
--}
++	sys_libc_log("\nMLIBC PANIC\n");
++	sys_exit(1);
+ }
 -int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd,
 -               off_t offset, void **window) {
 -  struct __syscall_ret ret =
@@ -73,9 +72,6 @@ index e2c2278..d48672d 100755
 -                 (uint64_t)flags, (uint64_t)fd, (uint64_t)offset);
 -  *window = (void *)ret.ret;
 -  return ret.err;
-+	sys_libc_log("\nMLIBC PANIC\n");
-+	sys_exit(1);
-+}
 +int sys_vm_map(void *hint, size_t size, int prot, int flags, int fd, off_t offset, void **window) {
 +	struct __syscall_ret ret = __syscall6(
 +	    SYSCALL_MMAP,
@@ -295,7 +291,13 @@ index e2c2278..d48672d 100755
 +	return ret.ret;
  }
  int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
- int sys_clock_get(int clock, time_t *secs, long *nanos) { return ENOSYS; }
+-int sys_clock_get(int clock, time_t *secs, long *nanos) { return ENOSYS; }
++int sys_clock_get(int clock, time_t *secs, long *nanos) { 
++	__syscall_ret ret = __syscall3(SYSCALL_CLOCKGET, clock, (uint64_t)secs, (uint64_t)nanos);
++	if (ret.err != 0)
++		return ret.err;
++	return 0;
++}
  #ifndef MLIBC_BUILDING_RTLD
  int sys_getcwd(char *buffer, size_t size) {
 -  __syscall_ret ret = __syscall2(SYSCALL_GETCWD, (uint64_t)buffer, size);
@@ -361,11 +363,7 @@ index e2c2278..d48672d 100755
  int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
 -  __syscall_ret ret = __syscall3(SYSCALL_IOCTL, fd, request, (uint64_t)arg);
 +	__syscall_ret ret = __syscall3(SYSCALL_IOCTL, fd, request, (uint64_t)arg);
- 
--  if (ret.err != 0)
--    return ret.err;
--  *result = (int)ret.ret;
--  return 0;
++
 +	if (ret.err != 0)
 +		return ret.err;
 +	*result = (int)ret.ret;
@@ -375,56 +373,23 @@ index e2c2278..d48672d 100755
 +	__syscall_ret ret = __syscall3(SYSCALL_POLL, (uint64_t)fds, count, timeout);
 +	if (ret.err != 0)
 +		return ret.err;
-+
+ 
+-  if (ret.err != 0)
+-    return ret.err;
+-  *result = (int)ret.ret;
+-  return 0;
 +	*num_events = (int)ret.ret;
 +	return 0;
  }
  int sys_fcntl(int fd, int request, va_list args, int *result) {
 -  // __syscall_ret ret = __syscall(12, fd, request, va_arg(args, uint64_t));
--
--  // if (ret.errno != 0)
--  // 	return ret.errno;
--
--  // *result = (ssize_t)ret.ret;
--  // return 0;
--  mlibc::infoLogger() << "mlibc: fd " << fd << " request " << request
--                      << frg::endlog;
--  return ENOSYS;
--}
--int sys_pselect(int nfds, fd_set *read_set, fd_set *write_set,
--                fd_set *except_set, const struct timespec *timeout,
--                const sigset_t *sigmask, int *num_events) {
--  // this is a stub to please bash
--  fd_set res_read_set;
--  fd_set res_write_set;
--  fd_set res_except_set;
--  FD_ZERO(&res_read_set);
--  FD_ZERO(&res_write_set);
--  FD_ZERO(&res_except_set);
--  for (int i = 0; i < nfds; i++) {
--    if (read_set && FD_ISSET(i, read_set)) {
--      FD_SET(i, &res_read_set);
--    }
--    if (write_set && FD_ISSET(i, write_set)) {
--      FD_SET(i, &res_write_set);
--    }
--    if (except_set && FD_ISSET(i, except_set)) {
--      FD_SET(i, &res_except_set);
--    }
--  }
--  if (read_set)
--    *read_set = res_read_set;
--  if (write_set)
--    *write_set = res_write_set;
--  if (except_set)
--    *except_set = res_except_set;
--  *num_events = 1;
--  return 0;
 +	// __syscall_ret ret = __syscall(12, fd, request, va_arg(args, uint64_t));
 +
 +	// if (ret.errno != 0)
 +	// 	return ret.errno;
-+
+ 
+-  // if (ret.errno != 0)
+-  // 	return ret.errno;
 +	// *result = (ssize_t)ret.ret;
 +	// return 0;
 +	mlibc::infoLogger() << "mlibc: fd " << fd << " request " << request << frg::endlog;
@@ -518,12 +483,48 @@ index e2c2278..d48672d 100755
 +		*write_set = res_write_set;
 +	if (except_set)
 +		*except_set = res_except_set;
-+
+ 
+-  // *result = (ssize_t)ret.ret;
+-  // return 0;
+-  mlibc::infoLogger() << "mlibc: fd " << fd << " request " << request
+-                      << frg::endlog;
+-  return ENOSYS;
+-}
+-int sys_pselect(int nfds, fd_set *read_set, fd_set *write_set,
+-                fd_set *except_set, const struct timespec *timeout,
+-                const sigset_t *sigmask, int *num_events) {
+-  // this is a stub to please bash
+-  fd_set res_read_set;
+-  fd_set res_write_set;
+-  fd_set res_except_set;
+-  FD_ZERO(&res_read_set);
+-  FD_ZERO(&res_write_set);
+-  FD_ZERO(&res_except_set);
+-  for (int i = 0; i < nfds; i++) {
+-    if (read_set && FD_ISSET(i, read_set)) {
+-      FD_SET(i, &res_read_set);
+-    }
+-    if (write_set && FD_ISSET(i, write_set)) {
+-      FD_SET(i, &res_write_set);
+-    }
+-    if (except_set && FD_ISSET(i, except_set)) {
+-      FD_SET(i, &res_except_set);
+-    }
+-  }
+-  if (read_set)
+-    *read_set = res_read_set;
+-  if (write_set)
+-    *write_set = res_write_set;
+-  if (except_set)
+-    *except_set = res_except_set;
+-  *num_events = 1;
+-  return 0;
 +	return 0;
  }
  int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
 -  int ret;
--
++	int ret;
+ 
 -  switch (optional_action) {
 -  case TCSANOW:
 -    optional_action = TCSETS;
@@ -551,8 +552,6 @@ index e2c2278..d48672d 100755
 -                        << frg::endlog;
 -    return ENOSYS;
 -  }
-+	int ret;
-+
 +	switch (optional_action) {
 +		case TCSANOW:
 +			optional_action = TCSETS;
@@ -642,12 +641,13 @@ index e2c2278..d48672d 100755
 -int sys_sigprocmask(int how, const sigset_t *__restrict set,
 -                    sigset_t *__restrict retrieve) {
 -  return ENOSYS;
-+int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
-+	return ENOSYS;
- }
+-}
 -int sys_sigaction(int signum, const struct sigaction *act,
 -                  struct sigaction *oldact) {
 -  return ENOSYS;
++int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) {
++	return ENOSYS;
++}
 +int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) {
 +	return ENOSYS;
  }
@@ -668,13 +668,19 @@ index e2c2278..d48672d 100755
  int sys_dup(int fd, int flags, int *newfd) {
 -  (void)flags;
 -  __syscall_ret ret = __syscall2(SYSCALL_DUP, fd, flags);
--
++	(void)flags;
++	__syscall_ret ret = __syscall2(SYSCALL_DUP, fd, flags);
+ 
 -  if (ret.err != 0)
 -    return ret.err;
--
++	if (ret.err != 0)
++		return ret.err;
+ 
 -  *newfd = (ssize_t)ret.ret;
 -  return 0;
--}
++	*newfd = (ssize_t)ret.ret;
++	return 0;
+ }
 -int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
 -             struct stat *statbuf) {
 -  __syscall_ret ret;
@@ -713,15 +719,6 @@ index e2c2278..d48672d 100755
 -  if (ret.err != 0)
 -    return ret.err;
 -  return ret.ret;
-+	(void)flags;
-+	__syscall_ret ret = __syscall2(SYSCALL_DUP, fd, flags);
-+
-+	if (ret.err != 0)
-+		return ret.err;
-+
-+	*newfd = (ssize_t)ret.ret;
-+	return 0;
-+}
 +int sys_dup2(int fd, int flags, int newfd) {
 +	__syscall_ret ret = __syscall3(SYSCALL_DUP2, fd, newfd, flags);
 +
@@ -770,15 +767,15 @@ index e2c2278..d48672d 100755
  }
  
  } // namespace mlibc
-diff --git mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h mlibc-workdir/sysdeps/nyaux/include/nyaux/syscalls.h
-index d613c67..eb6516e 100644
+diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h mlibc-workdir/sysdeps/nyaux/include/nyaux/syscalls.h
 --- mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h
 +++ mlibc-workdir/sysdeps/nyaux/include/nyaux/syscalls.h
-@@ -21,4 +21,6 @@
+@@ -21,4 +21,7 @@
  #define SYSCALL_FREE 17
  #define SYSCALL_EXECVE 18
  #define SYSCALL_FACCESSAT 19
 +#define SYSCALL_DUP2 20
 +#define SYSCALL_POLL 21
++#define SYSCALL_CLOCKGET 22
  #endif
 \ No newline at end of file

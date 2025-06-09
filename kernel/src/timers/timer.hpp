@@ -1,4 +1,5 @@
 #pragma once
+#include "Mutexes/seqlock.h"
 #include <cppglue/glue.hpp>
 #include <stddef.h>
 #include <stdint.h>
@@ -29,6 +30,12 @@ extern void
 #ifdef __cplusplus
 extern "C" {
 #endif
+struct nyaux_kernel_info {
+  __int128_t timestamp;
+  struct seq_lock lock;
+};
+extern struct nyaux_kernel_info info;
+extern volatile struct limine_boot_time_request limine_boot_time;
   void GenericTimerInit();
   int GenericTimerStallPollps(size_t ps);
   int GenericTimerStallPolfs(size_t fs);
