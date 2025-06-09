@@ -399,14 +399,3 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/i_video.h doomgeneric-w
  extern char *video_driver;
  extern boolean screenvisible;
  
-diff -urN --no-dereference doomgeneric-clean/doomgeneric/r_things.c doomgeneric-workdir/doomgeneric/r_things.c
---- doomgeneric-clean/doomgeneric/r_things.c
-+++ doomgeneric-workdir/doomgeneric/r_things.c
-@@ -206,6 +206,7 @@
- 	
- 	// scan the lumps,
- 	//  filling in the frames for whatever is found
-+    fprintf(stderr, "before\r\n");
- 	for (l=start+1 ; l<end ; l++)
- 	{
- 	    if (!strncasecmp(lumpinfo[l].name, spritename, 4))

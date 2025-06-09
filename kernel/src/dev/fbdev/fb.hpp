@@ -151,6 +151,7 @@ fixedfbinfo.line_length);
     kprintf("gfx::LimineFrameBuffer(): gurt: yo\r\n");
   }
   size_t read(thefunny) override {
+    return EINVAL;
     size_t end = epicfb->pitch * epicfb->height;
     if (offset >= end) {
       *res = EINVAL;
@@ -178,7 +179,7 @@ fixedfbinfo.line_length);
       size = end - offset;
     }
     void *calculated_dest = reinterpret_cast<void *>(
-        reinterpret_cast<uint64_t>(buffer) + static_cast<uint64_t>(offset));
+        reinterpret_cast<uint64_t>(epicfb->address) + static_cast<uint64_t>(offset));
     memcpy(
         calculated_dest,
         buffer, size);
