@@ -2,7 +2,7 @@
 # Code is governed by the GPL-2.0 license.
 # Copyright (C) 2021-2024 The nyaux authors.
 
-QEMUFLAGS ?= -M q35,smm=off -cdrom nyaux.iso -serial stdio -m 1G -display sdl
+QEMUFLAGS ?= -M q35,smm=off -cdrom nyaux.iso -serial stdio -m 1G -d int
 
 .PHONY: all
 all:

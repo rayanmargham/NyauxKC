@@ -15,7 +15,6 @@ struct devfsops fbdevops = {.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
                  int *res) {
-  sprintf("fbdev: wants to do somethin %d\r\n", rw);
 
   FBDev *owner = static_cast<class FBDev *>(data);
   if (!rw) {
@@ -26,8 +25,8 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 }
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
-
-  return ENOSYS;
+  FBDev *owner = static_cast<class FBDev *>(data);
+  return owner->ioctl(data, request, arg, result);
 }
 static int poll(struct vnode *curvnode, struct pollfd *requested) {
   requested->revents = requested->events;
@@ -50,7 +49,9 @@ void devfbdev_init(struct vfs *curvfs) {
     info->major = i;
     info->minor = i + 1;
     info->ops = &fbdevops;
-    info->data = new FBDev(i, new LimineFrameBuffer());
+    info->data = new FBDev(
+        i,
+        new LimineFrameBuffer(framebuffer_request.response->framebuffers[i]));
     char buffer[100];
     npf_snprintf(buffer, 100, "fb%lu", i);
     curvfs->cur_vnode->ops->create(curvfs->cur_vnode, strdup(buffer),

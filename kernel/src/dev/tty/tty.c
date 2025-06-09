@@ -35,7 +35,6 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
       if (res == 0 &&
           ((hnd->flags & O_NONBLOCK) ||
            (tty->termi.c_cc[VMIN] == 0 && tty->termi.c_cc[VTIME] == 0)) == false) {
-        // kprintf("blocking\r\n");
         spinlock_unlock(&tty->rxlock);
         sched_yield();
         goto restart1;
@@ -78,7 +77,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
   sprintf("tty(): request is 0x%lx\r\n", request);
-  *(void **)result = NULL;
+  *(void **)result = 0;
   switch (request) {
   case TIOCGWINSZ:
     // usermode is requesting to get the window size of the tty
@@ -155,6 +154,7 @@ void serial_put_input() {
       }
     }
   }
+  kprintf_log(FATAL, "WHAT??\r\n");
   exit_thread();
 }
 

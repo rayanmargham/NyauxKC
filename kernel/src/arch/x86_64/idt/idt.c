@@ -132,8 +132,8 @@ void *page_fault_handler(struct StackFrame *frame) {
   return 0;
 }
 void *general_protection_fault_handler(struct StackFrame *frame) {
-  kprintf("General Protection Fault with error code 0x%lx\r\nCR2 0x%lx\r\n",
-          frame->error_code, read_cr2());
+  kprintf("General Protection Fault with error code 0x%lx RIP: 0x%lx\r\nCR2 0x%lx\r\n",
+          frame->rip, frame->error_code, read_cr2());
   STACKTRACE
   panic("fuck\r\n");
   return 0;

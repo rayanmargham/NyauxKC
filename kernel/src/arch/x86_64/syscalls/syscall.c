@@ -13,9 +13,11 @@
 #include <stdint.h>
 
 struct __syscall_ret syscall_exit(int exit_code) {
-  sprintf("syscall_exit(): exit_code %d\r\n", exit_code);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
   if (cpu->cur_thread->proc->pid == 0) {
+    kprintf_log(FATAL, "init process destroyed\r\n");
+    
     exit_thread();
   }
   cpu->cur_thread->state = ZOMBIE;
@@ -116,7 +118,7 @@ struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);
+  //sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -148,7 +150,7 @@ struct __syscall_ret syscall_close(int fd) {
   fddfree(fd);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
-struct __syscall_ret syscall_seek(int fd, int64_t offset, int whence) {
+struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
