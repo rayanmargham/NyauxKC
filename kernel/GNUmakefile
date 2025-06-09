@@ -30,7 +30,7 @@ CFLAGS := -g -O2 -pipe
 CXXFLAGS := $(CFLAGS)
 
 # User controllable C/C++ preprocessor flags. We set none by default.
-CPPFLAGS :=
+
 
 ifeq ($(ARCH),x86_64)
     # User controllable nasm flags.
@@ -42,7 +42,7 @@ LDFLAGS :=
 
 # Ensure the dependencies have been obtained.
 ifneq ($(shell ( test '$(MAKECMDGOALS)' = clean || test '$(MAKECMDGOALS)' = distclean ); echo $$?),0)
-    ifeq ($(shell ( ! test -d freestnd-c-hdrs || ! test -d freestnd-cxx-hdrs || ! test -d src/cc-runtime || ! test -f src/limine.h ); echo $$?),0)
+    ifeq ($(shell ( ! test -d freestnd-c-hdrs || ! test -d freestnd-cxx-hdrs || ! test -d src/cc-runtime || ! test -f src/limine.h  || ! test -d src/frigg); echo $$?),0)
         $(error Please run the ./get-deps script first)
     endif
 endif
@@ -80,6 +80,7 @@ override CPPFLAGS_C := \
 override CPPFLAGS_CXX := \
     -I src \
     -I src/uACPI/include/ \
+	-I src/frigg/include/ \
     -DUACPI_SIZED_FREES \
     -isystem freestnd-c-hdrs/$(ARCH)/include \
     -isystem freestnd-cxx-hdrs/$(ARCH)/include \
@@ -198,7 +199,7 @@ override LDFLAGS += \
 
 # Use "find" to glob all *.c, *.cpp, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell cd src && find -L * -type f -not -path "uACPI/tests/*" | LC_ALL=C sort)
+override SRCFILES := $(shell cd src && find -L * -type f -not -path "uACPI/tests/*" -not -path "frigg/*" | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override CXXFILES := $(filter %.cpp,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
@@ -219,22 +220,22 @@ all: bin-$(ARCH)/$(OUTPUT)
 -include $(HEADER_DEPS)
 
 # Link rules for the final executable.
-bin-$(ARCH)/$(OUTPUT): GNUmakefile linker-$(ARCH).ld $(OBJ)
+bin-$(ARCH)/$(OUTPUT): linker-$(ARCH).ld $(OBJ)
 	mkdir -p "$$(dirname $@)"
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJ) -o $@
 
 # Compilation rules for *.c files.
-obj-$(ARCH)/%.c.o: src/%.c GNUmakefile
+obj-$(ARCH)/%.c.o: src/%.c
 	mkdir -p "$$(dirname $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS_C) -c $< -o $@
 
 # Compilation rules for *.cpp files.
-obj-$(ARCH)/%.cpp.o: src/%.cpp GNUmakefile
+obj-$(ARCH)/%.cpp.o: src/%.cpp
 	mkdir -p "$$(dirname $@)"
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS_CXX) -c $< -o $@
 
 # Compilation rules for *.S files.
-obj-$(ARCH)/%.S.o: src/%.S GNUmakefile
+obj-$(ARCH)/%.S.o: src/%.S
 	mkdir -p "$$(dirname $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS_C) -c $< -o $@
 

@@ -25,6 +25,7 @@ extern "C" {
   __attribute__((format(printf, 1, 2))) void sprintf(const char *format, ...);
   int is_transmit_empty();
   void sprintf_write(char *buf, size_t size);
+  void sprintf_log(enum LOGLEVEL log, const char *format, ...);
   struct flanterm_context *get_fctx();
 #ifdef __cplusplus
 }

@@ -103,15 +103,12 @@ void arch_init() {
   kprintf("Welcome to Nyaux on x86_64!\r\n");
   arch_create_bsp_per_cpu_data();
   init_gdt();
-  kprintf("arch_init(): gdt loaded.\r\n");
   init_idt();
-  kprintf("arch_init(): idt loaded.\r\n");
   fpu_init();
   syscall_init();
 
 #else
-  kprintf("Nyaux Cannot Run on this archiecture.");
-  hcf();
+#error cooked
 #endif
 }
 void arch_late_init() {

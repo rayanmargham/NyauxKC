@@ -1,6 +1,7 @@
 #include "term.h"
 
 #include <arch/x86_64/instructions/instructions.h>
+#include <stdarg.h>
 #include <stdint.h>
 
 #include "flanterm/flanterm.h"
@@ -170,6 +171,13 @@ void sprintf_write(char *buf, size_t size) {
 void sprintf(const char *format, ...) {
   va_list args;
   va_start(args, format);
+  npf_vpprintf(sputc, NULL, format, args);
+  va_end(args);
+}
+void sprintf_log(enum LOGLEVEL log, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  prettytime(log);
   npf_vpprintf(sputc, NULL, format, args);
   va_end(args);
 }
