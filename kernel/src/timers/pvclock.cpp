@@ -56,7 +56,7 @@ size_t pvclock::get_ns() {
   } else {
     time = time >> -shift;
   }
-  time = (time * tsc_to_system_mul) >> 32;
+  time = ((__uint128_t)time * tsc_to_system_mul) >> 32;
   time = time + system_time;
   return time;
 }

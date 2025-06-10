@@ -315,19 +315,17 @@ struct __syscall_ret syscall_clockget(int clock, long *time, long *nanosecs) {
     case CLOCK_REALTIME:
       __int128_t timestamp = 0;
       seq_read(&info.lock, read_shit, NULL, &timestamp);
-      kprintf("TIMESTAMP: from boot: %lld\r\n", (long long)timestamp);
       timestamp = timestamp + GenericTimerGetns();
-      kprintf("TIMESTAMP: added with getns: %lld\r\n", (long long)timestamp);
       if (timestamp < 0) {
           __int128_t seconds = (timestamp - (1000000000 - 1)) / 1000000000;
         *time = seconds;
         *nanosecs = timestamp - (seconds * 1000000000);
-        kprintf("TIMESTAMP: time is %ld, nanosecs is: %ld\r\n", *time, *nanosecs);
+
         return (struct __syscall_ret){.ret = 0, .errno = 0};
       } else {
         *time = timestamp / 1000000000;
         *nanosecs = timestamp % 1000000000;
-        kprintf("TIMESTAMP: different time is %ld, nanosecs is: %ld\r\n", *time, *nanosecs);
+
         return (struct __syscall_ret){.ret = 0, .errno = 0};
       }
       
