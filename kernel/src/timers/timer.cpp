@@ -26,38 +26,44 @@ extern "C" {
   }
   int GenericTimerStallPollps(size_t ps) {
     if (!Timer) {
-      panic((char *)"Timer wasn't inited");
+      return -1;
     }
     return static_cast<GenericTimer *>(Timer)->stall_poll_ps(ps);
   }
   int GenericTimerStallPolfs(size_t fs) {
     if (!Timer) {
-      panic((char *)"Timer wasn't inited");
+      return -1;
     }
     return static_cast<GenericTimer *>(Timer)->stall_poll_fs(fs);
   }
   int GenericTimerStallPollms(size_t ms) {
     if (!Timer) {
-      panic((char *)"Timer wasn't inited");
+      return -1;
     }
     return static_cast<GenericTimer *>(Timer)->stall_poll_ms(ms);
   }
   int GenericTimerStallPollus(size_t us) {
     if (!Timer) {
-      panic((char *)"Timer wasn't inited");
+      return -1;
     }
     return static_cast<GenericTimer *>(Timer)->stall_poll_us(us);
   }
   int GenericTimerStallPollns(size_t ns) {
     if (!Timer) {
-      panic((char *)"Timer wasn't inited");
+      return -1;
     }
     return static_cast<GenericTimer *>(Timer)->stall_poll_ns(ns);
   }
   size_t GenericTimerGetns() {
     if (!Timer) {
-      panic((char *)"Timer wasn't inited");
+      return 0;
     }
     return static_cast<GenericTimer *>(Timer)->get_ns();
+  }
+  size_t GenericTimerGetms() {
+    if (!Timer) {
+      return 0;
+    }
+    return static_cast<GenericTimer *>(Timer)->get_ms();
   }
 }

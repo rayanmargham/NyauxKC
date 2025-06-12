@@ -158,7 +158,7 @@ void kmain(void) {
   
   get_symbols();
   init_acpi_early();
-  kprintf("kmain(): Total Memory in Use: %lu Bytes or %lu MB\r\n",
+  kprintf_log(TRACE, "kmain(): Total Memory in Use: %lu Bytes or %lu MB\r\n",
           total_memory(), total_memory() / 1048576);
   create_kentry();
   hashmap_set_allocator(kmalloc, kfree);
@@ -174,7 +174,7 @@ void kmain(void) {
   // {
   // 	kprintf("Failed to shutdown system. %s\n", uacpi_status_to_string(ret));
   // }
-  kprintf("kmain(): We are chilling i guess\n");
+  kprintf_log(TRACE, "kmain(): We are chilling i guess\n");
   hcf(); // We just chill.
 }
 extern void do_funny();

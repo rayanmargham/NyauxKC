@@ -27,19 +27,17 @@ extern "C" {
       panic("Assertion Failed :c");                                            \
     }                                                                          \
   } while (0)
-
-  __attribute__((noreturn)) static inline void panic(const char *format, ...) {
+// extern void friendinsidemewrapper(const char *format, ...);
 #ifdef __x86_64__
-    __asm__ volatile("cli");
+#define panic(format, ...)                                      \
+do {                                                            \
+    __asm__ volatile ("cli");                                   \
+    kprintf_log(FATAL, "panic reached :c Function %s Reasoning: ", __PRETTY_FUNCTION__); \
+    friendinsidemewrapper(format, ##__VA_ARGS__);               \
+    kprintf("\r\n");                                            \
+    hcf();                                                      \
+} while (0)
 #endif
-    va_list args;
-    va_start(args, format);
-    kprintf_log(FATAL, "panic reached :c Reasoning: ");
-    friendinsideme(format, args);
-    kprintf("\r\n");
-    va_end(args);
-    hcf();
-  }
 #define is_aligned(value, align) (((value) & ((align) - 1)) == 0)
 #define SPINLOCK_INITIALIZER 0
 

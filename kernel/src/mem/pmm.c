@@ -12,9 +12,11 @@ result init_kmalloc();
 // OH MY GOD SO HARd
 // THIS IS THE PMM
 typedef struct {
+  void *ptr;
   struct pnode *next;
 } __attribute__((packed)) pnode;
 pnode head = {.next = NULL};
+pnode allocated = {.next = NULL};
 uint64_t get_free_pages();
 spinlock_t pmmlock;
 extern void *memset(void *s, int c, size_t n);
@@ -39,19 +41,75 @@ result pmm_init() {
           memmap_request.response->entry_count);
   kprintf("%s(): The HHDM is 0x%lx\r\n", __FUNCTION__,
           hhdm_request.response->offset);
-  for (uint64_t i = 0; i < memmap_request.response->entry_count; i++) {
-    struct limine_memmap_entry *entry = memmap_request.response->entries[i];
-    switch (entry->type) {
-    case LIMINE_MEMMAP_USABLE:
-      for (uint64_t i = 0; i < entry->length; i += 4096) {
-        pnode *hi = (pnode *)(entry->base + i + hhdm_request.response->offset);
-        memset(hi, 0, 4096);
-        cur->next = (struct pnode *)hi;
-        cur = hi;
-      }
-      break;
+  size_t num_of_pages = 0;
+  struct limine_memmap_response *response = memmap_request.response;
+  for (size_t i = 0; i < response->entry_count; i++) {
+    struct limine_memmap_entry *entry = response->entries[i];
+    switch(entry->type) {
+      case LIMINE_MEMMAP_USABLE:
+        if (entry->base == 0x0) {
+          continue;
+        }
+        for (size_t j = 0; j < entry->length; j += 0x1000) {
+          num_of_pages++;
+        }
+      default:
+        break;
     }
   }
+  kprintf_log(TRACE, "num of pages: %lu\r\n", num_of_pages);
+  for (size_t i = 0; i < response->entry_count; i++) {
+    struct limine_memmap_entry *entry = response->entries[i];
+    switch(entry->type) {
+      case LIMINE_MEMMAP_USABLE:
+        if (entry->base == 0x0) {
+          continue;
+        }
+        if (entry->length >= sizeof(pnode) * num_of_pages) {
+          pnode *prev = NULL;
+          for (size_t j = 0; j < sizeof(pnode) * num_of_pages; j += sizeof(pnode)) {
+             pnode *new_pnode = (pnode*)(entry->base + j + hhdm_request.response->offset);
+              if (prev == NULL) {
+                head.next = (struct pnode*)new_pnode;
+              } else {
+                prev->next = (struct pnode*)new_pnode;
+              }
+              prev = new_pnode;
+
+          }
+          prev->next = NULL;
+          
+          entry->base += align_up(sizeof(pnode) * num_of_pages, 4096);
+          entry->length -= align_up(sizeof(pnode) * num_of_pages, 4096);
+          goto finish;
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  finish:
+  pnode *start = (pnode*)head.next;
+  for (size_t i = 0; i < response->entry_count; i++) {
+    struct limine_memmap_entry *entry = response->entries[i];
+    switch(entry->type) {
+      case LIMINE_MEMMAP_USABLE:
+        if (entry->base == 0x0) {
+          continue;
+        }
+        
+        for (size_t j = 0; j < entry->length; j += 0x1000) {
+          start->ptr = (pnode*)entry->base + j;
+          if (start->next == 0x0) {
+            goto done;
+          }
+          start = (pnode*)start->next;
+        }
+      default:
+        break;
+    }
+  }
+  done:
   kprintf("pmm_init(): FreeList Created\r\n");
   kprintf("pmm_init(): Free Pages %ju\r\n", get_free_pages());
   spinlock_unlock(&pmmlock);
@@ -63,8 +121,9 @@ result pmm_init() {
 }
 // i get the free pages
 uint64_t get_free_pages() {
-  pnode *cur = &head;
+  pnode *cur = (pnode*)head.next;
   uint64_t page = 0;
+  kprintf_log(TRACE, "nothing ever happen\r\n");
   while (cur != NULL) {
     page += 1;
     cur = (pnode *)cur->next;
@@ -75,18 +134,19 @@ uint64_t get_free_pages() {
 // remove to get physical address
 void *pmm_alloc() {
   if (head.next == NULL) {
-    panic("no memory\r\n");
+    panic("no memory");
     return NULL;
   }
+  panic("no");
   pnode *him = (pnode *)head.next;
-  if ((uint64_t)him < hhdm_request.response->offset) {
+  if ((uint64_t)him->ptr < hhdm_request.response->offset) {
     sprintf("pmm(): addr is %p\r\n", him);
   }
-  assert((uint64_t)him >= hhdm_request.response->offset);
+  assert((uint64_t)him->ptr >= hhdm_request.response->offset);
   head.next = (struct pnode *)him->next;
-
-  memset(him, 0, 4096); // just in case :)
-  return (void *)him;
+  allocated.next = 
+  memset(him->ptr + hhdm_request.response->offset, 0, 4096); // just in case :)
+  return (void *)him->ptr + hhdm_request.response->offset;
 }
 // I expect to get a page phys + hhdm offset added
 // if i dont my assert will fail
@@ -94,6 +154,7 @@ void pmm_dealloc(void *he) {
   if (he == NULL) {
     return;
   }
+  panic("no");
   assert((uint64_t)he >= hhdm_request.response->offset);
   memset(he, 0, 4096); // just in case :)
   pnode *convert = (pnode *)he;
@@ -102,7 +163,6 @@ void pmm_dealloc(void *he) {
 }
 
 slab *init_slab(uint64_t size) {
-  assert(size > sizeof(pnode));
   void *page = pmm_alloc();
   uint64_t obj_amount = (4096 - sizeof(slab)) / size;
   slab *hdr = (slab *)page;
@@ -214,12 +274,12 @@ uint64_t total_memory() {
   return total_bytes;
 }
 void slabfree(void *addr) {
-  
+
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
     return;
   }
-  
+
   slab *guy = (slab *)(real_addr & ~0xFFF);
   memset(addr, 0, sizeof(pnode));
   pnode *node = (pnode *)addr;

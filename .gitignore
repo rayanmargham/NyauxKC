@@ -12,10 +12,11 @@
 /.jinx-cache
 /.cache
 /compile_commands.json
-/kernel/.cache
+kernel/.cache
 /ovmf
 *.hdd
 *.elf
 *.bin
 *.a
 *.o
+kernel/.cache/

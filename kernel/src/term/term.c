@@ -7,6 +7,7 @@
 #include "flanterm/flanterm.h"
 #include "mem/kmem.h"
 #include "term/term.h"
+#include "timers/timer.hpp"
 #include "utils/basic.h"
 struct flanterm_context *ft_ctx = NULL;
 spinlock_t lock = 0;
@@ -86,22 +87,23 @@ void friendinsidemewrapper(const char *format, ...) {
 void prettytime(enum LOGLEVEL lvl) {
   switch (lvl) {
   case FATAL:
-    friendinsidemewrapper("[ \e[41mFATAL\033[0m ]: ");
+    friendinsidemewrapper("[%5lu.%06lu][ \e[41mFATAL\033[0m ]: ", GenericTimerGetms() / 1000, (GenericTimerGetns() / 1000) % 1000000);
     break;
   case ERROR:
-    friendinsidemewrapper("[ \e[0;31mERROR\033[0m ]: ");
+    friendinsidemewrapper("[%5lu.%06lu][ \e[0;31mERROR\033[0m ]: ", GenericTimerGetms() / 1000, (GenericTimerGetns() / 1000) % 1000000);
     break;
   case TRACE:
-    friendinsidemewrapper("[ \e[0;93mTRACE\033[0m ]: ");
+    // math stolen from menix
+    friendinsidemewrapper("[%5lu.%06lu][ \e[0;93mTRACE\033[0m ]: ", GenericTimerGetms() / 1000, (GenericTimerGetns() / 1000) % 1000000);
     break;
   case STATUSFAIL:
-    friendinsidemewrapper("[ \e[0;91mFAIL\033[0m ]: ");
+    friendinsidemewrapper("[%5lu.%06lu][ \e[0;91mFAIL\033[0m ]: ", GenericTimerGetms() / 1000, (GenericTimerGetns() / 1000) % 1000000);
     break;
   case STATUSOK:
-    friendinsidemewrapper("[ \e[0;92mOK\033[0m ]: ");
+    friendinsidemewrapper("[%5lu.%06lu][ \e[0;92mOK\033[0m ]: ", GenericTimerGetms() / 1000, (GenericTimerGetns() / 1000) % 1000000);
     break;
   case LOG:
-    friendinsidemewrapper("[ \e[0;105mLOG\033[0m ]: ");
+    friendinsidemewrapper("[%5lu.%06lu][ \e[0;105mLOG\033[0m ]: ", GenericTimerGetms() / 1000, (GenericTimerGetns() / 1000) % 1000000);
   default:
     break;
   }

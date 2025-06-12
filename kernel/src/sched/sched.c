@@ -135,7 +135,7 @@ void exit_process(uint64_t exit_code) {
       back->next = got;
       ptr->back = NULL;
       ptr->next = NULL;
-      kprintf("thread %lu\r\n", ptr->tid);
+      kprintf_log(TRACE, "thread %lu\r\n", ptr->tid);
       // terminate thread
       refcount_dec(&ptr->count);
       refcount_dec(&ptr->count);

@@ -18,6 +18,7 @@ extern "C" {
 #include <utils/libc.h>
   void init_term(struct limine_framebuffer *buf);
   void friendinsideme(const char *format, va_list args);
+  void friendinsidemewrapper(const char *format, ...);
   void reinit_term(struct limine_framebuffer *buf);
   enum LOGLEVEL { FATAL, ERROR, LOG, TRACE, STATUSOK, STATUSFAIL };
   void kprintf_log(enum LOGLEVEL, const char *format, ...);

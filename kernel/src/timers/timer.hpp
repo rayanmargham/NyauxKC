@@ -43,6 +43,7 @@ extern volatile struct limine_boot_time_request limine_boot_time;
   int GenericTimerStallPollus(size_t us);
   int GenericTimerStallPollns(size_t ns);
   size_t GenericTimerGetns();
+  size_t GenericTimerGetms();
 
 #ifdef __cplusplus
 }
