@@ -12,6 +12,10 @@ void kprintf_elfsect(Elf64_Shdr* hdr)
 }
 nyauxsymbol find_from_rip(uint64_t rip)
 {
+	if (symbolarray == NULL) {
+		nyauxsymbol h = {.function_address = 0x0, .function_name = "Unknown"};
+		return h;
+	}
 	for (uint64_t i = 0; i != symbolarray->size - 1; i++)
 	{
 		nyauxsymbol bro = symbolarray->array[i];

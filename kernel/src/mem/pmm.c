@@ -35,19 +35,6 @@ cache caches[7];
 pnode **pagedatabase;
 /* SLAB ALLOCATOR IGNORE*/
 
-static void bubblesortfreelist() {
-  pnode *cur = (pnode*)head.next;
-  while (cur->next) {
-    pnode *other = (pnode*)cur->next;
-    if (cur->ptr < other->ptr) {
-      void *tmp = cur->ptr;
-      cur->ptr = other->ptr;
-      other->ptr = tmp;
-    }
-    cur = other;
-  }
-
-}
 result pmm_init() {
   spinlock_lock(&pmmlock);
   result ok = {.type = ERR, .err_msg = "pmm_init() failed"};
@@ -57,6 +44,7 @@ result pmm_init() {
           hhdm_request.response->offset);
   size_t num_of_pages = 0;
   struct limine_memmap_response *response = memmap_request.response;
+  uint64_t max_phys_addr = 0;
   for (size_t i = 0; i < response->entry_count; i++) {
     struct limine_memmap_entry *entry = response->entries[i];
     switch(entry->type) {
@@ -64,15 +52,15 @@ result pmm_init() {
         if (entry->base == 0x0) {
           continue;
         }
-        for (size_t j = 0; j < entry->length; j += 0x1000) {
-          num_of_pages++;
-        }
+        num_of_pages += entry->length / 4096;
+        max_phys_addr = entry->base + entry->length;
       default:
         break;
     }
   }
   kprintf_log(TRACE, "num of pages: %lu\r\n", num_of_pages);
   bool done_freelist_allocation = false;
+  bool done_db_alloc = false;
   for (size_t i = 0; i < response->entry_count; i++) {
     struct limine_memmap_entry *entry = response->entries[i];
     switch(entry->type) {
@@ -94,9 +82,10 @@ result pmm_init() {
           }
           prev->next = NULL;
           entry->base += align_up(sizeof(pnode) * num_of_pages, 4096);
+          entry->length -= align_up(sizeof(pnode) *num_of_pages, 4096);
           done_freelist_allocation = true;
         }
-        if (entry->length >= sizeof(pnode *) * num_of_pages) {
+        if (entry->length >= align_up(max_phys_addr, 4096) / 4096) {
           for (size_t j = 0; j < sizeof(pnode*) * num_of_pages; j += sizeof(pnode*)) {
             pnode **new_ptr = (pnode**)(entry->base + j + hhdm_request.response->offset);
             if (j == 0) {
@@ -105,7 +94,11 @@ result pmm_init() {
             *new_ptr = NULL;
           }
           entry->base += align_up(sizeof(pnode*) * num_of_pages, 4096);
-          goto finish;
+          entry->length -= align_up(sizeof(pnode*) *num_of_pages, 4096);
+          done_db_alloc = true;
+          if (done_db_alloc && done_freelist_allocation) {
+            goto finish;
+          }
         }
         break;
       default:
@@ -123,7 +116,7 @@ result pmm_init() {
         }
         
         for (size_t j = 0; j < entry->length; j += 0x1000) {
-          start->ptr = (pnode*)entry->base + j;
+          start->ptr = (void*)((size_t)entry->base + j);
           if (start->next == 0x0) {
             goto done;
           }
@@ -134,10 +127,8 @@ result pmm_init() {
     }
   }
   done:
-  kprintf("pmm_init(): FreeList Created\r\n");
-  bubblesortfreelist();
-  kprintf_log(LOG, "bubble sorting freelist...\r\n");
-  kprintf("pmm_init(): Free Pages %ju\r\n", get_free_pages());
+  kprintf_log(STATUSOK, "pmm_init(): FreeList Created\r\n");
+  kprintf_log(LOG, "pmm_init(): Free Pages %ju\r\n", get_free_pages());
   spinlock_unlock(&pmmlock);
   result ress = init_kmalloc();
   unwrap_or_panic(ress);
@@ -157,6 +148,7 @@ uint64_t get_free_pages() {
 }
 // Returns a page with the hddm offset added
 // remove to get physical address
+size_t pages_alloced = 0;
 void *pmm_alloc() {
   if (head.next == NULL) {
     panic("no memory");
@@ -164,12 +156,13 @@ void *pmm_alloc() {
   }
   // panic("no");
   pnode *him = (pnode *)head.next;
-  kprintf_log(TRACE, "him address is %p, him without virtual %p\r\n", him, (pnode*)((size_t)him - hhdm_request.response->offset));
-  kprintf_log(TRACE, "address returned %p\r\n", him->ptr);
+  sprintf("him %p, him ptr with hhdm %p\r\n", him, (void*)((uint64_t)him->ptr + hhdm_request.response->offset));
   head.next = (struct pnode *)him->next;
   memset((void*)(((uint64_t)him->ptr) + hhdm_request.response->offset), 0, 4096); // just in case :)
-  kprintf_log(TRACE, "address returned %p after memset\r\n", him->ptr);
   pagedatabase[(size_t)him->ptr >> 12] = him;
+  pages_alloced += 1;
+  //sprintf("pages alloc: %lu, free pages: %lu\r\n", pages_alloced, get_free_pages());
+
 
   return (void*)(((uint64_t)him->ptr) + hhdm_request.response->offset);
 }
