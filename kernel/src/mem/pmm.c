@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "arch/arch.h"
 #include "limine.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
@@ -16,7 +17,6 @@ typedef struct {
   struct pnode *next;
 } __attribute__((packed)) pnode;
 pnode head = {.next = NULL};
-pnode allocated = {.next = NULL};
 uint64_t get_free_pages();
 spinlock_t pmmlock;
 extern void *memset(void *s, int c, size_t n);
@@ -32,10 +32,24 @@ typedef struct {
   struct slab *slabs;
 } cache;
 cache caches[7];
+pnode **pagedatabase;
 /* SLAB ALLOCATOR IGNORE*/
+
+static void bubblesortfreelist() {
+  pnode *cur = (pnode*)head.next;
+  while (cur->next) {
+    pnode *other = (pnode*)cur->next;
+    if (cur->ptr < other->ptr) {
+      void *tmp = cur->ptr;
+      cur->ptr = other->ptr;
+      other->ptr = tmp;
+    }
+    cur = other;
+  }
+
+}
 result pmm_init() {
   spinlock_lock(&pmmlock);
-  pnode *cur = &head;
   result ok = {.type = ERR, .err_msg = "pmm_init() failed"};
   kprintf("pmm_init(): entry count %lu\r\n",
           memmap_request.response->entry_count);
@@ -58,6 +72,7 @@ result pmm_init() {
     }
   }
   kprintf_log(TRACE, "num of pages: %lu\r\n", num_of_pages);
+  bool done_freelist_allocation = false;
   for (size_t i = 0; i < response->entry_count; i++) {
     struct limine_memmap_entry *entry = response->entries[i];
     switch(entry->type) {
@@ -65,7 +80,7 @@ result pmm_init() {
         if (entry->base == 0x0) {
           continue;
         }
-        if (entry->length >= sizeof(pnode) * num_of_pages) {
+        if (entry->length >= sizeof(pnode) * num_of_pages && !done_freelist_allocation) {
           pnode *prev = NULL;
           for (size_t j = 0; j < sizeof(pnode) * num_of_pages; j += sizeof(pnode)) {
              pnode *new_pnode = (pnode*)(entry->base + j + hhdm_request.response->offset);
@@ -78,9 +93,18 @@ result pmm_init() {
 
           }
           prev->next = NULL;
-          
           entry->base += align_up(sizeof(pnode) * num_of_pages, 4096);
-          entry->length -= align_up(sizeof(pnode) * num_of_pages, 4096);
+          done_freelist_allocation = true;
+        }
+        if (entry->length >= sizeof(pnode *) * num_of_pages) {
+          for (size_t j = 0; j < sizeof(pnode*) * num_of_pages; j += sizeof(pnode*)) {
+            pnode **new_ptr = (pnode**)(entry->base + j + hhdm_request.response->offset);
+            if (j == 0) {
+              pagedatabase = new_ptr;
+            }
+            *new_ptr = NULL;
+          }
+          entry->base += align_up(sizeof(pnode*) * num_of_pages, 4096);
           goto finish;
         }
         break;
@@ -111,6 +135,8 @@ result pmm_init() {
   }
   done:
   kprintf("pmm_init(): FreeList Created\r\n");
+  bubblesortfreelist();
+  kprintf_log(LOG, "bubble sorting freelist...\r\n");
   kprintf("pmm_init(): Free Pages %ju\r\n", get_free_pages());
   spinlock_unlock(&pmmlock);
   result ress = init_kmalloc();
@@ -123,7 +149,6 @@ result pmm_init() {
 uint64_t get_free_pages() {
   pnode *cur = (pnode*)head.next;
   uint64_t page = 0;
-  kprintf_log(TRACE, "nothing ever happen\r\n");
   while (cur != NULL) {
     page += 1;
     cur = (pnode *)cur->next;
@@ -137,17 +162,18 @@ void *pmm_alloc() {
     panic("no memory");
     return NULL;
   }
-  panic("no");
+  // panic("no");
   pnode *him = (pnode *)head.next;
-  if ((uint64_t)him->ptr < hhdm_request.response->offset) {
-    sprintf("pmm(): addr is %p\r\n", him);
-  }
-  assert((uint64_t)him->ptr >= hhdm_request.response->offset);
+  kprintf_log(TRACE, "him address is %p, him without virtual %p\r\n", him, (pnode*)((size_t)him - hhdm_request.response->offset));
+  kprintf_log(TRACE, "address returned %p\r\n", him->ptr);
   head.next = (struct pnode *)him->next;
-  allocated.next = 
-  memset(him->ptr + hhdm_request.response->offset, 0, 4096); // just in case :)
-  return (void *)him->ptr + hhdm_request.response->offset;
+  memset((void*)(((uint64_t)him->ptr) + hhdm_request.response->offset), 0, 4096); // just in case :)
+  kprintf_log(TRACE, "address returned %p after memset\r\n", him->ptr);
+  pagedatabase[(size_t)him->ptr >> 12] = him;
+
+  return (void*)(((uint64_t)him->ptr) + hhdm_request.response->offset);
 }
+
 // I expect to get a page phys + hhdm offset added
 // if i dont my assert will fail
 void pmm_dealloc(void *he) {
@@ -155,11 +181,11 @@ void pmm_dealloc(void *he) {
     return;
   }
   panic("no");
-  assert((uint64_t)he >= hhdm_request.response->offset);
-  memset(he, 0, 4096); // just in case :)
-  pnode *convert = (pnode *)he;
+  memset((void*)((size_t)he - hhdm_request.response->offset), 0, 4096); // just in case :)
+  pnode *convert = (pnode *)pagedatabase[((size_t)he - hhdm_request.response->offset) >> 12];
   convert->next = head.next;
   head.next = (struct pnode *)convert;
+  pagedatabase[((size_t)he - hhdm_request.response->offset) >> 12] = NULL;
 }
 
 slab *init_slab(uint64_t size) {

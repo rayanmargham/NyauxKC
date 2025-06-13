@@ -41,12 +41,12 @@ endif
 LDFLAGS :=
 
 # Ensure the dependencies have been obtained.
+# Ensure the dependencies have been obtained.
 ifneq ($(shell ( test '$(MAKECMDGOALS)' = clean || test '$(MAKECMDGOALS)' = distclean ); echo $$?),0)
-    ifeq ($(shell ( ! test -d freestnd-c-hdrs || ! test -d freestnd-cxx-hdrs || ! test -d src/cc-runtime || ! test -f src/limine.h  || ! test -d src/frigg); echo $$?),0)
+    ifeq ($(shell ( ! test -d freestnd-c-hdrs || ! test -d freestnd-cxx-hdrs || ! test -d cc-runtime || ! test -f src/limine.h || ! test -d cc-runtime); echo $$?),0)
         $(error Please run the ./get-deps script first)
     endif
 endif
-
 # Check if CC is Clang.
 override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep 'clang' >/dev/null 2>&1; echo $$?)
 
@@ -199,7 +199,7 @@ override LDFLAGS += \
 
 # Use "find" to glob all *.c, *.cpp, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell cd src && find -L * -type f -not -path "uACPI/tests/*" -not -path "frigg/*" | LC_ALL=C sort)
+override SRCFILES := $(shell find -L src cc-runtime/src -type f -not -path "src/uACPI/tests/*" -not -path "src/frigg/*" | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override CXXFILES := $(filter %.cpp,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
@@ -225,23 +225,23 @@ bin-$(ARCH)/$(OUTPUT): linker-$(ARCH).ld $(OBJ)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJ) -o $@
 
 # Compilation rules for *.c files.
-obj-$(ARCH)/%.c.o: src/%.c
+obj-$(ARCH)/%.c.o: %.c
 	mkdir -p "$$(dirname $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS_C) -c $< -o $@
 
 # Compilation rules for *.cpp files.
-obj-$(ARCH)/%.cpp.o: src/%.cpp
+obj-$(ARCH)/%.cpp.o: %.cpp
 	mkdir -p "$$(dirname $@)"
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS_CXX) -c $< -o $@
 
 # Compilation rules for *.S files.
-obj-$(ARCH)/%.S.o: src/%.S
+obj-$(ARCH)/%.S.o: %.S
 	mkdir -p "$$(dirname $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS_C) -c $< -o $@
 
 ifeq ($(ARCH),x86_64)
 # Compilation rules for *.asm (nasm) files.
-obj-$(ARCH)/%.asm.o: src/%.asm GNUmakefile
+obj-$(ARCH)/%.asm.o: %.asm
 	mkdir -p "$$(dirname $@)"
 	nasm $(NASMFLAGS) $< -o $@
 endif
@@ -254,7 +254,7 @@ clean:
 # Remove everything built and generated including downloaded dependencies.
 .PHONY: distclean
 distclean:
-	rm -rf bin-* obj-* freestnd-c-hdrs freestnd-cxx-hdrs src/cc-runtime src/limine.h
+	rm -rf bin-* obj-* freestnd-c-hdrs freestnd-cxx-hdrs c-runtime src/limine.h
 
 # Install the final built executable to its final on-root location.
 .PHONY: install

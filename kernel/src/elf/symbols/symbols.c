@@ -26,7 +26,7 @@ nyauxsymbol find_from_rip(uint64_t rip)
 }
 nyauxsymbolresource* symbolarray;
 
-void bubblesort(int length)
+static void bubblesort(int length)
 {
 	for (int i = 0; i < length; i++)
 	{
