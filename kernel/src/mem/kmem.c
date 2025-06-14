@@ -7,13 +7,11 @@
 #include "utils/basic.h"
 spinlock_t mem_lock;
 void *kmalloc(uint64_t amount) {
-   __asm__ volatile ("cli");
   spinlock_lock(&mem_lock);
   if (amount > 1024) {
     void *him = kvmm_region_alloc(&ker_map, amount, PRESENT | RWALLOWED);
     memset(him, 0, amount);
     spinlock_unlock(&mem_lock);
-    __asm__ volatile ("sti");
     return him;
   } else {
 #ifdef __SANITIZE_ADDRESS__
@@ -26,13 +24,11 @@ void *kmalloc(uint64_t amount) {
     void *him = slaballocate(amount);
     memset(him, 0, amount);
     spinlock_unlock(&mem_lock);
-    __asm__ volatile ("sti");
     return him;
 #endif
   }
 }
 void kfree(void *addr, uint64_t size) {
-  __asm__ volatile ("cli");
   spinlock_lock(&mem_lock);
   if (size >> 63) {
     kprintf("kfree: memory corruption detected\r\n");
@@ -46,5 +42,4 @@ void kfree(void *addr, uint64_t size) {
     slabfree(addr);
     spinlock_unlock(&mem_lock);
   }
-  __asm__ volatile ("sti");
 }
