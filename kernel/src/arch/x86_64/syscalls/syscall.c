@@ -288,20 +288,26 @@ neverstop:
   if (!us) {
     return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
   }
+  __asm__ volatile ("cli"); // we dont want the process to be unmapped by the reaper thread while we are doing this so
+  // this is required
   while (us != NULL) {
-
+    sprintf("addr %p\r\n", us);
     if (us->state == ZOMBIE) {
       sprintf("doing so with error code %lu\r\n", us->exit_code);
       *status = W_EXITCODE(us->exit_code, 0);
       us->cnt = 0;
       us->state = BLOCKED;
-      return (struct __syscall_ret){.ret = us->pid, .errno = 0};
+      uint64_t pidnum = us->pid;
+      __asm__ volatile ("sti"); // restore interrupts
+      return (struct __syscall_ret){.ret = pidnum, .errno = 0};
     }
     if (us->children == us) {
       break;
     }
     us = us->children;
+
   }
+  __asm__ volatile ("sti"); // restore interrupts
   sched_yield();
 
   cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;

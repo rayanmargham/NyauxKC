@@ -68,9 +68,9 @@ result pmm_init() {
         if (entry->base == 0x0) {
           continue;
         }
-        if (entry->length >= sizeof(pnode) * num_of_pages && !done_freelist_allocation) {
+        if (entry->length >= sizeof(pnode) * align_up(max_phys_addr, 4096) / 4096 && !done_freelist_allocation) {
           pnode *prev = NULL;
-          for (size_t j = 0; j < sizeof(pnode) * num_of_pages; j += sizeof(pnode)) {
+          for (size_t j = 0; j < sizeof(pnode) * (max_phys_addr/4096); j += sizeof(pnode)) {
              pnode *new_pnode = (pnode*)(entry->base + j + hhdm_request.response->offset);
               if (prev == NULL) {
                 head.next = (struct pnode*)new_pnode;
@@ -81,20 +81,20 @@ result pmm_init() {
 
           }
           prev->next = NULL;
-          entry->base += align_up(sizeof(pnode) * num_of_pages, 4096);
-          entry->length -= align_up(sizeof(pnode) *num_of_pages, 4096);
+          entry->base += align_up(sizeof(pnode) * max_phys_addr / 4096, 4096);
+          entry->length -= align_up(sizeof(pnode) * max_phys_addr / 4096, 4096);
           done_freelist_allocation = true;
         }
-        if (entry->length >= align_up(max_phys_addr, 4096) / 4096) {
-          for (size_t j = 0; j < sizeof(pnode*) * num_of_pages; j += sizeof(pnode*)) {
+        if (entry->length >= sizeof(pnode*) * align_up(max_phys_addr, 4096) / 4096) {
+          for (size_t j = 0; j < sizeof(pnode*) * (max_phys_addr/4096); j += sizeof(pnode*)) {
             pnode **new_ptr = (pnode**)(entry->base + j + hhdm_request.response->offset);
             if (j == 0) {
               pagedatabase = new_ptr;
             }
             *new_ptr = NULL;
           }
-          entry->base += align_up(sizeof(pnode*) * num_of_pages, 4096);
-          entry->length -= align_up(sizeof(pnode*) *num_of_pages, 4096);
+          entry->base += align_up(sizeof(pnode*) * max_phys_addr/4096, 4096);
+          entry->length -= align_up(sizeof(pnode*) *max_phys_addr/4096, 4096);
           done_db_alloc = true;
           if (done_db_alloc && done_freelist_allocation) {
             goto finish;
@@ -126,6 +126,7 @@ result pmm_init() {
         break;
     }
   }
+  start->next = NULL;
   done:
   kprintf_log(STATUSOK, "pmm_init(): FreeList Created\r\n");
   kprintf_log(LOG, "pmm_init(): Free Pages %ju\r\n", get_free_pages());
@@ -156,7 +157,6 @@ void *pmm_alloc() {
   }
   // panic("no");
   pnode *him = (pnode *)head.next;
-  sprintf("him %p, him ptr with hhdm %p\r\n", him, (void*)((uint64_t)him->ptr + hhdm_request.response->offset));
   head.next = (struct pnode *)him->next;
   memset((void*)(((uint64_t)him->ptr) + hhdm_request.response->offset), 0, 4096); // just in case :)
   pagedatabase[(size_t)him->ptr >> 12] = him;
@@ -173,8 +173,7 @@ void pmm_dealloc(void *he) {
   if (he == NULL) {
     return;
   }
-  panic("no");
-  memset((void*)((size_t)he - hhdm_request.response->offset), 0, 4096); // just in case :)
+  memset((void*)((size_t)he), 0, 4096); // just in case :)
   pnode *convert = (pnode *)pagedatabase[((size_t)he - hhdm_request.response->offset) >> 12];
   convert->next = head.next;
   head.next = (struct pnode *)convert;
