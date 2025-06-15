@@ -3,6 +3,7 @@
 #include "elf/symbols/symbols.h"
 #include "flanterm/flanterm.h"
 #include "fs/vfs/fd.h"
+#include <utils/cmdline.hpp>
 #include "fs/vfs/vfs.h"
 #include "mem/vmm.h"
 #include "sched/sched.h"
@@ -33,7 +34,7 @@ __attribute__((used,
     // once or marked as used with the "used" attribute as done here.
     __attribute__((
         used, section(".requests"))) volatile struct limine_framebuffer_request
-    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 2};
+    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 3};
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
 __attribute__((used,
@@ -45,24 +46,27 @@ __attribute__((used,
 __attribute__((used, section(".requests"))) volatile struct limine_hhdm_request
     hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 2};
 __attribute__((used, section(".requests"))) volatile struct limine_mp_request
-    smp_request = {.id = LIMINE_MP_REQUEST, .revision = 2};
+    smp_request = {.id = LIMINE_MP_REQUEST, .revision = 3};
 __attribute__((
     used,
     section(".requests"))) volatile struct limine_executable_address_request
-    kernel_address = {.id = LIMINE_EXECUTABLE_ADDRESS_REQUEST, .revision = 2};
+    kernel_address = {.id = LIMINE_EXECUTABLE_ADDRESS_REQUEST, .revision = 3};
 __attribute__((used, section(".requests"))) volatile struct limine_rsdp_request
-    rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 2};
+    rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 3};
 __attribute__((
     used, section(".requests"))) volatile struct limine_executable_file_request
-    kernelfile = {.id = LIMINE_EXECUTABLE_FILE_REQUEST, .revision = 2};
+    kernelfile = {.id = LIMINE_EXECUTABLE_FILE_REQUEST, .revision = 3};
 __attribute__((
     used,
     section(".requests"))) volatile struct limine_module_request modules = {
-    .id = LIMINE_MODULE_REQUEST, .revision = 2};
+    .id = LIMINE_MODULE_REQUEST, .revision = 3};
 __attribute__((
     used,
     section(".requests"))) volatile struct limine_boot_time_request limine_boot_time = {
     .id = LIMINE_BOOT_TIME_REQUEST, .revision = 3};
+__attribute__((used, section(".requests"))) volatile struct limine_executable_cmdline_request limine_cmdline = {
+    .id = LIMINE_EXECUTABLE_CMDLINE_REQUEST, .revision = 3
+};
 __attribute__((
     used,
     section(".requests_end_marker"))) static volatile LIMINE_REQUESTS_END_MARKER
@@ -155,7 +159,7 @@ void kmain(void) {
   unwrap_or_panic(r);
   vmm_init();
   reinit_term(framebuffer);
-  
+  parse_cmdline();
   get_symbols();
   init_acpi_early();
   kprintf_log(TRACE, "kmain(): Total Memory in Use: %lu Bytes or %lu MB\r\n",

@@ -7,6 +7,7 @@ void *Timer = nullptr;
 struct nyaux_kernel_info info {
   .timestamp = 0,
   .lock = {0},
+  .cmdarray = NULL,
 };
 extern "C" {
   bool GenericTimerActive() {

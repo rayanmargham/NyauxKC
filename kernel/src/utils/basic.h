@@ -6,6 +6,20 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
+#include <Mutexes/seqlock.h>
+struct cmdlineobj {
+    char *key;
+    union {
+        char *str;
+        size_t num;
+        bool condition;
+    };
+};
+struct nyaux_kernel_info {
+  __int128_t timestamp;
+  struct seq_lock lock;
+  struct cmdlineobj *cmdarray;
+};
 #define MIB(x) (0x100000 * (x))
   __attribute__((noreturn)) static void hcf(void) {
     for (;;) {

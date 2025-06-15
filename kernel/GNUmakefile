@@ -80,7 +80,7 @@ override CPPFLAGS_C := \
 override CPPFLAGS_CXX := \
     -I src \
     -I src/uACPI/include/ \
-	-I src/frigg/include/ \
+    -I src/frigg/include/ \
     -DUACPI_SIZED_FREES \
     -isystem freestnd-c-hdrs/$(ARCH)/include \
     -isystem freestnd-cxx-hdrs/$(ARCH)/include \

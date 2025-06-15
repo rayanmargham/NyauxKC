@@ -30,10 +30,7 @@ extern void
 #ifdef __cplusplus
 extern "C" {
 #endif
-struct nyaux_kernel_info {
-  __int128_t timestamp;
-  struct seq_lock lock;
-};
+
 extern struct nyaux_kernel_info info;
 extern volatile struct limine_boot_time_request limine_boot_time;
   void GenericTimerInit();
