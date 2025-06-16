@@ -7,6 +7,8 @@
 #include "utils/basic.h"
 spinlock_t mem_lock;
 void *kmalloc(uint64_t amount) {
+// it is fine that slab allocate only has 8 byte alignment
+// sse shit only cares about 16 byte alignment, everything else doesnt mind
   spinlock_lock(&mem_lock);
   if (amount > 1024) {
     void *him = kvmm_region_alloc(&ker_map, amount, PRESENT | RWALLOWED);
@@ -23,6 +25,7 @@ void *kmalloc(uint64_t amount) {
 #else
     void *him = slaballocate(amount);
     memset(him, 0, amount);
+
     spinlock_unlock(&mem_lock);
     return him;
 #endif

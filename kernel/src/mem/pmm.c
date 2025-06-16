@@ -114,7 +114,7 @@ result pmm_init() {
         if (entry->base == 0x0) {
           continue;
         }
-        
+
         for (size_t j = 0; j < entry->length; j += 0x1000) {
           start->ptr = (void*)((size_t)entry->base + j);
           if (start->next == 0x0) {
@@ -292,7 +292,6 @@ uint64_t total_memory() {
   return total_bytes;
 }
 void slabfree(void *addr) {
-
   uint64_t real_addr = (uint64_t)addr;
   if (real_addr == 0) {
     return;

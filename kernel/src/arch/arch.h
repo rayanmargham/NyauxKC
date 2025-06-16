@@ -1,7 +1,5 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
@@ -11,6 +9,9 @@ extern "C" {
 #include <uacpi/types.h>
 #if defined(__x86_64__)
 #include "x86_64/cpu/structures.h"
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 void arch_raw_io_write(uint64_t address, uint64_t data, uint8_t byte_width);
 uint64_t arch_raw_io_in(uint64_t address, uint8_t byte_width);

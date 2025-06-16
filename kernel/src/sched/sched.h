@@ -1,7 +1,5 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include <arch/arch.h>
 #include <stdint.h>
 
@@ -9,6 +7,9 @@ extern "C" {
 #include "arch/x86_64/instructions/instructions.h"
 #include "utils/basic.h"
 #include "utils/hashmap.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 #define KSTACKSIZE 16384
 #define USTACKSIZE 1048576
 enum TASKSTATE {

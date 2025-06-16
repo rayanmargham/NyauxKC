@@ -1,5 +1,5 @@
 #include "tty.h"
-#include "flanterm/flanterm.h"
+#include "flanterm/src/flanterm.h"
 #include "fs/devfs/devfs.h"
 #include "fs/vfs/fd.h"
 #include "fs/vfs/vfs.h"

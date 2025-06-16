@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-#include "flanterm/flanterm.h"
+#include "flanterm/src/flanterm.h"
 #include "mem/kmem.h"
 #include "term/term.h"
 #include "timers/timer.hpp"
@@ -19,7 +19,6 @@ void flanterm_fb_free(void *ptr, size_t size) { kfree(ptr, size); }
 // reason being flanterm is giving us some shit addresses for some reason and
 // slabfree believes its a slab lol
 void no(void *ptr, size_t size) {
-  sprintf("got ptr %p, size: %lu\r\n", ptr, size);
   /* mrrp :3 */
 }
 void init_term(struct limine_framebuffer *buf) {

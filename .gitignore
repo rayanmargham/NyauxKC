@@ -12,11 +12,14 @@
 /.jinx-cache
 /.cache
 /compile_commands.json
-kernel/.cache
+/kernel/.cache
+/kernel/subprojects/uacpi
+/kernel/subprojects/freestnd-c-hdrs
+/kernel/subprojects/cc-runtime
+/kernel/subprojects/freestnd-cxx-hdrs
 /ovmf
 *.hdd
 *.elf
 *.bin
 *.a
 *.o
-kernel/.cache/

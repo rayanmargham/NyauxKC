@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://codeberg.org/osdev/cc-runtime.git
+revision = dae79833b57a01b9fd3e359ee31def69f5ae899b
+depth = 1
+patch_directory = cc-runtime
+
+[provide]
+cc_runtime = cc_runtime_dep

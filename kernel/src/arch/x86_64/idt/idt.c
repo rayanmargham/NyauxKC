@@ -104,6 +104,15 @@ uint64_t read_cr2() {
 
 void *page_fault_handler(struct StackFrame *frame) {
   __asm__ volatile("cli");
+  // this was causing some ub so i have fixed this
+  // this doesnt solve our syscall_waitpid bug ig
+  if (arch_get_per_cpu_data() == NULL) {
+      kprintf("Page Fault! CR2 0x%lx\r\n", read_cr2());
+          kprintf("RIP is 0x%lx. Error Code 0b%B\r\n", frame->rip,
+                  frame->error_code);
+          STACKTRACE
+          panic("Page Fault:c");
+  }
   if (arch_get_per_cpu_data()->cur_thread == NULL ||
       arch_get_per_cpu_data()->cur_thread->proc == NULL) {
 

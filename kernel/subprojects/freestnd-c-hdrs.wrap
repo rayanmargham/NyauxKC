@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://codeberg.org/osdev/freestnd-c-hdrs.git
+revision = 4039f438fb1dc1064d8e98f70e1cf122f91b763b
+depth = 1
+
+[provide]
+freestnd_c_hdrs = freestnd_c_hdrs_dep

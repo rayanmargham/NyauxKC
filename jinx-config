@@ -151,7 +151,6 @@ meson_configure_noflags() {
         --localstatedir=/var \
         --libdir=lib \
         --sbindir=bin \
-        --buildtype=release \
         -Ddefault_library=shared \
         "$@"
 }

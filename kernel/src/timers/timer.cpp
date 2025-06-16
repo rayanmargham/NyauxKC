@@ -4,7 +4,7 @@
 #include <timers/pvclock.hpp>
 #include <timers/timer.hpp>
 void *Timer = nullptr;
-struct nyaux_kernel_info info {
+struct nyaux_kernel_info info = {
   .timestamp = 0,
   .lock = {0},
   .cmdarray = NULL,

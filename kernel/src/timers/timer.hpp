@@ -28,10 +28,10 @@ public:
 extern void
     *Timer; // ignore this warning, pragma once is protecting us from an ODR
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 
-extern struct nyaux_kernel_info info;
 extern volatile struct limine_boot_time_request limine_boot_time;
   void GenericTimerInit();
   int GenericTimerStallPollps(size_t ps);

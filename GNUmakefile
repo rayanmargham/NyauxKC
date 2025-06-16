@@ -67,9 +67,7 @@ clean:
 cleankernel:
 	rm -rf iso_root sysroot nyaux.iso initramfs.tar
 	rm -rf builds/kernel/
-	make -C kernel clean
 	rm -rf pkgs/kernel*
 .PHONY: distclean
 distclean: clean
-	make -C kernel distclean
 	rm -rf .jinx-cache jinx builds host-builds host-pkgs pkgs sources ovmf

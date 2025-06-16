@@ -18,7 +18,7 @@ struct __syscall_ret syscall_exit(int exit_code) {
   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
   if (cpu->cur_thread->proc->pid == 0) {
     kprintf_log(FATAL, "init process destroyed\r\n");
-    
+
     exit_thread();
   }
   cpu->cur_thread->state = ZOMBIE;
@@ -291,7 +291,6 @@ neverstop:
   __asm__ volatile ("cli"); // we dont want the process to be unmapped by the reaper thread while we are doing this so
   // this is required
   while (us != NULL) {
-    sprintf("addr %p\r\n", us);
     if (us->state == ZOMBIE) {
       sprintf("doing so with error code %lu\r\n", us->exit_code);
       *status = W_EXITCODE(us->exit_code, 0);
@@ -334,7 +333,7 @@ struct __syscall_ret syscall_clockget(int clock, long *time, long *nanosecs) {
 
         return (struct __syscall_ret){.ret = 0, .errno = 0};
       }
-      
+
       break;
     default:
       break;

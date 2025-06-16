@@ -5,31 +5,28 @@ version=0.0git
 revision=1
 source_dir="kernel"
 source_imagedeps="git"
-source_allow_network="yes"
-hostdeps="gcc"
-imagedeps="nasm"
+source_allow_network=yes
+allow_network=yes
+hostdeps="gcc pkg-config libgcc-binaries"
+imagedeps="git nasm build-essential meson ninja-build cmake"
 deps="core-libs"
+builddeps="freestnd-c-hdrs freestnd-cxx-hdrs frigg"
 
 prepare() {
     ./get-deps
+    mkdir -p ${source_dir}/subprojects
+
+}
+configure() {
+    LDFLAGS="-Wl,/usr/local/libgcc-binaries/libgcc-$ARCHITECTURE.a" \
+    meson_configure_noflags \
+        --buildtype=debugoptimized
 }
 
 build() {
-    cp -rpf "${source_dir}"/. ./
-
-    make -j${parallelism} \
-        PROD="$PROD" \
-        CC=${OS_TRIPLET}-gcc \
-        CXX=${OS_TRIPLET}-g++ \
-        LD=${OS_TRIPLET}-ld \
-        AR=${OS_TRIPLET}-ar \
-        OBJDUMP=${OS_TRIPLET}-objdump
-        
-
+    ninja -j${parallelism}
 }
 
 package() {
-    make install PREFIX="${prefix}" DESTDIR="${dest_dir}"
-
-    # post_package_strip
+    DESTDIR="${dest_dir}" ninja install
 }

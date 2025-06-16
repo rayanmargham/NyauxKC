@@ -1,13 +1,14 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include "utils/hashmap.h"
 #include <sched/sched.h>
 #include <stddef.h>
 #include <term/term.h>
 #include <utils/basic.h>
 #include <utils/libc.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct FileDescriptorHandle {
   int fd;
   uint64_t offset;

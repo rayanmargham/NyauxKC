@@ -8,8 +8,8 @@ multiple output backends. Included is a fast framebuffer backend.
 To quickly set up and use a framebuffer Flanterm instance, it is possible to
 use the `flanterm_fb_init()` function as such:
 ```c
-#include <flanterm/flanterm.h>
-#include <flanterm/backends/fb.h>
+#include <flanterm.h>
+#include <flanterm_backends/fb.h>
 
 struct flanterm_context *ft_ctx = flanterm_fb_init(
         NULL,
@@ -30,7 +30,7 @@ struct flanterm_context *ft_ctx = flanterm_fb_init(
 Where `framebuffer_ptr, width, height, pitch` and `{red,green,blue}_mask_{size,shift}`
 represent the corresponding info about the framebuffer to use for this given instance.
 
-The meaning of the other arguments can be found in `backends/fb.h`.
+The meaning of the other arguments can be found in `flanterm_backends/fb.h`.
 
 To then print to the terminal instance, simply use the `flanterm_write()`
 function on the given instance. For example:

@@ -18,7 +18,7 @@ fi
 # Prepare the iso and boot directories.
 rm -rf iso_root
 mkdir -pv iso_root/boot
-cp sysroot/usr/share/NyauxKC/NyauxKC-x86_64 iso_root/boot/NyauxKC
+cp sysroot/usr/bin/NyauxKC iso_root/boot/NyauxKC
 cp initramfs.tar iso_root/boot/
 cp build-support/limine.conf iso_root/boot/
 

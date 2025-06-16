@@ -1,7 +1,7 @@
 #include "arch/x86_64/cmos/cmos.h"
 #include "dbg/kdb.h"
 #include "elf/symbols/symbols.h"
-#include "flanterm/flanterm.h"
+#include "flanterm/src/flanterm.h"
 #include "fs/vfs/fd.h"
 #include <utils/cmdline.hpp>
 #include "fs/vfs/vfs.h"
@@ -138,11 +138,13 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 }
 #include <uacpi/sleep.h>
 // Nyaux Kernel Entry Point
+// extern void nofriendsnobitches();
 void kmain(void) {
   // Ensure the bootloader actually understands our base revision (see spec).
   if (LIMINE_BASE_REVISION_SUPPORTED == false) {
     hcf();
   }
+  // nofriendsnobitches();
   // Ensure we got a framebuffer.
   if (framebuffer_request.response == NULL ||
       framebuffer_request.response->framebuffer_count < 1) {

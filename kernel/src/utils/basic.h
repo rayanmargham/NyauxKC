@@ -1,14 +1,17 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
 #include <Mutexes/seqlock.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+enum cmdType {None, Bool, Number};
 struct cmdlineobj {
     char *key;
+    enum cmdType type;
     union {
         char *str;
         size_t num;
@@ -20,6 +23,7 @@ struct nyaux_kernel_info {
   struct seq_lock lock;
   struct cmdlineobj *cmdarray;
 };
+extern struct nyaux_kernel_info info;
 #define MIB(x) (0x100000 * (x))
   __attribute__((noreturn)) static void hcf(void) {
     for (;;) {

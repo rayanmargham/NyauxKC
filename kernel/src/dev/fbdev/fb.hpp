@@ -1,8 +1,6 @@
 #pragma once
 #include "limine.h"
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include "fs/vfs/fd.h"
 #include <arch/x86_64/syscalls/syscall.h>
 #include <fs/devfs/devfs.h>
@@ -11,6 +9,9 @@ extern "C" {
 #include <term/term.h>
 #include <utils/basic.h>
 #include <utils/libc.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
   extern struct devfsops fbdevops;
   void devfbdev_init(struct vfs *curvfs);
 // stolen from linux source
@@ -145,7 +146,7 @@ variablefbinfo.bits_per_pixel,
 variablefbinfo.xres_virtual,
 variablefbinfo.yres_virtual,
 fixedfbinfo.line_length);
-	
+
 
     kprintf("gfx::LimineFrameBuffer(): yogurt\r\n");
     kprintf("gfx::LimineFrameBuffer(): gurt: yo\r\n");
@@ -183,7 +184,7 @@ fixedfbinfo.line_length);
     memcpy(
         calculated_dest,
         buffer, size);
-		
+
 		*res = 0;
     return size;
   }

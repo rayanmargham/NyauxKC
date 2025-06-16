@@ -1,11 +1,12 @@
 #pragma once
+
+#include <sched/sched.h>
+#include <utils/basic.h>
+#include <stdbool.h>
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "sched/sched.h"
-#include "utils/basic.h"
-#include <stdbool.h>
-#include <stdint.h>
 struct KMutex {
   spinlock_t protectionlock;
   bool lock;
