@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/managarm/frigg.git
+revision = ea0e9b5ea709b0c1b3e72ffc5de7019ca46ef427
+depth = 1
+
+[provide]
+frigg = frigg_dep

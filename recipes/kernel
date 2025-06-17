@@ -24,7 +24,7 @@ configure() {
 }
 
 build() {
-    ninja -j${parallelism}
+    ninja -j${parallelism} > compile_commands.json
 }
 
 package() {

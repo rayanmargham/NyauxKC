@@ -19,7 +19,11 @@ debug:
 jinx:
 	curl -Lo jinx https://codeberg.org/mintsuki/jinx/raw/commit/49be94c4592d40259e190416945f6aac3692b0c1/jinx
 	chmod +x jinx
-
+.PHONY: lsp
+lsp:
+	bear -- meson setup kernel/build kernel
+	ninja -C kernel/build
+	cp -r kernel/build/compile_commands.json compile_commands.json
 .PHONY: run-kvm
 run-kvm: nyaux.iso
 	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS) -display gtk
