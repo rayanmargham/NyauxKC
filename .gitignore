@@ -12,6 +12,8 @@
 /.jinx-cache
 /.cache
 /compile_commands.json
+/kernel/cc-runtime
+/kernel/freestnd-cxx-hdrs
 /kernel/.cache
 /kernel/subprojects/uacpi
 /kernel/subprojects/freestnd-c-hdrs

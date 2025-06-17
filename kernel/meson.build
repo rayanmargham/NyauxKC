@@ -11,7 +11,6 @@ frigg = dependency('frigg')
 cc_runtime = dependency('cc_runtime')
 freestnd_c_hdrs = dependency('freestnd_c_hdrs')
 freestnd_cxx_hdrs = dependency('freestnd_cxx_hdrs')
-
 src = files(
   'src/sched/test.asm',
   'src/sched/yield.asm',
@@ -129,7 +128,7 @@ else
     error('Unsupported architecture: ' + target_arch)
 endif
 executable('NyauxKC', src, uacpi.get_variable('sources'),
-	dependencies: [frigg, freestnd_c_hdrs, freestnd_cxx_hdrs],
+	dependencies: [frigg, freestnd_c_hdrs, freestnd_cxx_hdrs, cc_runtime],
 	c_args: c_args + shared_args,
 	cpp_args: cpp_args + shared_args,
 	link_args: link_args,

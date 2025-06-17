@@ -8,7 +8,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-enum cmdType {None, Bool, Number};
+enum cmdType {None, Bool, Number, String};
 struct cmdlineobj {
     char *key;
     enum cmdType type;

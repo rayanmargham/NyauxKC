@@ -67,44 +67,51 @@ void parse_cmd(frg::string_view cmdline) {
                         } else if (strcmp(right_str, "false") == 0) {
                             tobepushed.condition = false;
                         }
-          }
-          if (attemptnumber.has_value()) {
+          } else if (attemptnumber.has_value()) {
               tobepushed.num = attemptnumber.value();
               tobepushed.type = Number;
+          } else {
+              tobepushed.type = String;
+              tobepushed.str = strdup(static_cast<const char*>(right_str));
           }
+
 
           yo.push(tobepushed);
 
-          // kfree(left, him + 1);
-          // kfree(right_str, right_len + 1);
+          kfree(left, him + 1);
+          kfree(right_str, right_len + 1);
         } else {
             cmdlineobj push = {
-                .key = strdup((const char*)left),
+                .key = strdup(static_cast<const char*>(left)),
                 .type = None
             };
             yo.push(push);
-            // kfree(left, him + 1);
         }
 
-
-        // kfree(component, len + 1);
+        kfree(component, len + 1);
       }
 
       for (cmdlineobj &obj : yo) {
-          // Access fields of obj
-          frg_log(obj.key);
+          // Access fields of object
 
+          kprintf("key %s -> ", obj.key);
           if (obj.type == cmdType::Bool) {
-              frg_log(obj.condition ? "true" : "false");
+              const char *choose = obj.condition ? "true" : "false";
+              kprintf("bool: %s\r\n", choose);
           } else if (obj.type == cmdType::Number) {
-              kprintf("numsexy: %lu", obj.num);
+              kprintf("number: %lu\r\n", obj.num);
+          } else if (obj.type == cmdType::String) {
+              kprintf("string: %s\r\n", obj.str);
+          } else {
+              kprintf("None");
           }
       }
+      panic("stopping here");
 }
 extern "C" void parse_cmdline() {
   frg::string_view cmdline =
       frg::basic_string_view(limine_cmdline.response->cmdline);
-  kprintf_log(STATUSOK, "Nyaux Kernel Command Line: %s, size: %lu\r\n",
+  kprintf_log(STATUSOK, "Nyaux Kernel Command Line: [%s] size: [%lu]\r\n",
               cmdline.data(), cmdline.size());
   parse_cmd(cmdline);
 }

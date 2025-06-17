@@ -11,7 +11,7 @@ class frgalloc {
         }
         size_t *gotit = reinterpret_cast<size_t*>(reinterpret_cast<uint8_t*>(ptr) - alignof(max_align_t));
         size_t o = *gotit;
-        kprintf("got num: %lu\r\n", *gotit);
+        assert(n == o);
         kfree(reinterpret_cast<void*>(gotit), o + alignof(max_align_t));
     }
     T *allocate(size_t size) {
@@ -25,7 +25,6 @@ class frgalloc {
                 }
                 size_t *gotit = reinterpret_cast<size_t*>(reinterpret_cast<uint8_t*>(ptr) - alignof(max_align_t));
                 size_t o = *gotit;
-                kprintf("got num: %lu\r\n", *gotit);
                 kfree((reinterpret_cast<void*>(gotit)), o + alignof(max_align_t));
     }
 };
