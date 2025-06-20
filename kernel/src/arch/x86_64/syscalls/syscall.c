@@ -288,7 +288,7 @@ neverstop:
   if (!us) {
     return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
   }
-  __asm__ volatile ("cli"); // we dont want the process to be unmapped by the reaper thread while we are doing this so
+  //__asm__ volatile ("cli"); // we dont want the process to be unmapped by the reaper thread while we are doing this so
   // this is required
   while (us != NULL) {
     if (us->state == ZOMBIE) {
@@ -300,13 +300,9 @@ neverstop:
       __asm__ volatile ("sti"); // restore interrupts
       return (struct __syscall_ret){.ret = pidnum, .errno = 0};
     }
-    if (us->children == us) {
-      break;
-    }
-    us = us->children;
-
+    us = us->children_next;
   }
-  __asm__ volatile ("sti"); // restore interrupts
+  // __asm__ volatile ("sti"); // restore interrupts
   sched_yield();
 
   cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;

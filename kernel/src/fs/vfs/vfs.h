@@ -1,12 +1,13 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include "fs/vfs/fd.h"
 #include <stddef.h>
 #include <term/term.h>
 #include <utils/basic.h>
 #include <utils/libc.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 void vfs_init();
 enum vtype {
   VREG,

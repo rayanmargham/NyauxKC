@@ -2,7 +2,7 @@
 # Code is governed by the GPL-2.0 license.
 # Copyright (C) 2021-2024 The nyaux authors.
 
-QEMUFLAGS ?= -M q35,smm=off -cdrom nyaux.iso -serial stdio -m 1G -d int
+QEMUFLAGS ?= -M q35,smm=off -cdrom nyaux.iso -serial stdio -m 1G  -trace ps2*
 
 .PHONY: all
 all:
@@ -72,6 +72,7 @@ cleankernel:
 	rm -rf iso_root sysroot nyaux.iso initramfs.tar
 	rm -rf builds/kernel/
 	rm -rf pkgs/kernel*
+	meson subprojects purge --confirm --sourcedir=kernel
 .PHONY: distclean
 distclean: clean
 	rm -rf .jinx-cache jinx builds host-builds host-pkgs pkgs sources ovmf

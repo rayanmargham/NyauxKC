@@ -35,6 +35,8 @@ struct process_t {
   struct thread_t
       *queuewaitingforexit;   // threads waiting for the process to exit
   struct process_t *children; // linked list of children for this process
+  struct process_t *children_next; // a process can have MUTIPLE children, this wasnt supported
+  // this is a fix to support this
   struct process_t *parent;   // our parent
 };
 struct thread_t {

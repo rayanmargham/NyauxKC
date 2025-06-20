@@ -1,29 +1,35 @@
 #pragma once
 
+#include <Mutexes/seqlock.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
-#include <Mutexes/seqlock.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-enum cmdType {None, Bool, Number, String};
-struct cmdlineobj {
+  enum cmdType { None, Bool, Number, String };
+  struct cmdlineobj {
     char *key;
     enum cmdType type;
     union {
-        char *str;
-        size_t num;
-        bool condition;
+      char *str;
+      size_t num;
+      bool condition;
     };
-};
-struct nyaux_kernel_info {
-  __int128_t timestamp;
-  struct seq_lock lock;
-  struct cmdlineobj *cmdarray;
-};
-extern struct nyaux_kernel_info info;
+  };
+  struct nyaux_kernel_info {
+    struct {
+      struct seq_lock lock;
+      __int128_t timestamp;
+    };
+    struct {
+      // we store size as in c++ we can reconstruct this into a vector
+    struct cmdlineobj *cmdarray;
+     size_t size; 
+    };
+  };
+  extern struct nyaux_kernel_info info;
 #define MIB(x) (0x100000 * (x))
   __attribute__((noreturn)) static void hcf(void) {
     for (;;) {
@@ -47,14 +53,15 @@ extern struct nyaux_kernel_info info;
   } while (0)
 // extern void friendinsidemewrapper(const char *format, ...);
 #ifdef __x86_64__
-#define panic(format, ...)                                      \
-do {                                                            \
-    __asm__ volatile ("cli");                                   \
-    kprintf_log(FATAL, "panic reached :c Function %s Reasoning: ", __PRETTY_FUNCTION__); \
-    friendinsidemewrapper(format, ##__VA_ARGS__);               \
-    kprintf("\r\n");                                            \
-    hcf();                                                      \
-} while (0)
+#define panic(format, ...)                                                     \
+  do {                                                                         \
+    __asm__ volatile("cli");                                                   \
+    kprintf_log(FATAL, "panic reached :c Function %s Reasoning: ",             \
+                __PRETTY_FUNCTION__);                                          \
+    friendinsidemewrapper(format, ##__VA_ARGS__);                              \
+    kprintf("\r\n");                                                           \
+    hcf();                                                                     \
+  } while (0)
 #endif
 #define is_aligned(value, align) (((value) & ((align) - 1)) == 0)
 #define SPINLOCK_INITIALIZER 0

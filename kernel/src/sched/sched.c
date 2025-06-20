@@ -51,6 +51,7 @@ struct process_t *create_process(pagemap *map) {
   struct process_t *him = (struct process_t *)kmalloc(sizeof(struct process_t));
   him->cur_map = map;
   him->pid = pidallocate();
+  kprintf("allocated to pid %lu\r\n", him->pid);
   him->lock = SPINLOCK_INITIALIZER;
   him->cnt = 0;
   him->fds = hashmap_new(sizeof(struct FileDescriptorHandle), 0, 0, 0, fd_hash,
@@ -59,6 +60,7 @@ struct process_t *create_process(pagemap *map) {
   him->fdalloc[1] = 1;
   him->fdalloc[2] = 1;
   him->children = NULL;
+  him->children_next = NULL;
   if (vfs_list) {
     him->root = vfs_list->cur_vnode;
     him->cwd = him->root;
@@ -238,6 +240,17 @@ void create_kentry() {
   // create_kthread((uint64_t)klocktest2, kernelprocess, 3);
 #endif
 }
+void attach_child(struct process_t *from, struct process_t *child) {
+  if (from->children != NULL) {
+    struct process_t *lastchild = from->children;
+    while (lastchild->children_next) {
+      lastchild = lastchild->children_next;
+    }
+    lastchild->children_next = child;
+  } else {
+    from->children = child;
+  }
+}
 void do_funny() {
   struct thread_t *fun = create_uthread(0, get_process_start(), 2);
   get_process_finish(fun->proc);
@@ -255,9 +268,8 @@ int scheduler_fork() {
   newprocess->cwd = oldprocess->cwd;
   // so fucking simple
   // so fucking easy
-  newprocess->children = oldprocess->children;
   newprocess->parent = oldprocess;
-  oldprocess->children = newprocess;
+  attach_child(oldprocess, newprocess);
   if (oldprocess->cwdpath)
     newprocess->cwdpath = strdup(oldprocess->cwdpath);
   duplicate_process_fd(oldprocess, newprocess);

@@ -1,13 +1,20 @@
 #include "arch/arch.h"
+#include "cppglue/glue.hpp"
 
 #include <timers/hpet.hpp>
 #include <timers/pvclock.hpp>
 #include <timers/timer.hpp>
 void *Timer = nullptr;
 struct nyaux_kernel_info info = {
+  {
+    .lock = {0},
+
   .timestamp = 0,
-  .lock = {0},
-  .cmdarray = NULL,
+  },
+  {
+    .cmdarray = NULL,
+    .size = 0
+  }
 };
 extern "C" {
   bool GenericTimerActive() {
@@ -24,6 +31,7 @@ extern "C" {
       Timer = static_cast<void *>(new pvclock);
     }
     info.timestamp = limine_boot_time.response->boot_time;
+
   }
   int GenericTimerStallPollps(size_t ps) {
     if (!Timer) {

@@ -397,3 +397,6 @@ void free_pagemap(pagemap *take) {
   arch_destroy_pagemap(take);
   kfree(take, sizeof(pagemap));
 }
+void unmap_range(pagemap *take, void *addr, size_t sizeinbytes) {
+  arch_unmap_vmm_region(take, (uint64_t)addr, sizeinbytes);
+}

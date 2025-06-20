@@ -1,14 +1,14 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include "fs/vfs/fd.h"
 #include <fs/vfs/vfs.h>
 #include <mem/kmem.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <term/term.h>
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct devfsops {
   size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
                void *buffer, int rw, struct FileDescriptorHandle *hnd,

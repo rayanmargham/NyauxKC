@@ -8,7 +8,7 @@ with open('dump.txt', 'r') as f:
 
 def translate(matchobj):
     addr = matchobj.group(0)
-    out = subprocess.check_output(['addr2line', '-f', '-e', 'kernel/bin-x86_64/NyauxKC', addr], stderr=subprocess.DEVNULL).decode().strip().split('\n')
+    out = subprocess.check_output(['addr2line', '-f', '-e', 'builds/kernel/NyauxKC', addr], stderr=subprocess.DEVNULL).decode().strip().split('\n')
     func = out[0]
     path = out[1].split(':')[0]
     file = os.path.basename(path)

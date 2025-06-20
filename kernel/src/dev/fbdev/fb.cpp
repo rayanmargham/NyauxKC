@@ -33,7 +33,7 @@ static int poll(struct vnode *curvnode, struct pollfd *requested) {
   return 0;
 }
 
-void devfbdev_init(struct vfs *curvfs) {
+extern "C" void devfbdev_init(struct vfs *curvfs) {
   // struct vnode *res;
   // struct devfsinfo *info =
   //     (struct devfsinfo *)kmalloc(sizeof(struct devfsinfo));

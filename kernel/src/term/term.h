@@ -1,7 +1,5 @@
 #pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
+
 #include <limine.h>
 
 #include "../flanterm/src/flanterm_backends/fb.h"
@@ -16,6 +14,9 @@ extern "C" {
 #define NANOPRINTF_VISIBILITY_STATIC
 #include "nanoprintf.h"
 #include <utils/libc.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
   void init_term(struct limine_framebuffer *buf);
   void friendinsideme(const char *format, va_list args);
   void friendinsidemewrapper(const char *format, ...);

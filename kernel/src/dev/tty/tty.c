@@ -6,6 +6,7 @@
 #include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
+#include "utils/cmdline.hpp"
 #include "utils/libc.h"
 #include <arch/x86_64/syscalls/syscall.h>
 #include <stdint.h>
@@ -202,7 +203,27 @@ void devtty_init(struct vfs *curvfs) {
   hnd1->node = res;
   hnd2->node = res;
   hnd3->node = res;
-  struct process_t *p = get_process_start();
-  create_kthread((uint64_t)serial_put_input, p, 4);
+  char *optionchk[3] = {
+    "serial_input",
+    "serial_ttyinput",
+    "serial.input"
+  };
+  struct cmdlineobj *obj = NULL;
+  for (int i = 0; i < 3; i++) {
+    void *chk = look_for_option(optionchk[i]);
+    if (chk != NULL) {
+      obj = (struct cmdlineobj*)chk;
+    }
+  }
+  if (obj == NULL) {
+    kprintf_log(STATUSFAIL, "not using serial input due to cmdline option...\r\n");
+    goto mrrp;
+  }
+  if (obj->type == Bool) {
+    struct process_t *p = get_process_start();
+
+  create_kthread((uint64_t)serial_put_input, p, p->pid);
   get_process_finish(p);
+  }
+  mrrp:
 }

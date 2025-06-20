@@ -168,6 +168,7 @@ void kmain(void) {
           total_memory(), total_memory() / 1048576);
   create_kentry();
   hashmap_set_allocator(kmalloc, kfree);
+  
   init_smp();
   // uacpi_status ret = uacpi_prepare_for_sleep_state(UACPI_SLEEP_STATE_S5);
   // if (uacpi_unlikely_error(ret))

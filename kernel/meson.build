@@ -51,6 +51,8 @@ src = files(
 	'src/utils/hashmap.c',
 	'src/utils/libc.c',
 	'src/utils/profiler.c',
+    'src/controllers/i8042/i8042.c',
+    'src/dev/keyboard/keyboard.cpp'
 )
 
 inc = include_directories(

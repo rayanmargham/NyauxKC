@@ -175,6 +175,7 @@ void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
   }
 }
 
+
 static void destroy_page_table(uint64_t *table, int level) {
   // we are already in a differnt page table so this should be fine
   uint64_t *vtable =

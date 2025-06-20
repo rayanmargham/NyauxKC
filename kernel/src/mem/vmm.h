@@ -53,6 +53,7 @@ void deallocate_all_user_regions(pagemap *target);
 void free_pagemap(pagemap *take);
 bool iswithinvmmregion(pagemap *map, uint64_t virt);
 void *uvmm_region_alloc_demend_paged(pagemap *map, uint64_t amount);
+void unmap_range(pagemap *take, void *addr, size_t sizeinbytes);
 #ifdef __cplusplus
 }
 #endif

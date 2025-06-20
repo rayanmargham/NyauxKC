@@ -43,7 +43,7 @@ LDFLAGS :=
 # Ensure the dependencies have been obtained.
 # Ensure the dependencies have been obtained.
 ifneq ($(shell ( test '$(MAKECMDGOALS)' = clean || test '$(MAKECMDGOALS)' = distclean ); echo $$?),0)
-    ifeq ($(shell ( ! test -d freestnd-c-hdrs || ! test -d freestnd-cxx-hdrs || ! test -d cc-runtime || ! test -f src/limine.h || ! test -d cc-runtime); echo $$?),0)
+    ifeq ($(shell ( ! test -f src/limine.h); echo $$?),0)
         $(error Please run the ./get-deps script first)
     endif
 endif
@@ -199,7 +199,6 @@ override LDFLAGS += \
 
 # Use "find" to glob all *.c, *.cpp, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
-override SRCFILES := $(shell find -L src cc-runtime/src -type f -not -path "src/uACPI/tests/*" -not -path "src/frigg/*" | LC_ALL=C sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override CXXFILES := $(filter %.cpp,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))

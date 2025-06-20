@@ -312,6 +312,9 @@ void slabfree(void *addr) {
     counter = (pnode *)counter->next;
   }
   if (howmanynodes == guy->obj_ammount) {
+    // implementing this involes making the slab list doubly linked
+    // which is not the focus of Nyaux rn.
+    // TODO: do this memory optimization later.
     // kprintf("USELESS SLAB\r\n");
   }
 }
