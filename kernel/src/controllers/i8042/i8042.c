@@ -37,11 +37,12 @@ void i8042_init() {
         kprintf_log(STATUSOK, "found ps2 controller\r\n");
         send_command(0xAD); //disable ps2 port 1
         send_command(0xA7); // disable ps2 port 2
+        read_data_reg(); // hope for god something good happens
         send_command(0x20);
+
         uint8_t configbyte = read_data_reg();
         kprintf_log(TRACE, "config byte before 0x%b\r\n", configbyte);
-        configbyte |= (1<<1) | (1 << 0); // its okay to enable them as it isnt routed yet.
-        // we still need to configure shit and route the irqs
+        configbyte &= (~(1<<1) | ~(1 << 0)); // DO NOT LET THE USER FUCK THIS SHIT UP
         // give us a minute mr ps2 then we reset this shit
         configbyte &= ~(1 << 6); // disable ps2 translation
         configbyte &= ~(1 << 4); // enable kbd
