@@ -1,4 +1,5 @@
 #include "tty.h"
+#include "controllers/i8042/ps2.h"
 #include "flanterm/src/flanterm.h"
 #include "fs/devfs/devfs.h"
 #include "fs/vfs/fd.h"
@@ -15,8 +16,10 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *ret);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
-static int poll(struct vnode *curvnode, struct pollfd *requested);
-struct devfsops ttyops = {.rw = rw, .ioctl = ioctl, .poll = poll};
+static int poll(struct vnode *curvnode, struct pollfd *requested, void *data);
+static void open(struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd);
+static int close(struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd);
+struct devfsops ttyops = {.open = open, .close = close, .rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd, int *ret) {
   if (rw == 0) {
@@ -135,7 +138,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
 
 static struct tty *curtty = NULL;
 extern bool serial_data_ready();
-static int poll(struct vnode *curvnode, struct pollfd *requested) {
+static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
   sprintf("tty(): poll() called on me, events are %d\r\n", requested->events);
   requested->revents = requested->events; // for now
   return 0;
@@ -158,7 +161,44 @@ void serial_put_input() {
   kprintf_log(FATAL, "WHAT??\r\n");
   exit_thread();
 }
+void ps2_put_input() {
+  struct vnode *lah = NULL;
+  // just hope the underlying device recongizes that the kernel is asking this shit
+  vfs_lookup(NULL, "/dev/keyboard", &lah);
 
+  if (lah == NULL)
+    exit_thread();
+  int res = 0;
+  int fd = lah->ops->open(lah, O_RDONLY, 0644, &res);
+  if (res != 0)
+    exit_thread();
+  while (true) {
+    if (curtty) {
+      if (curtty->rx) {
+        struct pollfd yes = {-1, POLLIN, 0}; // fd -1 is a hack
+        lah->ops->poll(lah, &yes);
+        if (yes.revents & POLLIN) {
+        // spinlock_lock(&curtty->rxlock);
+        
+        nyauxps2kbdpacket pac;
+        int res = 0;
+        lah->ops->rw(lah, 0, sizeof(nyauxps2kbdpacket), &pac, 0, get_fd(fd), &res);
+        if (res != 0) {
+          sprintf("exitting\r\n");
+          // spinlock_unlock(&curtty->rxlock);
+          exit_thread();
+        }
+        if (pac.flags == PRESSED) {
+        put_ringbuf(curtty->rx, pac.ascii); };
+        // spinlock_unlock(&curtty->rxlock);
+yes.revents = 0;
+      } 
+      
+
+      }
+    }
+  }
+}
 void devtty_init(struct vfs *curvfs) {
   struct vnode *res;
   struct devfsinfo *info = kmalloc(sizeof(struct devfsinfo));
@@ -224,6 +264,17 @@ void devtty_init(struct vfs *curvfs) {
 
   create_kthread((uint64_t)serial_put_input, p, p->pid);
   get_process_finish(p);
+  goto yea;
   }
   mrrp:
+    struct process_t *p = get_process_start();
+    create_kthread((uint64_t)ps2_put_input, p, p->pid + 1);
+ get_process_finish(p);
+ yea:
+}
+static void open(struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd) {
+  *res = 0;
+}
+static int close(struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd) {
+  return 0;
 }

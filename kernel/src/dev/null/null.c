@@ -9,8 +9,10 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  int *res);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
-static int poll(struct vnode *curvnode, struct pollfd *requested);
-struct devfsops nullops = {.rw = rw, .ioctl = ioctl, .poll = poll};
+static void open(struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd);
+static int close(struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd);
+static int poll(struct vnode *curvnode, struct pollfd *requested, void *data);
+struct devfsops nullops = {.open = open, .close = close, .rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
                  int *res) {
@@ -33,7 +35,14 @@ void devnull_init(struct vfs *curvfs) {
   curvfs->cur_vnode->ops->create(curvfs->cur_vnode, "null", VCHRDEVICE,
                                  &vnode_devops, &res, info, NULL);
 }
-static int poll(struct vnode *curvnode, struct pollfd *requested) {
+static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
   requested->revents = requested->events;
+  return 0;
+}
+static void open(struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd) {
+  *res = 0;
+  return;
+}
+static int close(struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd) {
   return 0;
 }

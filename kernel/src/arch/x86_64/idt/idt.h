@@ -13,6 +13,8 @@ extern "C" {
 int AllocateIrq();
 void init_idt();
 extern void *isr_ctxt[256];
+extern volatile struct limine_hhdm_request
+    hhdm_request;
 void RegisterHandler(int interrupt, void *(*handler)(struct StackFrame *frame));
 typedef struct {
   uacpi_interrupt_handler fn;

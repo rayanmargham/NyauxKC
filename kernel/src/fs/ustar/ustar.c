@@ -35,7 +35,7 @@ void populate_tmpfs_from_tar() {
   }
   struct tar_header *ptr = modules.response->modules[0]->address;
   if (strcmp((char *)(ptr->ustar), "ustar") == 0) {
-    kprintf("populate_tmpfs_from_tar(): this is a ustar archive, unpacking and "
+    kprintf_log(STATUSOK, "populate_tmpfs_from_tar(): this is a ustar archive, unpacking and "
             "populating the vfs\r\n");
     while ((void *)ptr < (modules.response->modules[0]->address +
                           modules.response->modules[0]->size) -

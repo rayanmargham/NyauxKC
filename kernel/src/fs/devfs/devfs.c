@@ -22,9 +22,13 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
 static int readdir(struct vnode *curvnode, int offset, char **name);
 static int mount(struct vfs *curvfs, char *path, void *data);
 static int poll(struct vnode *curvnode, struct pollfd *requested);
+static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res);
+static int close (struct vnode *curvnode, int fd);
 static int hardlink(struct vnode *curvnode, struct vnode *with,
                     const char *name);
-struct vnodeops vnode_devops = {.lookup = lookup,
+struct vnodeops vnode_devops = {.open = open,
+  .close = close,
+  .lookup = lookup,
                                 .create = create,
                                 .rw = rww,
                                 readdir,
@@ -34,9 +38,10 @@ struct vnodeops vnode_devops = {.lookup = lookup,
 struct vfs_ops vfs_devops = {.mount = mount};
 static int mount(struct vfs *curvfs, char *path, void *data) {
   devnull_init(curvfs);
-  devtty_init(curvfs);
+
   devfbdev_init(curvfs);
   devkbd_init(curvfs);
+  devtty_init(curvfs);
   return 0;
 }
 static void insert_into_list(struct devfsnode *node,
@@ -197,7 +202,7 @@ static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
 }
 static int poll(struct vnode *curvnode, struct pollfd *requested) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
-  return devnode->info->ops->poll(curvnode, requested);
+  return devnode->info->ops->poll(curvnode, requested, devnode->info->data);
 }
 int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
   if (curvnode->v_type != VDIR) {
@@ -211,4 +216,23 @@ int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
   new->curvnode = with;
   insert_into_list(new, entry);
   return 0;
+}
+static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) {
+  int fd = fddalloc(curvnode);
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  hnd->flags = flags;
+  hnd->mode = mode;
+  struct devfsnode *node = (struct devfsnode*)curvnode->data;
+  node->info->ops->open(curvnode, node->info->data, res, hnd);
+  return fd;
+}
+static int close (struct vnode *curvnode, int fd) {
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (hnd == NULL) {
+    return EBADF;
+  }
+  struct devfsnode *node = (struct devfsnode*)curvnode->data;
+  int res = node->info->ops->close(curvnode, node->info->data, hnd);
+  fddfree(fd);
+  return res;
 }

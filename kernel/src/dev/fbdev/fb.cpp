@@ -1,5 +1,6 @@
 #include "fb.hpp"
 #include "fs/devfs/devfs.h"
+#include "fs/vfs/fd.h"
 #include "fs/vfs/vfs.h"
 #include "mem/kmem.h"
 #include "term/term.h"
@@ -10,8 +11,10 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  int *res);
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result);
-static int poll(struct vnode *curvnode, struct pollfd *requested);
-struct devfsops fbdevops = {.rw = rw, .ioctl = ioctl, .poll = poll};
+static void open(struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd);
+static int close(struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd);
+static int poll(struct vnode *curvnode, struct pollfd *requested, void *data);
+struct devfsops fbdevops = {.open = open, .close = close,.rw = rw, .ioctl = ioctl, .poll = poll};
 static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
                  void *buffer, int rw, struct FileDescriptorHandle *hnd,
                  int *res) {
@@ -28,7 +31,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
   FBDev *owner = static_cast<class FBDev *>(data);
   return owner->ioctl(data, request, arg, result);
 }
-static int poll(struct vnode *curvnode, struct pollfd *requested) {
+static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
   requested->revents = requested->events;
   return 0;
 }
@@ -62,3 +65,9 @@ extern "C" void devfbdev_init(struct vfs *curvfs) {
   // VCHRDEVICE,
   //                                &vnode_devops, &res, info, NULL);
 }
+static void open(struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd) {
+  *res = 0;
+};
+static int close(struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd) {
+  return 0;
+};

@@ -109,7 +109,7 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/d_main.c doomgeneric-wo
 diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c
 --- doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c	1970-01-01 01:00:00.000000000 +0100
 +++ doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c
-@@ -0,0 +1,247 @@
+@@ -0,0 +1,387 @@
 +#include "doomkeys.h"
 +
 +#include "doomgeneric.h"
@@ -234,7 +234,7 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doo
 +
 +  fbfd = openordie("/dev/fb0", O_WRONLY, 0);
 +  // no need for now
-+  //kbfd = openordie("/dev/keyboard0", O_RDONLY | O_NONBLOCK, 0);
++  kbfd = openordie("/dev/keyboard", O_RDONLY | O_NONBLOCK, 0);
 +
 +  // get needed fb info
 +
@@ -256,9 +256,9 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doo
 +  tcsetattr(1, TCSAFLUSH, &tty);
 +  atexit(cleanup);
 +
-+  // char a[100];
-+  // while (read(kbfd, a, 100))
-+  //   ;
++  char a[100];
++  while (read(kbfd, a, 100))
++    ;
 +}
 +
 +void DG_DrawFrame() {
@@ -278,12 +278,157 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doo
 +               DOOMGENERIC_RESX * 4);
 +  }
 +}
++enum ps2_scancode {
++    PS2_SC_INVALID,
++    PS2_SC_F9,
++    PS2_SC_F5,
++    PS2_SC_F3,
++    PS2_SC_F1,
++    PS2_SC_F2,
++    PS2_SC_F12,
++    PS2_SC_F10,
++    PS2_SC_F8,
++    PS2_SC_F6,
++    PS2_SC_F4,
 +
++    PS2_SC_TAB,
++    PS2_SC_BACKTICK,    // `
++    PS2_SC_LEFT_ALT,
++    PS2_SC_LEFT_SHIFT,
++    PS2_SC_LEFT_CTRL,
++
++    PS2_SC_Q,
++    PS2_SC_1,
++    PS2_SC_Z,
++    PS2_SC_S,
++    PS2_SC_A,
++    PS2_SC_W,
++    PS2_SC_2,
++    PS2_SC_C,
++    PS2_SC_X,
++    PS2_SC_D,
++    PS2_SC_E,
++    PS2_SC_4,
++    PS2_SC_3,
++
++    PS2_SC_SPACE,
++    PS2_SC_V,
++    PS2_SC_F,
++    PS2_SC_T,
++    PS2_SC_R,
++    PS2_SC_5,
++    PS2_SC_N,
++    PS2_SC_B,
++    PS2_SC_H,
++    PS2_SC_G,
++    PS2_SC_Y,
++    PS2_SC_6,
++    PS2_SC_M,
++    PS2_SC_J,
++    PS2_SC_U,
++    PS2_SC_7,
++    PS2_SC_8,
++
++    PS2_SC_COMMA,       // ,
++    PS2_SC_K,
++    PS2_SC_I,
++    PS2_SC_O,
++    PS2_SC_0,
++    PS2_SC_9,
++    PS2_SC_DOT,         // .
++    PS2_SC_SLASH,       // /
++    PS2_SC_L,
++    PS2_SC_SEMICOLON,   // ;
++    PS2_SC_P,
++    PS2_SC_MINUS,       // -
++    PS2_SC_APOSTROPHE,  // '
++    PS2_SC_LBRACKET,    // [
++    PS2_SC_EQUAL,       // =
++
++    PS2_SC_CAPSLOCK,
++    PS2_SC_RIGHT_SHIFT,
++    PS2_SC_ENTER,
++    PS2_SC_RBRACKET,    // ]
++    PS2_SC_BACKSLASH,   // 
++
++    PS2_SC_BACKSPACE,
++
++    PS2_SC_KP_1,
++    PS2_SC_KP_4,
++    PS2_SC_KP_7,
++    PS2_SC_KP_0,
++    PS2_SC_KP_DOT,
++    PS2_SC_KP_2,
++    PS2_SC_KP_5,
++    PS2_SC_KP_6,
++    PS2_SC_KP_8,
++
++    PS2_SC_ESC,
++    PS2_SC_NUMLOCK,
++    PS2_SC_F11,
++    PS2_SC_KP_PLUS,
++    PS2_SC_KP_3,
++    PS2_SC_KP_MINUS,
++    PS2_SC_KP_ASTERISK,
++    PS2_SC_KP_9,
++    PS2_SC_SCROLLLOCK,
++    PS2_SC_F7,
++
++    PS2_SC_E0_WWW_SEARCH,
++    PS2_SC_E0_RIGHT_ALT,
++    PS2_SC_E0_RIGHT_CTRL,
++    PS2_SC_E0_PREV_TRACK,
++    PS2_SC_E0_WWW_FAV,
++    PS2_SC_E0_LEFT_GUI,
++    PS2_SC_E0_WWW_REFRESH,
++    PS2_SC_E0_VOL_DOWN,
++    PS2_SC_E0_MUTE,
++    PS2_SC_E0_RIGHT_GUI,
++    PS2_SC_E0_WWW_STOP,
++    PS2_SC_E0_CALCULATOR,
++    PS2_SC_E0_APPS,
++    PS2_SC_E0_WWW_FORWARD,
++    PS2_SC_E0_VOL_UP,
++    PS2_SC_E0_PLAY_PAUSE,
++    PS2_SC_E0_POWER,
++    PS2_SC_E0_WWW_BACK,
++    PS2_SC_E0_WWW_HOME,
++    PS2_SC_E0_STOP,
++    PS2_SC_E0_SLEEP,
++    PS2_SC_E0_MY_COMPUTER,
++    PS2_SC_E0_EMAIL,
++    PS2_SC_E0_KP_SLASH,
++    PS2_SC_E0_NEXT_TRACK,
++    PS2_SC_E0_MEDIA_SELECT,
++    PS2_SC_E0_KP_ENTER,
++    PS2_SC_E0_WAKE,
++    PS2_SC_E0_END,
++    PS2_SC_E0_LEFT_ARROW,
++    PS2_SC_E0_HOME,
++    PS2_SC_E0_INSERT,
++    PS2_SC_E0_DELETE,
++    PS2_SC_E0_DOWN_ARROW,
++    PS2_SC_E0_RIGHT_ARROW,
++    PS2_SC_E0_UP_ARROW,
++    PS2_SC_E0_PAGE_DOWN,
++    PS2_SC_E0_PAGE_UP,
++    PS2_SC_E0_PRINT_SCREEN,
++
++    PS2_SC_E1_PAUSE,
++
++};
++enum ps2flags {
++    PRESSED,
++    RELEASED,
++    EXTENDEDKEYRELEASED,
++    EXTENDEDKEYPRESSED,
++};
 +typedef struct {
-+  char ascii;
-+  uintmax_t keycode;
-+  int flags;
-+} kbpacket_t;
++    char ascii;
++    enum ps2_scancode keycode;
++    enum ps2flags flags;
++} nyauxps2kbdpacket;
++
 +
 +#define KEYCODE_A 30
 +#define KEYCODE_S 31
@@ -299,40 +444,32 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doo
 +#define KBPACKET_FLAGS_RELEASED 1
 +
 +int DG_GetKey(int *pressed, unsigned char *doomkey) {
-+  kbpacket_t buff;
-+  if (readordie(kbfd, &buff, sizeof(kbpacket_t)) == 0)
++  nyauxps2kbdpacket buff;
++  if (readordie(kbfd, &buff, sizeof(nyauxps2kbdpacket)) == 0)
 +    return 0;
 +
 +  char key;
 +  switch (buff.keycode) {
-+  case KEYCODE_A:
++  case PS2_SC_A:
 +    key = KEY_LEFTARROW;
 +    break;
-+  case KEYCODE_W:
++  case PS2_SC_W:
 +    key = KEY_UPARROW;
 +    break;
-+  case KEYCODE_S:
++  case PS2_SC_S:
 +    key = KEY_DOWNARROW;
 +    break;
-+  case KEYCODE_D:
++  case PS2_SC_D:
 +    key = KEY_RIGHTARROW;
 +    break;
-+  case KEYCODE_ENTER:
++  case PS2_SC_ENTER:
 +    key = KEY_ENTER;
-+    break;
-+  case KEYCODE_LEFTCTRL:
-+  case KEYCODE_RIGHTCTRL:
-+    key = KEY_FIRE;
-+    break;
-+  case KEYCODE_LEFTSHIFT:
-+  case KEYCODE_RIGHTSHIFT:
-+    key = KEY_RSHIFT;
-+    break;
-+  case KEYCODE_ESCAPE:
-+    key = KEY_ESCAPE;
-+    break;
-+  case KEYCODE_SPACE:
++    break; 
++  case PS2_SC_SPACE:
 +    key = KEY_USE;
++    break;
++  case PS2_SC_LEFT_CTRL:
++    key = KEY_FIRE;
 +    break;
 +  default:
 +    key = buff.ascii;
@@ -340,7 +477,10 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doo
 +  }
 +
 +  *doomkey = key;
-+  *pressed = buff.flags & KBPACKET_FLAGS_RELEASED ? 0 : 1;
++  if (buff.flags != EXTENDEDKEYPRESSED && buff.flags != EXTENDEDKEYPRESSED)
++    *pressed = buff.flags & RELEASED ? 0 : 1;
++  else
++    *pressed = buff.flags & EXTENDEDKEYRELEASED ? 0 : 1;
 +  return 1;
 +}
 +

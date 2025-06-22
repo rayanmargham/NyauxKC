@@ -74,15 +74,17 @@ void route_irq(uint8_t irq, uint8_t vec, uint16_t flags, uint32_t lapic_id)
 	struct acpi_madt_interrupt_source_override* checker = NULL;
 	while (i != 16)
 	{
-		checker = &isos[i];
-		if (checker->source == irq)
+        uint8_t src = isos[i].source;
+		if ((src) == irq)
 		{
+
+		checker = &isos[i];
 			break;
 		}
 		i += 1;
 	}
 
-	if (i != 16)
+	if (checker != NULL)
 	{
 		i = 0;
 		kprintf("Found an iso for this\r\n");

@@ -42,13 +42,16 @@ typedef struct {
       break;                                                                   \
     }                                                                          \
     uint64_t ret_addr = *(uint64_t *)((uint64_t)base_ptr + 8);                 \
-    if (ret_addr != 0) {                                                       \
+                                                                       \
+    if (ret_addr != 0 && ret_addr >= hhdm_request.response->offset) {                                                       \
       h = find_from_rip(ret_addr);                                             \
-      kprintf_symbol(h, ret_addr);                                                       \
-    } else {                                                                   \
-      kprintf("-> Function: none -- 0x0\r\n");                                 \
-    }                                                                          \
-                                                                               \
+      kprintf_symbol(h, ret_addr);                                             \
+    } else if (ret_addr < hhdm_request.response->offset) {                                                                   \
+      kprintf("-> Function: UserSpace Function -- 0x%lx\r\n", ret_addr);                                 \
+    }else {\
+      kprintf("-> Function: none -- 0x0\r\n");\
+    }                      \
+    \
     base_ptr = (uint64_t *)*(uint64_t *)(base_ptr);                            \
   }
 
@@ -87,7 +90,7 @@ void *uacpi_wrap_irq_fn(struct StackFrame *frame) {
   return frame;
 }
 void *division_by_zero(struct StackFrame *frame) {
-  kprintf("Division Error\r\n");
+  kprintf("Division Error rip %lx\r\n", frame->rip);
   if (symbolarray != NULL) {
     STACKTRACE
   } else {

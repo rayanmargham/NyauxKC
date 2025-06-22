@@ -17,6 +17,7 @@ struct FileDescriptorHandle {
   unsigned int mode;
   unsigned int flags;
   struct FileDescriptorHandle *realhnd;
+  void *privatedata;
   // ops here
 };
 int fd_compare(const void *a, const void *b, void *udata);

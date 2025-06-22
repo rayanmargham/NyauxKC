@@ -1,9 +1,10 @@
 #pragma once
+
+#include <stddef.h>
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <stddef.h>
-#include <stdint.h>
 char *strtok(char *s, const char *sep);
 char *strdup(const char *str);
 size_t strlen(const char *s);

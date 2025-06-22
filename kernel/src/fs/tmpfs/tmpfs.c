@@ -15,6 +15,8 @@ int node_compare(const void *a, const void *b, void *udata) {
   const struct tmpfsnode *ub = b;
   return strcmp(ua->name, ub->name);
 }
+static int open(struct vnode *cur_vnode, int flags, unsigned int mode, int *res);
+static int close(struct vnode *curvnode, int fd);
 static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnodeops *ops, struct vnode **res, void *data,
                   struct vnode *todifferentnode);
@@ -30,7 +32,7 @@ static int poll(struct vnode *curvnode, struct pollfd *requested);
 static int hardlink(struct vnode *curvnode, struct vnode *with,
                     const char *name);
 struct vnodeops tmpfs_ops = {
-    lookup, create, poll, rw, readdir, .ioctl = ioctl, .hardlink = hardlink};
+    .close = close, .open = open, lookup, create, poll, rw, readdir, .ioctl = ioctl, .hardlink = hardlink};
 struct vfs_ops tmpfs_vfsops = {mount};
 static int readdir(struct vnode *curvnode, int offset, char **name) {
   if (curvnode->v_type == VDIR) {
@@ -246,5 +248,21 @@ int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
   dir->node = with;
   dir->name = (char *)name;
   insert_into_list(dir, entry);
+  return 0;
+}
+static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) {
+  int fd = fddalloc(curvnode);
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  hnd->flags = flags;
+  *res = 0;
+  hnd->mode = mode;
+  return fd;
+}
+static int close(struct vnode *curvnode, int fd) {
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (hnd == NULL) {
+    return EBADF;
+  }
+  fddfree(fd);
   return 0;
 }

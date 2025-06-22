@@ -88,11 +88,13 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   if (res != 0) {
     return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
   }
-  int outfd = fddalloc(retur);
-  struct FileDescriptorHandle *setup = get_fd(outfd);
-  setup->flags = flags;
-  setup->mode = mode;
-  return (struct __syscall_ret){.ret = outfd, .errno = 0};
+  res = 0;
+
+  int fd = retur->ops->open(retur, flags, mode, &res);
+  if (res != 0) {
+    return (struct __syscall_ret){.ret = -1, .errno = res};
+  }
+  return (struct __syscall_ret){.ret = fd, .errno = 0};
 }
 struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
                                   int timeout) {
@@ -148,7 +150,7 @@ struct __syscall_ret syscall_close(int fd) {
   if (hnd == NULL) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
-  fddfree(fd);
+hnd->node->ops->close(hnd->node, fd);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {

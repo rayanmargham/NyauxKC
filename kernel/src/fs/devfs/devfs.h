@@ -10,12 +10,14 @@
 extern "C" {
 #endif
 struct devfsops {
+  void (*open) (struct vnode *curvnode, void *data, int *res, struct FileDescriptorHandle *hnd);
+  int (*close) (struct vnode *curvnode, void *data, struct FileDescriptorHandle *hnd);
   size_t (*rw)(struct vnode *curvnode, void *data, size_t offset, size_t size,
                void *buffer, int rw, struct FileDescriptorHandle *hnd,
                int *res);
   int (*ioctl)(struct vnode *curvnode, void *data, unsigned long request,
                void *arg, void *result);
-  int (*poll)(struct vnode *curvnode, struct pollfd *requested);
+  int (*poll)(struct vnode *curvnode, struct pollfd *requested, void *data);
 };
 struct devfsinfo {
   uint8_t major;

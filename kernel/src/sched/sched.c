@@ -45,7 +45,8 @@ void arch_create_per_cpu_data() {
 #endif
 }
 uint64_t pidalloc = 0;
-uint64_t pidallocate() { return pidalloc++; }
+spinlock_t pidlock = SPINLOCK_INITIALIZER;
+uint64_t pidallocate() { spinlock_lock(&pidlock); uint64_t decided = pidalloc++; spinlock_unlock(&pidlock); return decided; }
 uint64_t piddealloc() { return pidalloc--; }
 struct process_t *create_process(pagemap *map) {
   struct process_t *him = (struct process_t *)kmalloc(sizeof(struct process_t));
