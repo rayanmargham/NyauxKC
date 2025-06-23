@@ -79,6 +79,7 @@ add_project_arguments(
     '-ffreestanding',
     '-fno-stack-protector',
     '-fno-stack-check',
+    '-fsanitize=undefined',
     '-ffunction-sections',
     '-fdata-sections',
     '-DUACPI_SIZED_FREES',

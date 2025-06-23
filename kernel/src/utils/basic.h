@@ -80,7 +80,7 @@ extern "C" {
   static inline void spinlock_lock(spinlock_t *lock) {
     while (!__sync_bool_compare_and_swap(lock, 0, 1)) {
 #if defined(__x86_64__)
-sprintf("lockbelike\r\n");
+//sprintf("lockbelike\r\n");
       __asm__ volatile("pause");
 #endif
     }

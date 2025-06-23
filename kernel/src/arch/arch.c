@@ -180,7 +180,7 @@ bool arch_check_kvm_clock() {
 #if defined(__x86_64__)
   uint32_t eax, ecx, ebx, edx;
   cpuid(1, 0, &eax, &ebx, &ecx, &edx);
-  if (ecx & (1 << 31)) {
+  if ((uint64_t)ecx & (1ul << 31)) {
     kprintf("arch()(x86_64): running in a HyperVisor, checking if kvm clock is "
             "available\r\n");
     // check if this is KVM
