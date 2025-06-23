@@ -112,7 +112,7 @@ void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
   int res = 0;
   node->ops->rw(node, 0, sizeofelf, buffer, 0, NULL, &res);
   if (res) {
-    panic("dead\r\n");
+    panic("dead error is %d\r\n", res);
   }
   sprintf("load_elf(): found elf signature %c%c%c%c\r\n", hdr->e_ident[0],
           hdr->e_ident[1], hdr->e_ident[2], hdr->e_ident[3]);

@@ -1,4 +1,5 @@
 #include "ps2.h"
+#include "arch/arch.h"
 #include "arch/x86_64/cpu/lapic.h"
 #include "arch/x86_64/cpu/structures.h"
 #include "arch/x86_64/idt/idt.h"
@@ -153,8 +154,10 @@ void mike_rebuild_my_kids(nyauxps2kbdpacket packet) {
 }
 #ifdef __x86_64__
 void *kbd_handler(struct StackFrame *frame) {
-  uint8_t scan_code = arch_raw_io_in(0x60, 1);
-  switch(state){
+ uint8_t scan_code = 0x0; 
+  while (read_status_reg() & 0x1) {
+  scan_code = arch_raw_io_in(0x60, 1);
+    switch(state){
     case INIT:
       if (scan_code == 0xF0) {
         state = F0;
@@ -226,6 +229,9 @@ void *kbd_handler(struct StackFrame *frame) {
      default:
       break;
   }
+
+  }
+  
   send_eoi();
   return frame;
 }

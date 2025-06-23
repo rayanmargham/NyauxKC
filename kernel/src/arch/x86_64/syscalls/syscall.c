@@ -45,19 +45,22 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
   sprintf("syscall_mmap(): size %lu flags %x\r\n", size, flags);
+  __asm__ volatile ("sti"); // MAKE SURE interrupts are there
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
+      sprintf("attempting with fixedd\r\n");
       return (struct __syscall_ret){
           (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map,
                                             (uint64_t)hint, size, false),
           0};
     }
-
+    sprintf("about to try\r\n");
     return (struct __syscall_ret){(uint64_t)uvmm_region_alloc_demend_paged(
                                       cpu->cur_thread->proc->cur_map, size),
                                   0};
   }
+  sprintf("saying enosys");
   return (struct __syscall_ret){-1, ENOSYS};
 }
 struct __syscall_ret syscall_free(void *pointer, size_t size) {
@@ -145,12 +148,20 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
-  sprintf("syscall_close()\r\n");
+  sprintf("syscall_close(): closing fd %d\r\n", fd);
   struct FileDescriptorHandle *hnd = get_fd(fd);
+  sprintf("got the fd\r\n");
   if (hnd == NULL) {
+    panic("thats bad\r\n");
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
-hnd->node->ops->close(hnd->node, fd);
+  sprintf("running funny\r\n");
+int ret = hnd->node->ops->close(hnd->node, fd);
+sprintf("ran ze fun\r\n");
+if (ret != 0) {
+
+  return (struct __syscall_ret){.ret = -1, .errno = ret};
+}
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
@@ -210,6 +221,7 @@ struct __syscall_ret syscall_ioctl(int fd, unsigned long request, void *arg) {
   sprintf("syscall_ioctl(): ioctling fd %d\r\n", fd);
   void *result;
   int res = hnd->node->ops->ioctl(hnd->node, request, arg, &result);
+  sprintf("done\r\n");
   return (struct __syscall_ret){.ret = (uint64_t)result, .errno = res};
 }
 struct __syscall_ret syscall_dup(int fd, int flags) {
@@ -336,7 +348,7 @@ struct __syscall_ret syscall_clockget(int clock, long *time, long *nanosecs) {
     default:
       break;
   }
-  return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
+  return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
 }
 struct __syscall_ret syscall_faccessat(int dirfd, const char *pathname,
                                        int mode, int flags) {

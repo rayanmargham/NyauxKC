@@ -174,7 +174,7 @@ int AllocateIrq() {
 void *sched(struct StackFrame *frame) {
   __asm__ volatile("cli");
   unsigned long rsp;
-
+  sprintf("before ze storm\r\n");
   // Inline assembly to read the RSP register
   __asm__ __volatile__("mov %%rsp, %0"
                        : "=r"(rsp) // Output operand

@@ -89,7 +89,9 @@ static void open(struct vnode *curvnode, void *data, int *res,
                  struct FileDescriptorHandle *hnd) {
   ps2keyboard *kbd = static_cast<ps2keyboard *>(data);
   subscriber *set = nullptr;
+  sprintf("before operation\r\n");
   kbd->onopen(&set);
+  sprintf("after opeartion\r\n");
   hnd->privatedata = set;
   *res = 0;
   return;
