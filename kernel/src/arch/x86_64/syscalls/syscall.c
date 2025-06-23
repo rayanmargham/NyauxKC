@@ -49,13 +49,12 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
-      sprintf("attempting with fixedd\r\n");
+
       return (struct __syscall_ret){
           (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map,
                                             (uint64_t)hint, size, false),
           0};
     }
-    sprintf("about to try\r\n");
     return (struct __syscall_ret){(uint64_t)uvmm_region_alloc_demend_paged(
                                       cpu->cur_thread->proc->cur_map, size),
                                   0};

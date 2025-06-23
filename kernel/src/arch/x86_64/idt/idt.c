@@ -127,6 +127,8 @@ void *page_fault_handler(struct StackFrame *frame) {
   }
   struct process_t *proc = arch_get_per_cpu_data()->cur_thread->proc;
   uint64_t virt = read_cr2();
+
+  sprintf("okay lets cook, my map is %p\r\n", proc->cur_map);
   if (iswithinvmmregion(proc->cur_map, virt)) {
     arch_map_usersingularpage(proc->cur_map, virt);
     return frame;
@@ -174,7 +176,6 @@ int AllocateIrq() {
 void *sched(struct StackFrame *frame) {
   __asm__ volatile("cli");
   unsigned long rsp;
-  sprintf("before ze storm\r\n");
   // Inline assembly to read the RSP register
   __asm__ __volatile__("mov %%rsp, %0"
                        : "=r"(rsp) // Output operand
