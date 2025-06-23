@@ -75,6 +75,7 @@ syscall_entry:
     mov r9, r10 ; move argument #6 from r10 to r9
     mov rax, [syscallarray + rax * 8]
     call rax
+    cli
     pop r15
     pop r14
     pop r13

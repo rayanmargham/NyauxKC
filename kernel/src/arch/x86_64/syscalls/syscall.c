@@ -44,22 +44,26 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 }
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
-  sprintf("syscall_mmap(): size %lu flags %x\r\n", size, flags);
-  __asm__ volatile ("sti"); // MAKE SURE interrupts are there
+  sprintf("syscall_mmap(): size %lu flags %x, hint %p\r\n", size, flags, hint);
+  // __asm__ volatile ("sti"); // MAKE SURE interrupts are there
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+
+sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
-
+sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);;
       return (struct __syscall_ret){
           (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map,
                                             (uint64_t)hint, size, false),
           0};
     }
+sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);;
     return (struct __syscall_ret){(uint64_t)uvmm_region_alloc_demend_paged(
                                       cpu->cur_thread->proc->cur_map, size),
                                   0};
   }
   sprintf("saying enosys");
+sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);;
   return (struct __syscall_ret){-1, ENOSYS};
 }
 struct __syscall_ret syscall_free(void *pointer, size_t size) {
@@ -132,6 +136,7 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   }
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
+  sprintf("syscall stack ptr tmp %p sys user sp %p\r\n", (void*)cpu->cur_thread->syscall_user_sp, (void*)cpu->arch_data.syscall_stack_ptr_tmp);
   if (count > (hnd->node->stat.size - hnd->offset) &&
       hnd->node->stat.size != 0 && hnd->node->v_type != VCHRDEVICE) {
     count = hnd->node->stat.size - hnd->offset;
