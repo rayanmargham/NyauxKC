@@ -362,6 +362,8 @@ void save_ctx(struct StackFrame *dest, struct StackFrame *src);
 
 void schedd(struct StackFrame *frame) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  if (frame) {
+  sprintf("rsp %p, frame rip %p\r\n", (void*)frame->rsp, (void*)frame->rip); }
   if (!cpu) {
     return;
   }

@@ -76,6 +76,7 @@ cpp_args = [
 add_project_arguments(
     '-g',
     '-nostdinc',
+    '-ggdb3',
     '-ffreestanding',
     '-fno-stack-protector',
     '-fno-stack-check',

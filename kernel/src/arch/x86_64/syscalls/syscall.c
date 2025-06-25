@@ -45,25 +45,28 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
   sprintf("syscall_mmap(): size %lu flags %x, hint %p\r\n", size, flags, hint);
-  // __asm__ volatile ("sti"); // MAKE SURE interrupts are there
+  __asm__ volatile ("sti"); // MAKE SURE interrupts are there
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-
-sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);
+sprintf("cpu %p\r\n", cpu);
+sprintf("bptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
-sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);;
+
+uint64_t shit = (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map, (uint64_t)hint, size, false);
+sprintf("ptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
       return (struct __syscall_ret){
-          (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map,
-                                            (uint64_t)hint, size, false),
+          shit,
           0};
     }
-sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);;
-    return (struct __syscall_ret){(uint64_t)uvmm_region_alloc_demend_paged(
-                                      cpu->cur_thread->proc->cur_map, size),
+    uint64_t shit = (uint64_t)uvmm_region_alloc_demend_paged(
+                                      cpu->cur_thread->proc->cur_map, size);
+sprintf("ptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
+    return (struct __syscall_ret){(uint64_t)shit,
                                   0};
   }
   sprintf("saying enosys");
-sprintf("%p\r\n", (void*)cpu->cur_thread->arch_data.frame.rsp);;
+
+sprintf("ptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
   return (struct __syscall_ret){-1, ENOSYS};
 }
 struct __syscall_ret syscall_free(void *pointer, size_t size) {
@@ -282,6 +285,7 @@ struct __syscall_ret syscall_getcwd(char *buffer, size_t len) {
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_fork() {
+  sprintf("attempting fork\r\n");
   int child = scheduler_fork();
   sprintf("syscall_fork(): forked process to %d\r\n", child);
   return (struct __syscall_ret){.ret = child, .errno = 0};
