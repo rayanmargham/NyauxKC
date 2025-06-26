@@ -305,16 +305,20 @@ void slabfree(void *addr) {
 
   node->next = (struct pnode *)old;
   guy->freelist = (struct pnode *)node;
-  pnode *counter = (pnode *)guy->freelist;
-  unsigned int howmanynodes = 0;
-  while (counter != NULL) {
-    howmanynodes += 1;
-    counter = (pnode *)counter->next;
-  }
-  if (howmanynodes == guy->obj_ammount) {
-    // implementing this involes making the slab list doubly linked
-    // which is not the focus of Nyaux rn.
-    // TODO: do this memory optimization later.
-    // kprintf("USELESS SLAB\r\n");
-  }
+  // pnode *counter = (pnode *)guy->freelist;
+  // unsigned int howmanynodes = 0;
+  // if (counter && counter->next) {
+
+  // }
+  // while (counter != NULL) {
+  //   howmanynodes += 1;
+  //   counter = (pnode *)counter->next;
+  // }
+  // sprintf("FUCKING YES\r\n");
+  // if (howmanynodes == guy->obj_ammount) {
+  //   // implementing this involes making the slab list doubly linked
+  //   // which is not the focus of Nyaux rn.
+  //   // TODO: do this memory optimization later.
+  //   // kprintf("USELESS SLAB\r\n");
+  // }
 }

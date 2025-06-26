@@ -51,6 +51,7 @@ syscallarray:
 .length: dq ($ - syscallarray) / 8
 section .text
 syscall_entry:
+    cli ; quickly do this
     swapgs
     mov [gs:0], rsp
     mov rsp, [gs:8]
@@ -73,9 +74,10 @@ syscall_entry:
     mov rcx, r8 ; move argument #4 from r8 to rcx
     mov r8, r9  ; move argument #5 from r9 to r8
     mov r9, r10 ; move argument #6 from r10 to r9
-    mov rax, [syscallarray + rax * 8]
-    call rax
     cli
+    mov rax, [syscallarray + rax * 8]
+    cli
+    call rax
     pop r15
     pop r14
     pop r13

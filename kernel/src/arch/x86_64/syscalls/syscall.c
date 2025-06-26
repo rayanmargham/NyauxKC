@@ -12,7 +12,11 @@
 #include "utils/basic.h"
 #include <timers/timer.hpp>
 #include <stdint.h>
-
+#define SYSCALLENT __asm__ volatile ("cli"); \
+cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp; \
+__asm__ volatile ("sti");
+#define SYSCALLEXT __asm__ volatile ("cli"); \
+cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
 struct __syscall_ret syscall_exit(int exit_code) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
@@ -44,41 +48,42 @@ struct __syscall_ret syscall_setfsbase(uint64_t ptr) {
 }
 struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
                                   int fd, size_t offset) {
-  sprintf("syscall_mmap(): size %lu flags %x, hint %p\r\n", size, flags, hint);
-  __asm__ volatile ("sti"); // MAKE SURE interrupts are there
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-sprintf("cpu %p\r\n", cpu);
-sprintf("bptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
+SYSCALLENT
+  sprintf("syscall_mmap(): size %lu flags %x, hint %p\r\n", size, flags, hint);
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
 
 uint64_t shit = (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map, (uint64_t)hint, size, false);
-sprintf("ptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
+SYSCALLEXT
       return (struct __syscall_ret){
           shit,
           0};
     }
     uint64_t shit = (uint64_t)uvmm_region_alloc_demend_paged(
                                       cpu->cur_thread->proc->cur_map, size);
-sprintf("ptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
+                                      SYSCALLEXT
     return (struct __syscall_ret){(uint64_t)shit,
                                   0};
   }
   sprintf("saying enosys");
-
-sprintf("ptrtmp a %p t %lu\r\n", (void*)&cpu->arch_data.syscall_stack_ptr_tmp, cpu->cur_thread->tid);
+  SYSCALLEXT
   return (struct __syscall_ret){-1, ENOSYS};
 }
 struct __syscall_ret syscall_free(void *pointer, size_t size) {
-  sprintf("syscall_free(): freeing %lu\r\n", size);
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  SYSCALLENT
+  sprintf("syscall_free(): freeing %lu\r\n", size);
   uvmm_region_dealloc(cpu->cur_thread->proc->cur_map, pointer);
+  SYSCALLEXT
   return (struct __syscall_ret){-0, 0};
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
   sprintf("syscall_openat(): opening %s from thread %lu with flags %d\r\n",
           path, arch_get_per_cpu_data()->cur_thread->tid, flags);
+          struct per_cpu_data *cpu = arch_get_per_cpu_data();
+          SYSCALLENT
   struct vnode *node = NULL;
   if (dirfd == AT_FDCWD) {
     struct process_t *proc = get_process_start();
@@ -88,6 +93,9 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   } else {
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
     if (hnd == NULL) {
+      
+      sprintf("bye\r\n");
+      SYSCALLEXT;
       return (struct __syscall_ret){.ret = -1, .errno = EBADF};
     }
     node = hnd->node;
@@ -95,51 +103,63 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   struct vnode *retur = NULL;
   int res = vfs_lookup(node, path, &retur);
   if (res != 0) {
+    sprintf("bye\r\n");
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
   }
   res = 0;
 
   int fd = retur->ops->open(retur, flags, mode, &res);
   if (res != 0) {
+    sprintf("bye\r\n");
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
+  sprintf("bye\r\n");
+  SYSCALLEXT
   return (struct __syscall_ret){.ret = fd, .errno = 0};
 }
 struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
                                   int timeout) {
-
+                                    struct per_cpu_data *cpu = arch_get_per_cpu_data();
+SYSCALLENT
   sprintf("poll(): fuck you! number of fds: %lu, events: %d, targetted fd: %d, "
           "timeout: %d\r\n",
           nfds, fds->events, fds->fd, timeout);
   if (timeout != -1) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
   if (nfds > 1) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
   if (!fds) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = EINVAL};
   }
   struct FileDescriptorHandle *hnd = get_fd(fds->fd);
   int ret = hnd->node->ops->poll(hnd->node, fds);
   if (ret != 0) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = ret};
   }
-
+  SYSCALLEXT
   return (struct __syscall_ret){.ret = 1, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  SYSCALLENT
   struct FileDescriptorHandle *hnd = get_fd(fd);
   //sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);
   if (hnd == NULL) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   if (hnd->node == NULL) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = EIO};
   }
-  struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
-  sprintf("syscall stack ptr tmp %p sys user sp %p\r\n", (void*)cpu->cur_thread->syscall_user_sp, (void*)cpu->arch_data.syscall_stack_ptr_tmp);
   if (count > (hnd->node->stat.size - hnd->offset) &&
       hnd->node->stat.size != 0 && hnd->node->v_type != VCHRDEVICE) {
     count = hnd->node->stat.size - hnd->offset;
@@ -148,13 +168,15 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   size_t bytes_read =
       hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0, hnd, &res);
   if (res != 0) {
+    SYSCALLEXT
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
-  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
   hnd->offset += bytes_read;
+  SYSCALLEXT
   return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
+  __asm__ volatile ("cli");
   sprintf("syscall_close(): closing fd %d\r\n", fd);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   sprintf("got the fd\r\n");
@@ -319,7 +341,6 @@ neverstop:
       us->cnt = 0;
       us->state = BLOCKED;
       uint64_t pidnum = us->pid;
-      __asm__ volatile ("sti"); // restore interrupts
       return (struct __syscall_ret){.ret = pidnum, .errno = 0};
     }
     us = us->children_next;

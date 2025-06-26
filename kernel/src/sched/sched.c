@@ -363,7 +363,8 @@ void save_ctx(struct StackFrame *dest, struct StackFrame *src);
 void schedd(struct StackFrame *frame) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   if (frame) {
-  sprintf("rsp %p, frame rip %p\r\n", (void*)frame->rsp, (void*)frame->rip); }
+    //sprintf("sched, %p\r\n", frame);
+  }
   if (!cpu) {
     return;
   }
@@ -411,9 +412,13 @@ void schedd(struct StackFrame *frame) {
 }
 struct process_t *get_process_start() {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  sprintf("lock-> %p\r\n", &cpu->cur_thread->proc->lock);
   spinlock_lock(&cpu->cur_thread->proc->lock);
+  sprintf("went well\r\n");
   return cpu->cur_thread->proc;
 }
 void get_process_finish(struct process_t *proc) {
+  sprintf("going gaming?\r\n");
   spinlock_unlock(&proc->lock);
+  sprintf("gamer\r\n");
 }

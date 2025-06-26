@@ -141,6 +141,7 @@ uint8_t pause_buf[7];
 int pause_pos;
 KBDSTATE state = INIT;
 void mike_rebuild_my_kids(nyauxps2kbdpacket packet) {
+  __asm__ volatile ("cli"); // js in case
   sprintf("adding\r\n");
   struct vnode *node = NULL;
   vfs_lookup(NULL, "/dev/keyboard", &node);
