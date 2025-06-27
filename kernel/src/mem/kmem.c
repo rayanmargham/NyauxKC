@@ -42,6 +42,7 @@ spinlock_unlock(&mem_lock);
 #endif
   }
 }
+uint64_t kill = 0;
 void kfree(void *addr, uint64_t size) {
 uint64_t flags;
   // store the old rflags, disable interrupts and do our print
@@ -60,6 +61,12 @@ if (flags & 1 << 9) {
     asm volatile("sti");
   }
   } else {
+    if (kill == (uint64_t) addr) {
+      void *ret = __builtin_extract_return_addr(__builtin_return_address (0));
+    sprintf("who %p\r\n", ret);
+    return;
+    }
+    kill = (uint64_t)addr;
     slabfree(addr);
     spinlock_unlock(&mem_lock);
  if (flags & 1 << 9) {
