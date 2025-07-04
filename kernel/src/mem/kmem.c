@@ -48,6 +48,13 @@ uint64_t flags;
   // store the old rflags, disable interrupts and do our print
   asm volatile("pushfq; cli; pop %0" : "=r"(flags));
   spinlock_lock(&mem_lock);
+  if (addr == NULL) {
+    if (flags & 1 << 9) {
+      asm volatile("sti");
+    }
+    spinlock_unlock(&mem_lock);
+    return;
+  }
   if (size >> 63) {
     kprintf("kfree: memory corruption detected\r\n");
     spinlock_unlock(&mem_lock);
@@ -61,11 +68,6 @@ if (flags & 1 << 9) {
     asm volatile("sti");
   }
   } else {
-    if (kill == (uint64_t) addr) {
-      void *ret = __builtin_extract_return_addr(__builtin_return_address (0));
-    sprintf("who %p\r\n", ret);
-    return;
-    }
     kill = (uint64_t)addr;
     slabfree(addr);
     spinlock_unlock(&mem_lock);

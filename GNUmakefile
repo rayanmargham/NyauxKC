@@ -2,7 +2,7 @@
 # Code is governed by the GPL-2.0 license.
 # Copyright (C) 2021-2024 The nyaux authors.
 
-QEMUFLAGS ?= -M q35,smm=off -cdrom nyaux.iso -serial stdio -m 1G  -trace ps2*
+QEMUFLAGS ?= -M q35,smm=off -cdrom nyaux.iso -serial stdio -m 1G  -trace ps2* -display sdl
 
 .PHONY: all
 all:
@@ -26,7 +26,7 @@ lsp:
 	cp -r kernel/build/compile_commands.json compile_commands.json
 .PHONY: run-kvm
 run-kvm: nyaux.iso
-	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS) -display gtk
+	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS)
 
 .PHONY: run-hvf
 run-hvf: nyaux.iso

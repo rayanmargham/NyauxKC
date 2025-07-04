@@ -346,18 +346,19 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
  #ifndef MLIBC_BUILDING_RTLD
  int sys_fork(pid_t *child) {
 -  __syscall_ret ret = __syscall0(SYSCALL_FORK);
-+	__syscall_ret ret = __syscall0(SYSCALL_FORK);
- 
+-
 -  if (ret.err != 0) {
 -    return ret.err;
 -  }
-+	if (ret.err != 0) {
-+		return ret.err;
-+	}
++	int rett = 0;
++	__syscall_ret ret = __syscall1(SYSCALL_FORK, (uint64_t)&rett);
  
 -  *child = (pid_t)ret.ret;
 -  return 0;
-+	*child = (pid_t)ret.ret;
++	if (ret.err != 0) {
++		return ret.err;
++	}
++	*child = (pid_t)rett;
 +	return 0;
  }
  int sys_ioctl(int fd, unsigned long request, void *arg, int *result) {
@@ -384,12 +385,47 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
  int sys_fcntl(int fd, int request, va_list args, int *result) {
 -  // __syscall_ret ret = __syscall(12, fd, request, va_arg(args, uint64_t));
 +	// __syscall_ret ret = __syscall(12, fd, request, va_arg(args, uint64_t));
-+
-+	// if (ret.errno != 0)
-+	// 	return ret.errno;
  
 -  // if (ret.errno != 0)
 -  // 	return ret.errno;
++	// if (ret.errno != 0)
++	// 	return ret.errno;
+ 
+-  // *result = (ssize_t)ret.ret;
+-  // return 0;
+-  mlibc::infoLogger() << "mlibc: fd " << fd << " request " << request
+-                      << frg::endlog;
+-  return ENOSYS;
+-}
+-int sys_pselect(int nfds, fd_set *read_set, fd_set *write_set,
+-                fd_set *except_set, const struct timespec *timeout,
+-                const sigset_t *sigmask, int *num_events) {
+-  // this is a stub to please bash
+-  fd_set res_read_set;
+-  fd_set res_write_set;
+-  fd_set res_except_set;
+-  FD_ZERO(&res_read_set);
+-  FD_ZERO(&res_write_set);
+-  FD_ZERO(&res_except_set);
+-  for (int i = 0; i < nfds; i++) {
+-    if (read_set && FD_ISSET(i, read_set)) {
+-      FD_SET(i, &res_read_set);
+-    }
+-    if (write_set && FD_ISSET(i, write_set)) {
+-      FD_SET(i, &res_write_set);
+-    }
+-    if (except_set && FD_ISSET(i, except_set)) {
+-      FD_SET(i, &res_except_set);
+-    }
+-  }
+-  if (read_set)
+-    *read_set = res_read_set;
+-  if (write_set)
+-    *write_set = res_write_set;
+-  if (except_set)
+-    *except_set = res_except_set;
+-  *num_events = 1;
+-  return 0;
 +	// *result = (ssize_t)ret.ret;
 +	// return 0;
 +	mlibc::infoLogger() << "mlibc: fd " << fd << " request " << request << frg::endlog;
@@ -483,42 +519,7 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 +		*write_set = res_write_set;
 +	if (except_set)
 +		*except_set = res_except_set;
- 
--  // *result = (ssize_t)ret.ret;
--  // return 0;
--  mlibc::infoLogger() << "mlibc: fd " << fd << " request " << request
--                      << frg::endlog;
--  return ENOSYS;
--}
--int sys_pselect(int nfds, fd_set *read_set, fd_set *write_set,
--                fd_set *except_set, const struct timespec *timeout,
--                const sigset_t *sigmask, int *num_events) {
--  // this is a stub to please bash
--  fd_set res_read_set;
--  fd_set res_write_set;
--  fd_set res_except_set;
--  FD_ZERO(&res_read_set);
--  FD_ZERO(&res_write_set);
--  FD_ZERO(&res_except_set);
--  for (int i = 0; i < nfds; i++) {
--    if (read_set && FD_ISSET(i, read_set)) {
--      FD_SET(i, &res_read_set);
--    }
--    if (write_set && FD_ISSET(i, write_set)) {
--      FD_SET(i, &res_write_set);
--    }
--    if (except_set && FD_ISSET(i, except_set)) {
--      FD_SET(i, &res_except_set);
--    }
--  }
--  if (read_set)
--    *read_set = res_read_set;
--  if (write_set)
--    *write_set = res_write_set;
--  if (except_set)
--    *except_set = res_except_set;
--  *num_events = 1;
--  return 0;
++
 +	return 0;
  }
  int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) {
