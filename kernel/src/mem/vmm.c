@@ -70,6 +70,7 @@ pagemap ker_map = {.head = NULL, .root = NULL};
 void per_cpu_vmm_init() { arch_switch_pagemap(&ker_map); }
 void vmm_init() {
   arch_init_pagemap(&ker_map);
+  kprintf_log(LOG, "vmm(): kernel map at %p\r\n", &ker_map);
   hhdm_pages = arch_mapkernelhhdmandmemorymap(&ker_map);
   hhdm_pages = (hhdm_pages * MIB(2)) / 4096;
   kprintf("vmm(): HDDM Pages %lu\r\n", hhdm_pages);

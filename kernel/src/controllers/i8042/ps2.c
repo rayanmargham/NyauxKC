@@ -155,6 +155,8 @@ void mike_rebuild_my_kids(nyauxps2kbdpacket packet) {
 }
 #ifdef __x86_64__
 void *kbd_handler(struct StackFrame *frame) {
+  kprintf_log(TRACE, "kbdhandler: before rip %p\r\n", frame->rip);
+
  uint8_t scan_code = 0x0; 
   while (read_status_reg() & 0x1) {
   scan_code = arch_raw_io_in(0x60, 1);
@@ -232,7 +234,7 @@ void *kbd_handler(struct StackFrame *frame) {
   }
 
   }
-  
+  kprintf_log(TRACE, "kbdhandler: after rip %p\r\n", frame->rip);
   send_eoi();
   return frame;
 }

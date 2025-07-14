@@ -109,7 +109,7 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/d_main.c doomgeneric-wo
 diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c
 --- doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c	1970-01-01 01:00:00.000000000 +0100
 +++ doomgeneric-workdir/doomgeneric/doomgeneric_nyaux.c
-@@ -0,0 +1,387 @@
+@@ -0,0 +1,388 @@
 +#include "doomkeys.h"
 +
 +#include "doomgeneric.h"
@@ -259,6 +259,7 @@ diff -urN --no-dereference doomgeneric-clean/doomgeneric/doomgeneric_nyaux.c doo
 +  char a[100];
 +  while (read(kbfd, a, 100))
 +    ;
++  close(kbfd);
 +}
 +
 +void DG_DrawFrame() {

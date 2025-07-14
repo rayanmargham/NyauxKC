@@ -15,10 +15,11 @@
 /kernel/cc-runtime
 /kernel/freestnd-cxx-hdrs
 /kernel/.cache
-/kernel/subprojects/uacpi
-/kernel/subprojects/freestnd-c-hdrs
 /kernel/subprojects/cc-runtime
+/kernel/subprojects/freestnd-c-hdrs
+/kernel/subprojects/frigg
 /kernel/subprojects/freestnd-cxx-hdrs
+/kernel/subprojects/uacpi
 /ovmf
 *.hdd
 *.elf
