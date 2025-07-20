@@ -159,6 +159,14 @@ int put_ringbuf(struct ring_buf *buf, uint64_t data) {
   buf->write_idx = (buf->write_idx + 1) % buf->size;
   return 1;
 }
+int get_without_consumeringbuf(struct ring_buf *buf, uint64_t *value) {
+  if (buf->read_idx == buf->write_idx) {
+    return 0;
+  }
+  assert(buf != NULL || buf->buf != NULL);
+  *value = buf->buf[buf->read_idx];
+  return 1;
+}
 int get_ringbuf(struct ring_buf *buf, uint64_t *value) {
   if (buf->read_idx == buf->write_idx) {
     return 0;

@@ -12,11 +12,8 @@
 #include "utils/basic.h"
 #include <timers/timer.hpp>
 #include <stdint.h>
-#define SYSCALLENT __asm__ volatile ("cli"); \
-cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp; \
-__asm__ volatile ("sti");
-#define SYSCALLEXIT __asm__ volatile ("cli"); \
-cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
+#define SYSCALLENT __asm__ volatile ("sti");
+#define SYSCALLEXIT __asm__ volatile ("cli");
 struct __syscall_ret syscall_exit(int exit_code) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
@@ -93,8 +90,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
     if (hnd == NULL) {
       
-      sprintf("bye\r\n");
-      ;
+      
       return (struct __syscall_ret){.ret = -1, .errno = EBADF};
     }
     node = hnd->node;
@@ -102,7 +98,6 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   struct vnode *retur = NULL;
   int res = vfs_lookup(node, path, &retur);
   if (res != 0) {
-    sprintf("bye\r\n");
     
     return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
   }
@@ -110,11 +105,9 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 
   int fd = retur->ops->open(retur, flags, mode, &res);
   if (res != 0) {
-    sprintf("bye\r\n");
     
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
-  sprintf("bye\r\n");
   
   return (struct __syscall_ret){.ret = fd, .errno = 0};
 }
@@ -327,7 +320,6 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   }
 neverstop:
 
-  cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
   struct process_t *us = cpu->cur_thread->proc->children;
   if (!us) {
     return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
@@ -348,7 +340,6 @@ neverstop:
   // __asm__ volatile ("sti"); // restore interrupts
   sched_yield();
 
-  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
   goto neverstop;
 }
 static void read_shit(void *data, void *variable) {

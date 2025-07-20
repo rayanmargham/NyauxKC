@@ -1,0 +1,53 @@
+
+
+diff --git a/kernel/src/arch/x86_64/syscalls/syscall.c b/kernel/src/arch/x86_64/syscalls/syscall.c
+index c45b767..2443c6f 100644
+--- a/kernel/src/arch/x86_64/syscalls/syscall.c
++++ b/kernel/src/arch/x86_64/syscalls/syscall.c
+@@ -12,11 +12,8 @@
+ #include "utils/basic.h"
+ #include <timers/timer.hpp>
+ #include <stdint.h>
+-#define SYSCALLENT __asm__ volatile ("cli"); \
+-cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp; \
+-__asm__ volatile ("sti");
+-#define SYSCALLEXIT __asm__ volatile ("cli"); \
+-cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
++#define SYSCALLENT __asm__ volatile ("sti");
++#define SYSCALLEXIT __asm__ volatile ("cli");
+ struct __syscall_ret syscall_exit(int exit_code) {
+   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
+@@ -327,7 +324,6 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
+   }
+ neverstop:
+ 
+-  cpu->cur_thread->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
+   struct process_t *us = cpu->cur_thread->proc->children;
+   if (!us) {
+     return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
+@@ -348,7 +344,6 @@ neverstop:
+   // __asm__ volatile ("sti"); // restore interrupts
+   sched_yield();
+ 
+-  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
+   goto neverstop;
+ }
+ static void read_shit(void *data, void *variable) {
+diff --git a/kernel/src/sched/sched.c b/kernel/src/sched/sched.c
+index 57f1b09..c7b8eac 100644
+--- a/kernel/src/sched/sched.c
++++ b/kernel/src/sched/sched.c
+@@ -399,6 +399,10 @@ void schedd(struct StackFrame *frame) {
+   if (old != NULL && frame != NULL) {
+     save_ctx(&old->arch_data.frame, frame);
+   }
++
++  if (old) old->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
++  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
++
+   cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
+   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
+   wrmsr(x86_FS_BASE, cpu->cur_thread->arch_data.fs_base);
+
+

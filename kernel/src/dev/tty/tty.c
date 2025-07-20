@@ -175,7 +175,7 @@ void ps2_put_input() {
   while (true) {
     if (curtty) {
       if (curtty->rx) {
-        struct pollfd yes = {-1, POLLIN, 0}; // fd -1 is a hack
+        struct pollfd yes = {fd, POLLIN, 0}; // fd -1 is a hack
         lah->ops->poll(lah, &yes);
         if (yes.revents & POLLIN) {
         // spinlock_lock(&curtty->rxlock);

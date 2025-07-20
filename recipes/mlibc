@@ -18,7 +18,6 @@ configure() {
         --buildtype=release \
         -Dno_headers=true \
         -Dlinux_kernel_headers=${sysroot_dir}${prefix}/include \
-        -Dposix_option=enabled \
         -Ddefault_library=both \
         -Dlibgcc_dependency=false \
         -Duse_freestnd_hdrs=enabled

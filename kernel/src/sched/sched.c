@@ -399,6 +399,10 @@ void schedd(struct StackFrame *frame) {
   if (old != NULL && frame != NULL) {
     save_ctx(&old->arch_data.frame, frame);
   }
+
+  if (old) old->syscall_user_sp = cpu->arch_data.syscall_stack_ptr_tmp;
+  cpu->arch_data.syscall_stack_ptr_tmp = cpu->cur_thread->syscall_user_sp;
+
   cpu->arch_data.kernel_stack_ptr = cpu->cur_thread->kernel_stack_ptr;
   arch_switch_pagemap(cpu->cur_thread->proc->cur_map);
   wrmsr(x86_FS_BASE, cpu->cur_thread->arch_data.fs_base);
@@ -417,9 +421,18 @@ void schedd(struct StackFrame *frame) {
 }
 struct process_t *get_process_start() {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  uint64_t flags;
+asm volatile("pushfq; cli; pop %0" : "=r"(flags));
+cpu->freeshit = (void*)flags;
   spinlock_lock(&cpu->cur_thread->proc->lock);
   return cpu->cur_thread->proc;
 }
 void get_process_finish(struct process_t *proc) {
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  uint64_t flags = (uint64_t)cpu->freeshit;
+  
   spinlock_unlock(&proc->lock);
+if (flags & (1 << 9)) {
+    __asm__ volatile ("sti");
+  }
 }

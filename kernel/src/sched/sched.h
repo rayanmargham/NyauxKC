@@ -58,6 +58,7 @@ struct per_cpu_data {
   struct thread_t
       *to_be_reapered; // any thread with refcount zero will be thrown into here
   // a reaper thread will kill the dead
+  void *freeshit; // store what u want here
 };
 struct fpu_state {
   uint16_t fcw;

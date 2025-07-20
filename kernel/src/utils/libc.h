@@ -15,6 +15,7 @@ struct ring_buf {
   size_t read_idx;
 };
 int get_ringbuf(struct ring_buf *buf, uint64_t *value);
+int get_without_consumeringbuf(struct ring_buf *buf, uint64_t *value);
 int put_ringbuf(struct ring_buf *buf, uint64_t data);
 bool empty_ringbuf(struct ring_buf *buf);
 void resize_ringbuf(struct ring_buf *buf, size_t resize);
