@@ -162,7 +162,6 @@ void exit_process(uint64_t exit_code) {
   //   sex = pop_from_list(&cur_proc->queuewaitingforexit);
   //   ThreadReady(sex);
   // }
-  piddealloc();
   exit_thread();
 }
 void collect_exit_code() {}
@@ -258,8 +257,21 @@ void attach_child(struct process_t *from, struct process_t *child) {
   }
 }
 void do_funny() {
-  struct thread_t *fun = create_uthread(0, get_process_start(), 2);
-  get_process_finish(fun->proc);
+  struct process_t *aa = get_process_start();
+  struct process_t *FUCKYOU = create_process(aa->cur_map);
+  FUCKYOU->parent = NULL; // do NOT link it to the kernel proc
+  aa->children = NULL;
+  for (int i = 0; i < 256; i++) {
+    FUCKYOU->fdalloc[i] = aa->fdalloc[i];
+    struct FileDescriptorHandle *hnd =
+        (struct FileDescriptorHandle *)hashmap_get(
+            aa->fds, &(struct FileDescriptorHandle){.fd = i});
+    if (!hnd)
+      continue;
+    hashmap_set(FUCKYOU->fds, (const struct FileDescriptorHandle *)hnd);
+  }
+  get_process_finish(aa);
+  struct thread_t *fun = create_uthread(0, FUCKYOU, 2);
   pagemap *curpagemap = fun->proc->cur_map;
   load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/bash", NULL},
            (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame);

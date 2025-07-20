@@ -150,7 +150,8 @@ meson_configure_noflags() {
         --sysconfdir=/etc \
         --localstatedir=/var \
         --libdir=lib \
-        --sbindir=bin \
+        --sbindir=sbin \
+        --bindir=bin \
         -Ddefault_library=shared \
         "$@"
 }

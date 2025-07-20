@@ -14,6 +14,8 @@ configure() {
         -Daudit=disabled \
         -Dbash-completions=true \
         -Dbranding=\"Nyaux\" \
+        --sbindir=/usr/bin \
+        --libexecdir=/usr/libexec/rc \
         -Dlocal_prefix=usr/local \
         -Dnewnet=false \
         -Dos=Nyaux \
@@ -23,7 +25,10 @@ configure() {
         -Dshell="/bin/sh" \
         -Dzsh-completions=false
 }
+prepare() {
 
+    sed -ie 's!/sbin/rc!/usr/bin/rc!g' ${source_dir}/support/sysvinit/inittab
+}
 build() {
 	ninja
 }

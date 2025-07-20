@@ -17,7 +17,7 @@
 struct __syscall_ret syscall_exit(int exit_code) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
-  if (cpu->cur_thread->proc->pid == 0) {
+  if (cpu->cur_thread->proc->pid == 0 || cpu->cur_thread->proc->pid == 1) {
     kprintf_log(FATAL, "init process destroyed\r\n");
 
     exit_thread();
@@ -208,7 +208,7 @@ struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
 struct __syscall_ret syscall_isatty(int fd) {
 
   struct FileDescriptorHandle *hnd = get_fd(fd);
-
+  sprintf("syscall_isatty(): call on fd %d\r\n", fd);
   if (hnd == NULL) {
     sprintf("syscall_isatty(): fd %d not a tty\r\n", fd);
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -306,8 +306,9 @@ struct __syscall_ret syscall_fork(int *pid) {
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_getpid() {
-  sprintf("syscall_getpid(): getting pid\r\n");
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
+
+  sprintf("syscall_getpid(): giving pid %lu\r\n", cpu->cur_thread->proc->pid);
   return (struct __syscall_ret){.ret = cpu->cur_thread->proc->pid, .errno = 0};
 }
 struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
@@ -316,6 +317,7 @@ struct __syscall_ret syscall_waitpid(int pid, int *status, int flags) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_waitpid(): wait on pid %d, flags %d\r\n", pid, flags);
   if (pid != -1) {
+    sprintf("syscall_waitpid(): unsupported waitpit with pid %d\r\n", pid);
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
 neverstop:

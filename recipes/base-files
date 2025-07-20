@@ -6,7 +6,7 @@ revision=1
 source_dir="base-files"
 skip_pkg_check=yes
 package() {
- 
+  cp -rpv ${source_dir}/. "${dest_dir}"/
     mkdir -pv "${dest_dir}/home/nyaux"
 
 ln -s usr/bin "${dest_dir}"/bin
@@ -16,6 +16,6 @@ ln -s usr/bin "${dest_dir}"/bin
     ln -s bin "${dest_dir}"/usr/sbin
     ln -s lib "${dest_dir}"/usr/lib64
 
-    cp -rpv ${source_dir}/. "${dest_dir}"/
+   
 
 }
