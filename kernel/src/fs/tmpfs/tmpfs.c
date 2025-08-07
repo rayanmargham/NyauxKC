@@ -130,6 +130,7 @@ static int create(struct vnode *curvnode, char *name, enum vtype type,
       file->size = 0;
       newnode->stat.size = 0;
       newnode->stat.st_mode = type == VREG ? S_IFREG : S_IFLNK;
+      newnode->stat.st_mode |= O_RDWR;
       insert_into_list(file, entry);
       file->node = newnode;
       *res = newnode;

@@ -218,11 +218,17 @@ int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
   return 0;
 }
 static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) {
+ 
   int fd = fddalloc(curvnode);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   hnd->flags = flags;
   hnd->mode = mode;
   struct devfsnode *node = (struct devfsnode*)curvnode->data;
+  if (node->direntry != NULL && node->name) {
+    *res = EISDIR;
+    return fd;
+   }
+  
   node->info->ops->open(curvnode, node->info->data, res, hnd);
   return fd;
 }
@@ -232,6 +238,10 @@ static int close (struct vnode *curvnode, int fd) {
     return EBADF;
   }
   struct devfsnode *node = (struct devfsnode*)curvnode->data;
+  if (node->info == NULL) {
+    fddfree(fd);
+    return 0;
+  } 
   int res = node->info->ops->close(curvnode, node->info->data, hnd);
   fddfree(fd);
   return res;

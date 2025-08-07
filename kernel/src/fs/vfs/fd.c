@@ -53,7 +53,7 @@ int fddup(int fromfd) {
 struct FileDescriptorHandle *get_fd(int fd) {
   struct process_t *proc = get_process_start();
   struct FileDescriptorHandle *res =
-      hashmap_get(proc->fds, &(struct FileDescriptorHandle){.fd = fd});
+      (struct FileDescriptorHandle*)hashmap_get(proc->fds, &(struct FileDescriptorHandle){.fd = fd});
   if (!res) {
     get_process_finish(proc);
     return NULL;

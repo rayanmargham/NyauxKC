@@ -1,0 +1,18 @@
+diff -urN --no-dereference nano-clean/src/files.c nano-workdir/src/files.c
+--- nano-clean/src/files.c
++++ nano-workdir/src/files.c
+@@ -427,9 +427,12 @@
+ 		}
+ #elif defined(HAVE_GETEUID)
+ 		if (new_one && !(fileinfo.st_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) &&
+-						geteuid() == ROOT_UID)
+-			statusline(ALERT, _("%s is meant to be read-only"), realname);
++						geteuid() == ROOT_UID) {
++							statusline(ALERT, _("file mode is %lu, expected %lu, geteuid returns %lu"), fileinfo.st_mode, (S_IWUSR|S_IWGRP|S_IWOTH), geteuid());
++						}
++			// statusline(ALERT, _("%s is meant to be read-only"), realname);
+ #endif
++
+ 	}
+ 
+ 	/* When loading into a new buffer, first check the file's path is valid,

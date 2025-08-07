@@ -63,6 +63,7 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
 }
 static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
   ps2keyboard *kbd = static_cast<ps2keyboard *>(get_fd(requested->fd)->privatedata);
+  sprintf("kbd: polling for fd %d\r\n", requested->fd);
   short cringeevents = requested->events;
   if (requested->events & POLLIN) {
     if (empty_ringbuf(kbd->buf)) {
@@ -99,7 +100,7 @@ int result = i8042_init();
 static void open(struct vnode *curvnode, void *data, int *res,
                  struct FileDescriptorHandle *hnd) {
 
-  kprintf("adding ps2kbd for fd %d\r\n", hnd->fd);
+  sprintf("adding ps2kbd for fd %d\r\n", hnd->fd);
 ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd->fd);
   hnd->privatedata = set;
   *res = 0;
@@ -107,6 +108,7 @@ ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd->fd);
 }
 static int close(struct vnode *curvnode, void *data,
                  struct FileDescriptorHandle *hnd) {
+                  sprintf("closing fd %d\r\n", hnd->fd);
   static_cast<ps2allstars*>(data)->remove_one(hnd->fd);
   hnd->privatedata = nullptr;
   return 0;

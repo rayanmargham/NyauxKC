@@ -10,13 +10,14 @@
 #include "sched/sched.h"
 #include "term/term.h"
 #include "utils/basic.h"
-#include <timers/timer.hpp>
 #include <stdint.h>
-#define SYSCALLENT __asm__ volatile ("sti");
-#define SYSCALLEXIT __asm__ volatile ("cli");
+#include <timers/timer.hpp>
+#define SYSCALLENT __asm__ volatile("sti");
+#define SYSCALLEXIT __asm__ volatile("cli");
 struct __syscall_ret syscall_exit(int exit_code) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n", cpu->cur_thread->proc->pid, exit_code);
+  sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n",
+          cpu->cur_thread->proc->pid, exit_code);
   if (cpu->cur_thread->proc->pid == 0 || cpu->cur_thread->proc->pid == 1) {
     kprintf_log(FATAL, "init process destroyed\r\n");
 
@@ -50,36 +51,34 @@ struct __syscall_ret syscall_mmap(void *hint, size_t size, int prot, int flags,
   if (flags & MAP_ANONYMOUS) {
     if (hint != 0) {
 
-uint64_t shit = (uint64_t)uvmm_region_alloc_fixed(cpu->cur_thread->proc->cur_map, (uint64_t)hint, size, false);
+      uint64_t shit = (uint64_t)uvmm_region_alloc_fixed(
+          cpu->cur_thread->proc->cur_map, (uint64_t)hint, size, false);
 
-      return (struct __syscall_ret){
-          shit,
-          0};
+      return (struct __syscall_ret){shit, 0};
     }
     uint64_t shit = (uint64_t)uvmm_region_alloc_demend_paged(
-                                      cpu->cur_thread->proc->cur_map, size);
-                                      
-    return (struct __syscall_ret){(uint64_t)shit,
-                                  0};
+        cpu->cur_thread->proc->cur_map, size);
+
+    return (struct __syscall_ret){(uint64_t)shit, 0};
   }
   sprintf("saying enosys");
-  
+
   return (struct __syscall_ret){-1, ENOSYS};
 }
 struct __syscall_ret syscall_free(void *pointer, size_t size) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  
+
   sprintf("syscall_free(): freeing %lu\r\n", size);
   uvmm_region_dealloc(cpu->cur_thread->proc->cur_map, pointer);
-  
+
   return (struct __syscall_ret){-0, 0};
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
   sprintf("syscall_openat(): opening %s from thread %lu with flags %d\r\n",
           path, arch_get_per_cpu_data()->cur_thread->tid, flags);
-          struct per_cpu_data *cpu = arch_get_per_cpu_data();
-          
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
+
   struct vnode *node = NULL;
   if (dirfd == AT_FDCWD) {
     struct process_t *proc = get_process_start();
@@ -89,8 +88,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   } else {
     struct FileDescriptorHandle *hnd = get_fd(dirfd);
     if (hnd == NULL) {
-      
-      
+
       return (struct __syscall_ret){.ret = -1, .errno = EBADF};
     }
     node = hnd->node;
@@ -98,58 +96,74 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   struct vnode *retur = NULL;
   int res = vfs_lookup(node, path, &retur);
   if (res != 0) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = ENOENT};
   }
   res = 0;
+  int fd = -1;
+  switch (mode) {
+  case O_DIRECTORY:
+    if (retur->v_type == VREG) {
+      return (struct __syscall_ret) { .ret = -1, .errno = ENOTDIR};
+    } else if (retur->v_type == VDIR) {
+      return (struct __syscall_ret) { .ret = -1, .errno = ENOTSUP};
+    }
+    break;
+  default:
 
-  int fd = retur->ops->open(retur, flags, mode, &res);
-  if (res != 0) {
-    
-    return (struct __syscall_ret){.ret = -1, .errno = res};
+    if (retur->v_type == VBLKDEVICE || retur->v_type == VCHRDEVICE) {
+      fd = retur->ops->open(retur, flags, mode, &res);  
+    } else {
+      fd = retur->ops->open(retur, flags, mode, &res); 
+    }
+    if (res != 0) {
+
+      return (struct __syscall_ret){.ret = -1, .errno = res};
+    }
+    break;
   }
-  
+
   return (struct __syscall_ret){.ret = fd, .errno = 0};
 }
 struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
                                   int timeout) {
-                                    struct per_cpu_data *cpu = arch_get_per_cpu_data();
+  struct per_cpu_data *cpu = arch_get_per_cpu_data();
 
   sprintf("poll(): fuck you! number of fds: %lu, events: %d, targetted fd: %d, "
           "timeout: %d\r\n",
           nfds, fds->events, fds->fd, timeout);
   if (timeout != -1) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
   if (nfds > 1) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
   }
   if (!fds) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = EINVAL};
   }
   struct FileDescriptorHandle *hnd = get_fd(fds->fd);
   int ret = hnd->node->ops->poll(hnd->node, fds);
   if (ret != 0) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = ret};
   }
-  
+
   return (struct __syscall_ret){.ret = 1, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
-  
+
   struct FileDescriptorHandle *hnd = get_fd(fd);
-  //sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);
+  // sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd, hnd->flags);
   if (hnd == NULL) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   if (hnd->node == NULL) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = EIO};
   }
   if (count > (hnd->node->stat.size - hnd->offset) &&
@@ -160,15 +174,15 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   size_t bytes_read =
       hnd->node->ops->rw(hnd->node, hnd->offset, count, buf, 0, hnd, &res);
   if (res != 0) {
-    
+
     return (struct __syscall_ret){.ret = -1, .errno = res};
   }
   hnd->offset += bytes_read;
-  
+
   return (struct __syscall_ret){.ret = bytes_read, .errno = 0};
 }
 struct __syscall_ret syscall_close(int fd) {
-  __asm__ volatile ("cli");
+  __asm__ volatile("cli");
   sprintf("syscall_close(): closing fd %d\r\n", fd);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   sprintf("got the fd\r\n");
@@ -177,12 +191,12 @@ struct __syscall_ret syscall_close(int fd) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   sprintf("running funny\r\n");
-int ret = hnd->node->ops->close(hnd->node, fd);
-sprintf("ran ze fun\r\n");
-if (ret != 0) {
+  int ret = hnd->node->ops->close(hnd->node, fd);
+  sprintf("ran ze fun\r\n");
+  if (ret != 0) {
 
-  return (struct __syscall_ret){.ret = -1, .errno = ret};
-}
+    return (struct __syscall_ret){.ret = -1, .errno = ret};
+  }
   return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
@@ -278,6 +292,7 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
   *output = hnd->node->stat;
+
   sprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
           output->size, output->st_mode);
   return (struct __syscall_ret){.ret = 0, .errno = 0};
@@ -326,7 +341,8 @@ neverstop:
   if (!us) {
     return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
   }
-  //__asm__ volatile ("cli"); // we dont want the process to be unmapped by the reaper thread while we are doing this so
+  //__asm__ volatile ("cli"); // we dont want the process to be unmapped by the
+  //reaper thread while we are doing this so
   // this is required
   while (us != NULL) {
     if (us->state == ZOMBIE) {
@@ -345,30 +361,30 @@ neverstop:
   goto neverstop;
 }
 static void read_shit(void *data, void *variable) {
-  *(__int128_t*)variable = info.timestamp;
+  *(__int128_t *)variable = info.timestamp;
 }
 struct __syscall_ret syscall_clockget(int clock, long *time, long *nanosecs) {
   switch (clock) {
-    case CLOCK_REALTIME:
-      __int128_t timestamp = 0;
-      seq_read(&info.lock, read_shit, NULL, &timestamp);
-      timestamp = timestamp + GenericTimerGetns();
-      if (timestamp < 0) {
-          __int128_t seconds = (timestamp - (1000000000 - 1)) / 1000000000;
-        *time = seconds;
-        *nanosecs = timestamp - (seconds * 1000000000);
+  case CLOCK_REALTIME:
+    __int128_t timestamp = 0;
+    seq_read(&info.lock, read_shit, NULL, &timestamp);
+    timestamp = timestamp + GenericTimerGetns();
+    if (timestamp < 0) {
+      __int128_t seconds = (timestamp - (1000000000 - 1)) / 1000000000;
+      *time = seconds;
+      *nanosecs = timestamp - (seconds * 1000000000);
 
-        return (struct __syscall_ret){.ret = 0, .errno = 0};
-      } else {
-        *time = timestamp / 1000000000;
-        *nanosecs = timestamp % 1000000000;
+      return (struct __syscall_ret){.ret = 0, .errno = 0};
+    } else {
+      *time = timestamp / 1000000000;
+      *nanosecs = timestamp % 1000000000;
 
-        return (struct __syscall_ret){.ret = 0, .errno = 0};
-      }
+      return (struct __syscall_ret){.ret = 0, .errno = 0};
+    }
 
-      break;
-    default:
-      break;
+    break;
+  default:
+    break;
   }
   return (struct __syscall_ret){.ret = -1, .errno = ENOSYS};
 }
