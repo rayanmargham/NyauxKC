@@ -27,3 +27,6 @@
 *.a
 *.o
 /NyauxKC-*.iso
+kernel/subprojects/cc-runtime
+kernel/subprojects/freestnd-c-hdrs
+kernel/subprojects/freestnd-cxx-hdrs
