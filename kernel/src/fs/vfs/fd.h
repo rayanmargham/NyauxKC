@@ -17,6 +17,7 @@ struct FileDescriptorHandle {
   unsigned int mode;
   unsigned int flags;
   struct FileDescriptorHandle *realhnd;
+  refcount_t ref;
   void *privatedata;
   // ops here
 };

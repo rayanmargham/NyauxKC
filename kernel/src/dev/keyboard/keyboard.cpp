@@ -51,7 +51,7 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     }
 
     memcpy(buffer, pac, sizeof(nyauxps2kbdpacket));
-    sprintf("fd %d got packet of key %d\r\n", hnd->fd, pac->keycode);
+    sprintf("kbd: fd %d got packet of key %d\r\n", hnd->fd, pac->keycode);
     kfree(pac, sizeof(nyauxps2kbdpacket));
     *res = 0;
     return sizeof(nyauxps2kbdpacket);
@@ -59,16 +59,18 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
 }
 static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
                  void *arg, void *result) {
+                  sprintf("kbd: ioctl\r\n");
   return ENOSYS;
 }
 static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
+ 
   ps2keyboard *kbd = static_cast<ps2keyboard *>(get_fd(requested->fd)->privatedata);
-  sprintf("kbd: polling for fd %d\r\n", requested->fd);
   short cringeevents = requested->events;
   if (requested->events & POLLIN) {
     if (empty_ringbuf(kbd->buf)) {
+ 
       cringeevents &= ~(POLLIN);
-    }
+    } 
   }
   requested->revents = cringeevents;
   return 0;
@@ -99,8 +101,8 @@ int result = i8042_init();
 }
 static void open(struct vnode *curvnode, void *data, int *res,
                  struct FileDescriptorHandle *hnd) {
-
-  sprintf("adding ps2kbd for fd %d\r\n", hnd->fd);
+if (hnd)
+    kprintf("adding ps2kbd for fd %d\r\n", hnd->fd);
 ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd->fd);
   hnd->privatedata = set;
   *res = 0;

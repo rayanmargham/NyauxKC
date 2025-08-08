@@ -19,19 +19,21 @@ static size_t rww(struct vnode *curvnode, size_t offset, size_t size,
                   int *res);
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
-static int readdir(struct vnode *curvnode, int offset, char **name);
+
 static int mount(struct vfs *curvfs, char *path, void *data);
 static int poll(struct vnode *curvnode, struct pollfd *requested);
 static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res);
+static int readdir(struct vnode *curvnode, struct FileDescriptorHandle *hnd, const char *name);
 static int close (struct vnode *curvnode, int fd);
 static int hardlink(struct vnode *curvnode, struct vnode *with,
                     const char *name);
+static struct dirstream *getdirents(struct vnode *curvnode, int *res);
 struct vnodeops vnode_devops = {.open = open,
   .close = close,
   .lookup = lookup,
                                 .create = create,
                                 .rw = rww,
-                                readdir,
+                                .getdirents = getdirents,
                                 .ioctl = ioctl,
                                 .poll = poll,
                                 .hardlink = hardlink};
@@ -191,9 +193,7 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
   }
   return -1;
 }
-static int readdir(struct vnode *curvnode, int offset, char **name) {
-  return -1;
-}
+
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result) {
   struct devfsnode *devnode = (struct devfsnode *)curvnode->data;
@@ -245,4 +245,8 @@ static int close (struct vnode *curvnode, int fd) {
   int res = node->info->ops->close(curvnode, node->info->data, hnd);
   fddfree(fd);
   return res;
+}
+
+static struct dirstream *getdirents(struct vnode *curvnode, int *res) {
+
 }

@@ -145,28 +145,8 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
     token = next_token;
   }
 }
-void vf_scan(struct vnode *curvnode) {
-  struct vnode *fein = curvnode;
-  int offset = 0;
-  int res = 0;
-  while (res == 0) {
-    if (fein->v_type == VDIR) {
-      char *name;
 
-      int res = fein->ops->readdir(fein, offset, &name);
-      if (res != 0) {
-        break;
-      }
-      kprintf("->%s\r\n", name);
 
-      offset += 1;
-    }
-  }
-}
-void vfs_scan() {
-  struct vnode *fein = vfs_list->cur_vnode;
-  vf_scan(fein);
-}
 
 void vfs_init() {
   vfs_mount(&tmpfs_vfsops, NULL, NULL);

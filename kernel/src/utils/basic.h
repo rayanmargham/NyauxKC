@@ -74,8 +74,8 @@ extern "C" {
   static inline void refcount_inc(refcount_t *ref) {
     __atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST);
   }
-  static inline void refcount_dec(refcount_t *ref) {
-    __atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL);
+  static inline int refcount_dec(refcount_t *ref) {
+    return __atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL);
   }
   static inline void spinlock_lock(spinlock_t *lock) {
 

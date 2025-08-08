@@ -11,6 +11,7 @@ extern "C" {
 void vfs_init();
 enum vtype {
   VREG,
+  VFIFO,
   VCHRDEVICE,
   VBLKDEVICE,
   VDIR,
@@ -77,7 +78,7 @@ struct vnodeops {
   // curvnode, offset, size, buffer, rw
   size_t (*rw)(struct vnode *curvnode, size_t offset, size_t size, void *buffer,
                int rw, struct FileDescriptorHandle *hnd, int *res);
-  int (*readdir)(struct vnode *curvnode, int offset, char **out);
+  struct dirstream *(*getdirents)(struct vnode *curvnode, int *res);
   int (*ioctl)(struct vnode *curvnode, unsigned long request, void *arg,
                void *result);
   // will throw vnode into dir with the name
@@ -96,6 +97,26 @@ void vfs_create_from_tar(char *path, enum vtype type, size_t filesize,
 void vfs_scan();
 int vfs_lookup(struct vnode *start, const char *path, struct vnode **node);
 #define O_PATH 010000000
+struct linux_dirent64 {
+	uint64_t d_ino;
+	int64_t d_off;
+	unsigned short	d_reclen;
+	unsigned char	d_type;
+	char		*d_name;
+};
+struct dirstream {
+  uint64_t position;
+  struct linux_dirent64 **list;
+};
+#define DT_UNKNOWN 0
+#define DT_FIFO 1
+#define DT_CHR 2
+#define DT_DIR 4
+#define DT_BLK 6
+#define DT_REG 8
+#define DT_LNK 10
+#define DT_SOCK 12
+#define DT_WHT 14
 
 #define O_ACCMODE (03 | O_PATH)
 #define O_RDONLY 00

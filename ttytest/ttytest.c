@@ -1,20 +1,28 @@
-#include <stdio.h>
 #include <strings.h>
 #include <termios.h>
-
-static struct termios stored_settings;
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/wait.h>
+#include <sched.h>
+#include <sys/utsname.h>
+void other_fn() {
+    printf("I am a child\n");
+}
 int main(int argc, char **argv) {
-    if(argc != 1) {
-        printf("%s takes no arguments.\n", argv[0]);
-        return 1;
-    }
-    tcgetattr(0,&stored_settings);
 
-    struct termios new_settings = stored_settings;
-    new_settings.c_lflag |= (ICANON | ECHO);
-    tcsetattr(0,TCSANOW,&new_settings);
-    while (1)
-      ;;
-    
+ printf("Hello, world!\n");
+
+    for (int i = 0; i < 1024; i++) {
+        int forked = fork();
+        if (forked) {
+            printf("I am parent for %i\n", forked);
+        } else {
+            other_fn();
+            break;
+        }
+    }
+  sched_yield(); 
     return 0;
 }

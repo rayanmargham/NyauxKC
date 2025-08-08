@@ -32,7 +32,7 @@ diff -urN --no-dereference mlibc-clean/options/rtld/generic/main.cpp mlibc-workd
 diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 --- mlibc-clean/sysdeps/nyaux/generic/generic.cpp
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -12,394 +12,467 @@
+@@ -12,394 +12,470 @@
  #include <stdlib.h>
  #include <sys/select.h>
  #include <sys/types.h>
@@ -636,8 +636,10 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
  
 -int sys_access(const char *path, int mode) {
 -  return sys_faccessat(AT_FDCWD, path, mode, 0);
--}
 +int sys_access(const char *path, int mode) { return sys_faccessat(AT_FDCWD, path, mode, 0); }
++int sys_open_dir(const char *path, int *handle) {
++	return sys_open(path, O_DIRECTORY, 0, handle);
+ }
  #endif
 -int sys_sigprocmask(int how, const sigset_t *__restrict set,
 -                    sigset_t *__restrict retrieve) {

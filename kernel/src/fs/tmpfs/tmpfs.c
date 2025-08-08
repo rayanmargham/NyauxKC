@@ -27,24 +27,15 @@ static size_t rw(struct vnode *curvnode, size_t offset, size_t size,
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
                  void *result);
 static int mount(struct vfs *curvfs, char *path, void *data);
-static int readdir(struct vnode *curvnode, int offset, char **name);
 static int poll(struct vnode *curvnode, struct pollfd *requested);
 static int hardlink(struct vnode *curvnode, struct vnode *with,
                     const char *name);
+static struct dirstream *getdirents(struct vnode *curvnode, int *res);
 struct vnodeops tmpfs_ops = {
-    .close = close, .open = open, lookup, create, poll, rw, readdir, .ioctl = ioctl, .hardlink = hardlink};
+    .getdirents = getdirents, .close = close, .open = open, lookup, create, poll, rw, .ioctl = ioctl, .hardlink = hardlink};
 struct vfs_ops tmpfs_vfsops = {mount};
-static int readdir(struct vnode *curvnode, int offset, char **name) {
-  if (curvnode->v_type == VDIR) {
-    struct tmpfsnode *node = (struct tmpfsnode *)curvnode->data;
-    if ((size_t)offset >= node->direntry->cnt) {
-      return -1;
-    }
-    *name = node->direntry->nodes[offset]->name;
-    return 0;
-  }
-  return -1;
-}
+
+
 static void insert_into_list(struct tmpfsnode *node, struct direntry *entry) {
   if (entry->cnt == 0) {
     entry->nodes = kmalloc(sizeof(struct tmpfsnode *));
@@ -258,6 +249,44 @@ static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) 
   *res = 0;
   hnd->mode = mode;
   return fd;
+}
+static struct dirstream *getdirents(struct vnode *curvnode, int *res) {
+  struct direntry *a = (struct direntry*)curvnode->data;
+
+  struct dirstream *star = (struct dirstream *)kmalloc(sizeof(struct dirstream));
+  star->list = (struct linux_dirent64 **)kmalloc((a->cnt + 1) * sizeof(struct linux_dirent64));
+  size_t index = 0;
+  while (index != a->cnt) {
+    struct tmpfsnode *n = a->nodes[index];
+    struct linux_dirent64 *m = star->list[index];
+    m->d_name = n->name;
+    m->d_ino = 0;
+    m->d_reclen = sizeof(struct linux_dirent64);
+    m->d_off = (index + 1) * sizeof(struct linux_dirent64);
+    switch (n->node->v_type) {
+      case VREG:
+        m->d_type = DT_REG;
+        break;
+      case VSYMLINK:
+        m->d_type = DT_LNK;
+        break;
+      case VCHRDEVICE:
+        m->d_type = DT_CHR;
+        break;
+      case VBLKDEVICE:
+        m->d_type = DT_BLK;
+        break;
+      case VDIR:
+        m->d_type = DT_DIR;
+      case VFIFO:
+        m->d_type = DT_FIFO;
+        break;
+    }
+
+    index += 1;
+  }
+  *res = 0;
+  return star;
 }
 static int close(struct vnode *curvnode, int fd) {
   struct FileDescriptorHandle *hnd = get_fd(fd);

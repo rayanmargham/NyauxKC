@@ -49,6 +49,7 @@ public:
     }
   }
 ~ps2keyboard() {
+  sprintf("kbd: going bai bai\r\n");
   bye();
   kfree(buf->buf, align_up(100 * sizeof(uint64_t), 8));
   kfree(buf, sizeof(ring_buf));

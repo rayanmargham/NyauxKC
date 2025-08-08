@@ -1,6 +1,7 @@
 #include "fd.h"
 
 #include "sched/sched.h"
+#include "utils/basic.h"
 #include "utils/hashmap.h"
 
 uint64_t fd_hash(const void *item, uint64_t seed0, uint64_t seed1) {
@@ -23,7 +24,7 @@ int fddalloc(struct vnode *node) {
     if (proc->fdalloc[i] == 0) {
       proc->fdalloc[i] = 1;
       hashmap_set(proc->fds, &(struct FileDescriptorHandle){
-                                 .fd = i, .offset = 0, .node = node});
+                                 .fd = i, .offset = 0, .node = node, .ref = 0});
       get_process_finish(proc);
       return i;
     }
@@ -38,12 +39,13 @@ int fdmake(int oldfd, int fd) {
   hashmap_set(
       proc->fds,
       &(struct FileDescriptorHandle){
-          .fd = fd, .offset = 0, .node = g->node, .dummy = true, .realhnd = g});
+          .fd = fd, .offset = 0, .node = g->node, .dummy = true, .realhnd = g, .ref = 0});
   get_process_finish(proc);
   return fd;
 }
 int fddup(int fromfd) {
   struct FileDescriptorHandle *res = get_fd(fromfd);
+  refcount_inc(&res->ref);
   int newfd = fddalloc(res->node);
   struct FileDescriptorHandle *other = get_fd(newfd);
   other->dummy = true;
@@ -67,9 +69,9 @@ struct FileDescriptorHandle *get_fd(int fd) {
   return res;
 }
 void fddfree(int fd) {
+  int maybe = refcount_dec(&get_fd(fd)->ref) + 1;
   struct process_t *proc = get_process_start();
-
-  if (proc->fdalloc[fd] == 1) {
+  if (proc->fdalloc[fd] == 1 && maybe == 0) {
     proc->fdalloc[fd] = 0;
     const void *e =
         hashmap_delete(proc->fds, &(struct FileDescriptorHandle){.fd = fd});
