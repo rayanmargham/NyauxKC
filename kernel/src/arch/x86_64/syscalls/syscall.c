@@ -14,6 +14,7 @@
 #include <timers/timer.hpp>
 #define SYSCALLENT __asm__ volatile("sti");
 #define SYSCALLEXIT __asm__ volatile("cli");
+#define UNIMPL return (struct __syscall_ret) {.ret = 0, .errno = ENOSYS};
 struct __syscall_ret syscall_exit(int exit_code) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n",
@@ -77,7 +78,6 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
                                     unsigned int mode) {
   sprintf("syscall_openat(): opening %s from thread %lu with flags %d\r\n",
           path, arch_get_per_cpu_data()->cur_thread->tid, flags);
-  struct per_cpu_data *cpu = arch_get_per_cpu_data();
 
   struct vnode *node = NULL;
   if (dirfd == AT_FDCWD) {
@@ -122,7 +122,9 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
     }
     break;
   }
-
+  struct FileDescriptorHandle *h = get_fd(fd);
+  h->flags = flags;
+  h->mode = mode;
   return (struct __syscall_ret){.ret = fd, .errno = 0};
 }
 struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
@@ -152,6 +154,36 @@ struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
   }
 
   return (struct __syscall_ret){.ret = 1, .errno = 0};
+}
+struct __syscall_ret syscall_readdir(int fd, void *buf) {
+  sprintf("syscall_readdir(): fd %d, buf usr addr %p\r\n", fd, buf); 
+  struct FileDescriptorHandle *hnd = get_fd(fd);
+ if (hnd == NULL) {
+
+    return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+  if (hnd->node == NULL) {
+
+    return (struct __syscall_ret){.ret = -1, .errno = EIO};
+  }
+  if (hnd->offset == 0) {
+    // cache em
+    int res = 0;
+    struct dirstream *star = hnd->node->ops->getdirents(hnd->node, &res);
+    hnd->privatedata = star;
+    if (res != 0) {
+      return (struct __syscall_ret){.ret = -1, .errno = res};
+    }
+    // this is okay to do as no 1 FUCK YOU IM MEMCPYING TO USR SPACE
+    // 2 entries are at least ensured
+    memcpy(buf, star->list, (star->cnt + 1) * sizeof(struct linux_dirent64));
+    star->position += (star->cnt + 1) * sizeof(struct linux_dirent64);
+    hnd->offset += (star->cnt + 1) * sizeof(struct linux_dirent64);
+    sprintf("done readdir\r\n");
+    return (struct __syscall_ret){.ret = (star->cnt + 1) * sizeof(struct linux_dirent64), .errno = 0};
+  }
+  sprintf("READDIR OTHER SHIT IS UNIMPL'D\r\n");
+ UNIMPL 
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
@@ -207,12 +239,24 @@ struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
   switch (whence) {
   case SEEK_SET:
     hnd->offset = offset;
+    if (offset == 0 && hnd->flags & O_DIRECTORY) {
+      struct dirstream *star = hnd->privatedata;
+      kfree(star->list, (star->cnt + 1) * sizeof(struct linux_dirent64));
+      kfree(hnd->privatedata, sizeof(struct dirstream));
+    }
     break;
   case SEEK_CUR:
     hnd->offset += offset;
+    if (hnd->flags & O_DIRECTORY) {
+struct dirstream *star = hnd->privatedata;
+star->position += offset;
+    }
     break;
   case SEEK_END:
     hnd->offset = hnd->node->stat.size + offset;
+    if (hnd->flags & O_DIRECTORY) {
+      panic(">:3 no");
+    }
     break;
   default:
     return (struct __syscall_ret){.ret = -1, .errno = EINVAL};
@@ -285,11 +329,49 @@ struct __syscall_ret syscall_dup2(int oldfd, int newfd) {
   fdmake(oldfd, newfd);
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
-struct __syscall_ret syscall_fstat(int fd, struct stat *output) {
+struct __syscall_ret syscall_fstat(int fd, struct stat *output, int flags, char *path) {
+  sprintf("syscall_fstat(): trying to access fd %d, flags %x\r\n", fd, flags);
   struct FileDescriptorHandle *hnd = get_fd(fd);
+  if (fd == AT_FDCWD) {
+    sprintf("path %s\r\n", path);
+    struct process_t *proc = get_process_start();
+    struct vnode *cwd = proc->cwd;
+    struct vnode *node = NULL;
+    int res = vfs_lookup(cwd, path, &node);
+    get_process_finish(proc);
+    if (node == NULL || res != 0 ) {
+      return (struct __syscall_ret){.ret = -1, .errno = res};
+    }
+if (flags & AT_EMPTY_PATH) {
+  sprintf("syscall_fstat(): empty path\r\n");
+    *output = cwd->stat;}
+else
+    *output = node->stat;
+  sprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
+          output->size, output->st_mode);
+  return (struct __syscall_ret){.ret = 0, .errno = 0};
+
+  }
   if (hnd == NULL) {
     sprintf("syscall_fstat(): bad file descriptor\r\n");
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
+  }
+
+  if (path == NULL) {
+sprintf("syscall_fstat(): flags %d\r\n", flags);
+
+    goto b;
+  } 
+  sprintf("syscall_fstat(): flags %d, path %s\r\n", flags, path);
+  if (path[0] != '\0') {
+    if (path[0] != '/') {
+      UNIMPL
+    }
+  }
+  b:
+  if (flags != 0) {
+    sprintf("sorry not impld'd\r\n");
+    UNIMPL
   }
   *output = hnd->node->stat;
 

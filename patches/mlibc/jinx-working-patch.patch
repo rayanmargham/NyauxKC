@@ -32,7 +32,7 @@ diff -urN --no-dereference mlibc-clean/options/rtld/generic/main.cpp mlibc-workd
 diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 --- mlibc-clean/sysdeps/nyaux/generic/generic.cpp
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -12,394 +12,470 @@
+@@ -12,394 +12,490 @@
  #include <stdlib.h>
  #include <sys/select.h>
  #include <sys/types.h>
@@ -622,24 +622,41 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 -  __syscall_ret ret =
 -      __syscall4(SYSCALL_FACCESSAT, dirfd, (uint64_t)pathname, mode, flags);
 +	__syscall_ret ret = __syscall4(SYSCALL_FACCESSAT, dirfd, (uint64_t)pathname, mode, flags);
- 
--  if (ret.err != 0) {
--    return ret.err;
--  }
++
 +	if (ret.err != 0) {
 +		return ret.err;
 +	}
  
--  return 0;
+-  if (ret.err != 0) {
+-    return ret.err;
+-  }
 +	return 0;
- }
++}
  
--int sys_access(const char *path, int mode) {
--  return sys_faccessat(AT_FDCWD, path, mode, 0);
+-  return 0;
 +int sys_access(const char *path, int mode) { return sys_faccessat(AT_FDCWD, path, mode, 0); }
 +int sys_open_dir(const char *path, int *handle) {
 +	return sys_open(path, O_DIRECTORY, 0, handle);
  }
++int sys_read_entries(int fd, void *buffer, size_t max_size, size_t *bytes_read) {
++	// managarm does this so i do too
++	__syscall_ret ret = __syscall2(23, (uint64_t)fd, (uint64_t)buffer);
+ 
+-int sys_access(const char *path, int mode) {
+-  return sys_faccessat(AT_FDCWD, path, mode, 0);
++	if (ret.ret == (uint64_t)-1 && ret.err == 0) {
++		// End of directory.
++		*bytes_read = 0;
++		return 0;
++	} else if (ret.err != 0) {
++		return ret.err;
++	}
++
++	*bytes_read = ret.ret;
++	return 0;
+ }
++
++
  #endif
 -int sys_sigprocmask(int how, const sigset_t *__restrict set,
 -                    sigset_t *__restrict retrieve) {
@@ -681,9 +698,7 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
  
 -  *newfd = (ssize_t)ret.ret;
 -  return 0;
-+	*newfd = (ssize_t)ret.ret;
-+	return 0;
- }
+-}
 -int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags,
 -             struct stat *statbuf) {
 -  __syscall_ret ret;
@@ -722,6 +737,9 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 -  if (ret.err != 0)
 -    return ret.err;
 -  return ret.ret;
++	*newfd = (ssize_t)ret.ret;
++	return 0;
+ }
 +int sys_dup2(int fd, int flags, int newfd) {
 +	__syscall_ret ret = __syscall3(SYSCALL_DUP2, fd, newfd, flags);
 +
@@ -734,7 +752,7 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 +	__syscall_ret ret;
 +	switch (fsfdt) {
 +		case fsfd_target::fd: {
-+			ret = __syscall2(SYSCALL_FSTAT, fd, (uint64_t)statbuf);
++			ret = __syscall4(SYSCALL_FSTAT, fd, (uint64_t)statbuf, flags, (uint64_t)path);
 +			if (ret.err != 0) {
 +				return ret.err;
 +			}
@@ -747,16 +765,22 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 +			if (bad != 0) {
 +				return bad;
 +			}
-+			ret = __syscall2(SYSCALL_FSTAT, fd, (uint64_t)statbuf);
++			ret = __syscall4(SYSCALL_FSTAT, fd, (uint64_t)statbuf, flags, (uint64_t)0);
++if (ret.err != 0) {
++				return ret.err;
++			}
 +			bad = sys_close(fd);
 +			// ret = __syscall(11, AT_FDCWD, path, statbuf, flags);
 +			return ret.ret;
 +			break;
 +		}
 +		case fsfd_target::fd_path: {
-+			mlibc::infoLogger() << "mlibc: statfd_path is a stub" << frg::endlog;
-+			// ret = __syscall(11, fd, path, statbuf, flags);
-+			return ENOSYS;
++			ret = __syscall4(SYSCALL_FSTAT, fd, (uint64_t)statbuf, flags, (uint64_t)path);
++if (ret.err != 0) {
++				return ret.err;
++			}
++
++			return ret.ret;
 +			break;
 +		}
 +		default: {
@@ -764,11 +788,8 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 +			__builtin_unreachable();
 +		}
 +	}
-+	if (ret.err != 0)
-+		return ret.err;
-+	return ret.ret;
- }
  
++}
  } // namespace mlibc
 diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h mlibc-workdir/sysdeps/nyaux/include/nyaux/syscalls.h
 --- mlibc-clean/sysdeps/nyaux/include/nyaux/syscalls.h

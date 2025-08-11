@@ -2,6 +2,7 @@
 
 #include <mem/kmem.h>
 
+#include "arch/x86_64/syscalls/syscall.h"
 #include "fs/devfs/devfs.h"
 #include "fs/tmpfs/tmpfs.h"
 #include "fs/ustar/ustar.h"

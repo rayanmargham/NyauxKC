@@ -201,6 +201,10 @@ struct __syscall_ret {
 #define WCOREDUMP(x) ((x) & WCOREFLAG)
 #define AT_FDCWD -100
 #define AT_SYMLINK_NOFOLLOW 0x100
+#define 	AT_REMOVEDIR
+#define 	AT_SYMLINK_FOLLOW   0x400 /* Follow symbolic links. */
+#define 	AT_NO_AUTOMOUNT   0x800 /* Suppress terminal automount traversal */
+#define 	AT_EMPTY_PATH   0x1000 /* Allow empty relative pathname */
 #define R_OK 4 /* Test for read permission.  */
 #define W_OK 2 /* Test for write permission.  */
 #define X_OK 1 /* Test for execute permission.  */

@@ -21,6 +21,7 @@ extern syscall_execve
 extern syscall_faccessat
 extern syscall_dup2
 extern syscall_poll
+extern syscall_readdir
 global syscall_entry
 section .data
 syscallarray:
@@ -47,6 +48,7 @@ syscallarray:
     dq syscall_dup2 ; 20
     dq syscall_poll ; 21
     dq syscall_clockget ; 22
+    dq syscall_readdir ; 23
 
 .length: dq ($ - syscallarray) / 8
 section .text

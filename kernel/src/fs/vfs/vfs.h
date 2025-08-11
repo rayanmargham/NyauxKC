@@ -102,11 +102,13 @@ struct linux_dirent64 {
 	int64_t d_off;
 	unsigned short	d_reclen;
 	unsigned char	d_type;
-	char		*d_name;
+	char		d_name[1024]; // mlibc does this so like, we cant escape it...
+  // we cant be the epic kernel 
 };
 struct dirstream {
   uint64_t position;
-  struct linux_dirent64 **list;
+  struct linux_dirent64 *list;
+  size_t cnt;
 };
 #define DT_UNKNOWN 0
 #define DT_FIFO 1

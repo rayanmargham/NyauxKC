@@ -147,9 +147,9 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
       }
     }
 
-    return -1;
+    return ENOENT;
   }
-  return -1;
+  return ENOENT;
 }
 
 static int mount(struct vfs *curvfs, char *path, void *data) {
@@ -251,15 +251,21 @@ static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) 
   return fd;
 }
 static struct dirstream *getdirents(struct vnode *curvnode, int *res) {
-  struct direntry *a = (struct direntry*)curvnode->data;
+  if (curvnode->v_type != VDIR) {
+    *res = ENOTDIR;
+    return NULL;
+  }
+  struct tmpfsnode *imopid = (struct tmpfsnode*)curvnode->data;
 
+  struct direntry *a = (struct direntry*)imopid->direntry;
   struct dirstream *star = (struct dirstream *)kmalloc(sizeof(struct dirstream));
-  star->list = (struct linux_dirent64 **)kmalloc((a->cnt + 1) * sizeof(struct linux_dirent64));
+  star->list = (struct linux_dirent64 *)kmalloc((a->cnt + 1) * sizeof(struct linux_dirent64));
+  star->cnt = a->cnt;
   size_t index = 0;
   while (index != a->cnt) {
     struct tmpfsnode *n = a->nodes[index];
-    struct linux_dirent64 *m = star->list[index];
-    m->d_name = n->name;
+    struct linux_dirent64 *m = &star->list[index];
+    memcpy(m->d_name, n->name, strlen(n->name) + 1);
     m->d_ino = 0;
     m->d_reclen = sizeof(struct linux_dirent64);
     m->d_off = (index + 1) * sizeof(struct linux_dirent64);

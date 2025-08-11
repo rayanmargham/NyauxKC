@@ -189,9 +189,9 @@ static int lookup(struct vnode *curvnode, char *name, struct vnode **res) {
         return 0;
       }
     }
-    return -1;
+    return ENOENT;
   }
-  return -1;
+  return ENOENT;
 }
 
 static int ioctl(struct vnode *curvnode, unsigned long request, void *arg,
