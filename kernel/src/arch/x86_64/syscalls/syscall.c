@@ -14,7 +14,7 @@
 #include <timers/timer.hpp>
 #define SYSCALLENT __asm__ volatile("sti");
 #define SYSCALLEXIT __asm__ volatile("cli");
-#define UNIMPL return (struct __syscall_ret) {.ret = 0, .errno = ENOSYS};
+#define UNIMPL return (struct __syscall_ret){.ret = 0, .errno = ENOSYS};
 struct __syscall_ret syscall_exit(int exit_code) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   sprintf("syscall_exit(): exiting pid %lu, exit_code %d\r\n",
@@ -104,17 +104,17 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
   switch (mode) {
   case O_DIRECTORY:
     if (retur->v_type == VREG) {
-      return (struct __syscall_ret) { .ret = -1, .errno = ENOTDIR};
+      return (struct __syscall_ret){.ret = -1, .errno = ENOTDIR};
     } else if (retur->v_type == VDIR) {
-      return (struct __syscall_ret) { .ret = -1, .errno = ENOTSUP};
+      return (struct __syscall_ret){.ret = -1, .errno = ENOTSUP};
     }
     break;
   default:
 
     if (retur->v_type == VBLKDEVICE || retur->v_type == VCHRDEVICE) {
-      fd = retur->ops->open(retur, flags, mode, &res);  
+      fd = retur->ops->open(retur, flags, mode, &res);
     } else {
-      fd = retur->ops->open(retur, flags, mode, &res); 
+      fd = retur->ops->open(retur, flags, mode, &res);
     }
     if (res != 0) {
 
@@ -155,10 +155,11 @@ struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
 
   return (struct __syscall_ret){.ret = 1, .errno = 0};
 }
-struct __syscall_ret syscall_readdir(int fd, void *buf) {
-  sprintf("syscall_readdir(): fd %d, buf usr addr %p\r\n", fd, buf); 
+struct __syscall_ret syscall_readdir(int fd, void *buf, size_t size) {
+  sprintf("syscall_readdir(): fd %d, buf usr addr %p, size aligned %lu\r\n", fd, buf, ROUND_DOWN(size, sizeof(struct linux_dirent64)));
+  size = ROUND_DOWN(size, sizeof(struct linux_dirent64));
   struct FileDescriptorHandle *hnd = get_fd(fd);
- if (hnd == NULL) {
+  if (hnd == NULL) {
 
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
@@ -166,24 +167,50 @@ struct __syscall_ret syscall_readdir(int fd, void *buf) {
 
     return (struct __syscall_ret){.ret = -1, .errno = EIO};
   }
+  // cache em
+  struct dirstream *star = NULL;
   if (hnd->offset == 0) {
-    // cache em
-    int res = 0;
-    struct dirstream *star = hnd->node->ops->getdirents(hnd->node, &res);
-    hnd->privatedata = star;
-    if (res != 0) {
-      return (struct __syscall_ret){.ret = -1, .errno = res};
-    }
-    // this is okay to do as no 1 FUCK YOU IM MEMCPYING TO USR SPACE
-    // 2 entries are at least ensured
-    memcpy(buf, star->list, (star->cnt + 1) * sizeof(struct linux_dirent64));
-    star->position += (star->cnt + 1) * sizeof(struct linux_dirent64);
-    hnd->offset += (star->cnt + 1) * sizeof(struct linux_dirent64);
-    sprintf("done readdir\r\n");
-    return (struct __syscall_ret){.ret = (star->cnt + 1) * sizeof(struct linux_dirent64), .errno = 0};
+  int res = 0;
+  star = hnd->node->ops->getdirents(hnd->node, &res);
+  spinlock_lock(&star->write_lock);
+  hnd->privatedata = star;
+  spinlock_unlock(&star->write_lock);
+if (res != 0) {
+    return (struct __syscall_ret){.ret = -1, .errno = res};
+  } } else {
+    star = hnd->privatedata;
   }
-  sprintf("READDIR OTHER SHIT IS UNIMPL'D\r\n");
- UNIMPL 
+  int print = star->cnt - 1;
+  while (print != -1) {
+    struct linux_dirent64 meow = star->list[print];
+    sprintf("syscall_readdir(): d_name: %s\r\n", meow.d_name);
+    print -= 1;
+  }
+  // this is okay to do as no 1 FUCK YOU IM MEMCPYING TO USR SPACE
+  // 2 entries are at least ensured
+  size_t test = hnd->offset / sizeof(struct linux_dirent64);
+  size_t new_idx = size / sizeof(struct linux_dirent64);
+  if (star->position != test) {
+    star->position = test;
+  }
+  sprintf("syscall_readdir(): dirstream pos %lu, new_idx %lu, size of lsit %lu\r\n", star->position, new_idx, star->cnt * sizeof(struct linux_dirent64));
+  bool cry = false;
+  if (star->position + new_idx >= star->cnt) {
+    size = star->cnt * sizeof(struct linux_dirent64);
+    cry = true;
+  }
+  sprintf("syscall_readdir(): size is %lu\r\n", size);
+  memcpy(buf, star->list, size);
+  if (!cry) {
+  star->position += new_idx;
+  hnd->offset += size; 
+} else {
+  star->position = star->cnt * sizeof(struct linux_dirent64);
+  hnd->offset = star->cnt * sizeof(struct linux_dirent64);
+  size = 0; // end of file
+}
+  sprintf("done readdir\r\n");
+  return (struct __syscall_ret){.ret = size, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
@@ -241,16 +268,15 @@ struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
     hnd->offset = offset;
     if (offset == 0 && hnd->flags & O_DIRECTORY) {
       struct dirstream *star = hnd->privatedata;
+      spinlock_lock(&star->write_lock);
       kfree(star->list, (star->cnt + 1) * sizeof(struct linux_dirent64));
       kfree(hnd->privatedata, sizeof(struct dirstream));
+      spinlock_unlock(&star->write_lock);
     }
     break;
   case SEEK_CUR:
     hnd->offset += offset;
-    if (hnd->flags & O_DIRECTORY) {
-struct dirstream *star = hnd->privatedata;
-star->position += offset;
-    }
+
     break;
   case SEEK_END:
     hnd->offset = hnd->node->stat.size + offset;
@@ -329,9 +355,9 @@ struct __syscall_ret syscall_dup2(int oldfd, int newfd) {
   fdmake(oldfd, newfd);
   return (struct __syscall_ret){.ret = (uint64_t)newfd, .errno = 0};
 }
-struct __syscall_ret syscall_fstat(int fd, struct stat *output, int flags, char *path) {
+struct __syscall_ret syscall_fstat(int fd, struct stat *output, int flags,
+                                   char *path) {
   sprintf("syscall_fstat(): trying to access fd %d, flags %x\r\n", fd, flags);
-  struct FileDescriptorHandle *hnd = get_fd(fd);
   if (fd == AT_FDCWD) {
     sprintf("path %s\r\n", path);
     struct process_t *proc = get_process_start();
@@ -339,36 +365,37 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output, int flags, char 
     struct vnode *node = NULL;
     int res = vfs_lookup(cwd, path, &node);
     get_process_finish(proc);
-    if (node == NULL || res != 0 ) {
+    if (node == NULL || res != 0) {
       return (struct __syscall_ret){.ret = -1, .errno = res};
     }
-if (flags & AT_EMPTY_PATH) {
-  sprintf("syscall_fstat(): empty path\r\n");
-    *output = cwd->stat;}
-else
-    *output = node->stat;
-  sprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
-          output->size, output->st_mode);
-  return (struct __syscall_ret){.ret = 0, .errno = 0};
-
+    if (flags & AT_EMPTY_PATH) {
+      sprintf("syscall_fstat(): empty path\r\n");
+      *output = cwd->stat;
+    } else
+      *output = node->stat;
+    sprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
+            output->size, output->st_mode);
+    return (struct __syscall_ret){.ret = 0, .errno = 0};
   }
+
+  struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
     sprintf("syscall_fstat(): bad file descriptor\r\n");
     return (struct __syscall_ret){.ret = -1, .errno = EBADF};
   }
 
   if (path == NULL) {
-sprintf("syscall_fstat(): flags %d\r\n", flags);
+    sprintf("syscall_fstat(): flags %d\r\n", flags);
 
     goto b;
-  } 
+  }
   sprintf("syscall_fstat(): flags %d, path %s\r\n", flags, path);
   if (path[0] != '\0') {
     if (path[0] != '/') {
       UNIMPL
     }
   }
-  b:
+b:
   if (flags != 0) {
     sprintf("sorry not impld'd\r\n");
     UNIMPL
@@ -424,7 +451,7 @@ neverstop:
     return (struct __syscall_ret){.ret = -1, .errno = ECHILD};
   }
   //__asm__ volatile ("cli"); // we dont want the process to be unmapped by the
-  //reaper thread while we are doing this so
+  // reaper thread while we are doing this so
   // this is required
   while (us != NULL) {
     if (us->state == ZOMBIE) {

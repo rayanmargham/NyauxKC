@@ -163,6 +163,8 @@ extern "C" {
   static inline uint64_t align_down(uint64_t value, uint64_t alignment) {
     return value & ~(alignment - 1);
   }
+#define ROUND_DOWN(v, n) ((v) - ((v) % (n)))
+#define ROUND_UP(v, n) ROUND_DOWN((v) + (n) - 1, n)
   // stolen :)
   static inline uint64_t next_pow2(uint64_t x) {
 #ifdef __GNUC__

@@ -107,6 +107,7 @@ struct linux_dirent64 {
 };
 struct dirstream {
   uint64_t position;
+  spinlock_t write_lock;
   struct linux_dirent64 *list;
   size_t cnt;
 };
