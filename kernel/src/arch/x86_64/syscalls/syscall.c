@@ -156,7 +156,6 @@ struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
   return (struct __syscall_ret){.ret = 1, .errno = 0};
 }
 struct __syscall_ret syscall_readdir(int fd, void *buf, size_t size) {
-  sprintf("syscall_readdir(): fd %d, buf usr addr %p, size aligned %lu\r\n", fd, buf, ROUND_DOWN(size, sizeof(struct linux_dirent64)));
   size = ROUND_DOWN(size, sizeof(struct linux_dirent64));
   struct FileDescriptorHandle *hnd = get_fd(fd);
   if (hnd == NULL) {
@@ -180,12 +179,7 @@ if (res != 0) {
   } } else {
     star = hnd->privatedata;
   }
-  int print = star->cnt - 1;
-  while (print != -1) {
-    struct linux_dirent64 meow = star->list[print];
-    sprintf("syscall_readdir(): d_name: %s\r\n", meow.d_name);
-    print -= 1;
-  }
+
   // this is okay to do as no 1 FUCK YOU IM MEMCPYING TO USR SPACE
   // 2 entries are at least ensured
   size_t test = hnd->offset / sizeof(struct linux_dirent64);
@@ -193,23 +187,23 @@ if (res != 0) {
   if (star->position != test) {
     star->position = test;
   }
-  sprintf("syscall_readdir(): dirstream pos %lu, new_idx %lu, size of lsit %lu\r\n", star->position, new_idx, star->cnt * sizeof(struct linux_dirent64));
+  if (star->position == star->cnt) {
+    return (struct __syscall_ret){.ret = 0, .errno = 0};
+  }
   bool cry = false;
   if (star->position + new_idx >= star->cnt) {
-    size = star->cnt * sizeof(struct linux_dirent64);
+    size = sizeof(struct linux_dirent64);
     cry = true;
   }
-  sprintf("syscall_readdir(): size is %lu\r\n", size);
-  memcpy(buf, star->list, size);
+  memcpy(buf, star->list + star->position, size);
   if (!cry) {
-  star->position += new_idx;
   hnd->offset += size; 
-} else {
-  star->position = star->cnt * sizeof(struct linux_dirent64);
+  star->position += new_idx;
+  } else {
+  size = sizeof(struct linux_dirent64);
+  star->position = star->cnt;
   hnd->offset = star->cnt * sizeof(struct linux_dirent64);
-  size = 0; // end of file
-}
-  sprintf("done readdir\r\n");
+  }
   return (struct __syscall_ret){.ret = size, .errno = 0};
 }
 struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
@@ -360,6 +354,15 @@ struct __syscall_ret syscall_fstat(int fd, struct stat *output, int flags,
   sprintf("syscall_fstat(): trying to access fd %d, flags %x\r\n", fd, flags);
   if (fd == AT_FDCWD) {
     sprintf("path %s\r\n", path);
+    if (path[0] == '.' && path[1] == '\0') {
+    struct process_t *proc = get_process_start();
+    struct vnode *cwd = proc->cwd;
+*output = cwd->stat;
+    get_process_finish(proc);
+    sprintf("syscall_fstat(): output address %p, size %lu, mode %x\r\n", output,
+            output->size, output->st_mode);
+    return (struct __syscall_ret){.ret = 0, .errno = 0};
+    }
     struct process_t *proc = get_process_start();
     struct vnode *cwd = proc->cwd;
     struct vnode *node = NULL;
