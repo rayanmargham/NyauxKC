@@ -78,6 +78,17 @@ uint64_t arch_get_phys(pagemap *take, uint64_t virt) {
   return x86_64_get_phys(take, virt);
 #endif
 }
+bool arch_is_mapped(pagemap *take, uint64_t virt) {
+  #if defined(__x86_64__)
+
+  return x86_64_is_mapped(take, virt);
+  #endif
+}
+bool arch_is_mapped_buf(pagemap *take, uint64_t virt, size_t size) {
+  #if defined(__x86_64__)
+  return x86_64_is_mapped_buf(take, virt, size);
+  #endif
+}
 int uacpi_arch_install_irq(uacpi_u32 irq, uacpi_interrupt_handler handler,
                            uacpi_handle ctx, uacpi_handle *out_irq_handle) {
 #if defined(__x86_64__)

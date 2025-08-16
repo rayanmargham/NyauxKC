@@ -21,6 +21,7 @@ configure() {
     LDFLAGS="-Wl,/usr/local/libgcc-binaries/libgcc-$ARCHITECTURE.a" \
     meson_configure_noflags \
         --buildtype=debug
+        #-DNONDEBUG=true
 }
 
 build() {

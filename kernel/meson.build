@@ -52,7 +52,8 @@ src = files(
 	'src/utils/libc.c',
 	'src/utils/profiler.c',
     'src/controllers/i8042/ps2.c',
-    'src/dev/keyboard/keyboard.cpp'
+    'src/dev/keyboard/keyboard.cpp',
+    'src/fs/vfs/fifo.c'
 )
 
 inc = include_directories(
@@ -130,6 +131,9 @@ elif target_arch == 'loongarch64'
     ]
 else
     error('Unsupported architecture: ' + target_arch)
+endif
+if get_option('NONDEBUG') == true
+add_project_arguments('-DNONDEBUG', language: ['c'])
 endif
 executable('NyauxKC', src, uacpi.get_variable('sources'),
 	dependencies: [frigg, freestnd_c_hdrs, freestnd_cxx_hdrs, cc_runtime],

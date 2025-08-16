@@ -51,7 +51,6 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     }
 
     memcpy(buffer, pac, sizeof(nyauxps2kbdpacket));
-    sprintf("kbd: fd %d got packet of key %d\r\n", hnd->fd, pac->keycode);
     kfree(pac, sizeof(nyauxps2kbdpacket));
     *res = 0;
     return sizeof(nyauxps2kbdpacket);
@@ -101,8 +100,7 @@ int result = i8042_init();
 }
 static void open(struct vnode *curvnode, void *data, int *res,
                  struct FileDescriptorHandle *hnd) {
-if (hnd)
-    kprintf("adding ps2kbd for fd %d\r\n", hnd->fd);
+
 ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd->fd);
   hnd->privatedata = set;
   *res = 0;
@@ -110,7 +108,6 @@ ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd->fd);
 }
 static int close(struct vnode *curvnode, void *data,
                  struct FileDescriptorHandle *hnd) {
-                  sprintf("closing fd %d\r\n", hnd->fd);
   static_cast<ps2allstars*>(data)->remove_one(hnd->fd);
   hnd->privatedata = nullptr;
   return 0;

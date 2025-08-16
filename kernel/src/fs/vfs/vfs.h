@@ -66,6 +66,7 @@ struct vnode {
   enum vtype v_type;
   struct stat stat;
   void *data;
+  refcount_t cnt;
 };
 struct vnodeops {
   int (*close)(struct vnode *curvnode, int fd);

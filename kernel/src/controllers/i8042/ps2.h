@@ -337,7 +337,7 @@ static inline char ps2_scancode_to_ascii(enum ps2_scancode sc) {
         case PS2_SC_9: return '9';
         case PS2_SC_0: return '0';
         case PS2_SC_SPACE:     return ' ';
-        case PS2_SC_ENTER:     return '\n';
+        case PS2_SC_ENTER:     return '\r';
         case PS2_SC_TAB:       return '\t';
         case PS2_SC_BACKTICK:  return '`';
         case PS2_SC_MINUS:     return '-';
@@ -351,9 +351,9 @@ static inline char ps2_scancode_to_ascii(enum ps2_scancode sc) {
         case PS2_SC_DOT:       return '.';
         case PS2_SC_SLASH:     return '/';
         case PS2_SC_BACKSPACE: return '\b';
-        default:               return 0;
+        default:               return '\0';
     }};
-
+char ps2_scancode_to_uppercase(enum ps2_scancode sc);
 int i8042_init(); 
 #ifdef __cplusplus
 }

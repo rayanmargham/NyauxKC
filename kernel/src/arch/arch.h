@@ -35,6 +35,8 @@ void arch_enable_interrupts();
 void arch_map_usersingularpage(pagemap *take, uint64_t virt);
 void arch_disable_interrupts();
 bool arch_check_kvm_clock();
+bool arch_is_mapped_buf(pagemap *take, uint64_t virt, size_t size);
+bool arch_is_mapped(pagemap *take, uint64_t virt);
 #ifdef __x86_64__
 #define ARCH_CHECK_SPACE(amount) (align_up((amount), 4096) + 0x1000)
 struct StackFrame arch_create_frame(bool usermode, uint64_t entry_func,

@@ -1,2 +1,4 @@
-BasedOnStyle: LLVM
-IndentExternBlock: Indent
+---
+TabWidth: 4
+UseTab: Always
+IndentWidth: 4

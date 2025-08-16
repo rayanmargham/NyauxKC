@@ -1,0 +1,1 @@
+option('NONDEBUG', type: 'boolean', value: false, description: 'no debug prints')

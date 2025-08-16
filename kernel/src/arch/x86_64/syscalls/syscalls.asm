@@ -22,6 +22,8 @@ extern syscall_faccessat
 extern syscall_dup2
 extern syscall_poll
 extern syscall_readdir
+extern syscall_chdir
+extern syscall_pipe
 global syscall_entry
 section .data
 syscallarray:
@@ -49,6 +51,8 @@ syscallarray:
     dq syscall_poll ; 21
     dq syscall_clockget ; 22
     dq syscall_readdir ; 23
+    dq syscall_chdir ; 24
+    dq syscall_pipe ; 25
 
 .length: dq ($ - syscallarray) / 8
 section .text

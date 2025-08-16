@@ -100,11 +100,11 @@ void load_elf_pie(pagemap *usrmap, Elf64_Ehdr *hdr, struct ElfInfo *out) {
   }
 }
 void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
-              struct StackFrame *frame) {
+              struct StackFrame *frame, struct vnode *curcwd) {
 
   uint64_t userstack = frame->rsp;
   struct vnode *node = NULL;
-  vfs_lookup(NULL, path, &node);
+  vfs_lookup(curcwd, path, &node);
   assert(node != NULL);
   size_t sizeofelf = node->stat.size;
   void *buffer = kmalloc(sizeofelf);

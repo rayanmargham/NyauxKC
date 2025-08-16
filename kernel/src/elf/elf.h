@@ -6,6 +6,7 @@ extern "C" {
 #include "mem/vmm.h"
 #include <limine.h>
 #include <stdint.h>
+#include <fs/vfs/vfs.h>
 #define EI_NIDENT 16
 #define Elf64_Addr uint64_t
 #define Elf64_Off uint64_t
@@ -75,7 +76,7 @@ struct ElfInfo {
   uint64_t phnum;
 };
 void load_elf(pagemap *usrmap, char *path, char **argv, char **envp,
-              struct StackFrame *frame);
+              struct StackFrame *frame, struct vnode* curcwd);
 extern volatile struct limine_executable_file_request kernelfile;
 Elf64_Ehdr *get_kernel_elfheader();
 uint64_t get_kerneL_address();

@@ -32,7 +32,7 @@ diff -urN --no-dereference mlibc-clean/options/rtld/generic/main.cpp mlibc-workd
 diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 --- mlibc-clean/sysdeps/nyaux/generic/generic.cpp
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -12,394 +12,486 @@
+@@ -12,394 +12,504 @@
  #include <stdlib.h>
  #include <sys/select.h>
  #include <sys/types.h>
@@ -296,20 +296,36 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 +	__syscall_ret ret = __syscall3(SYSCALL_CLOCKGET, clock, (uint64_t)secs, (uint64_t)nanos);
 +	if (ret.err != 0)
 +		return ret.err;
-+	return 0;
++	return ret.ret;
 +}
  #ifndef MLIBC_BUILDING_RTLD
++int sys_chdir(const char *path) {
++	// mlibc::infoLogger() << "CHDIR IS A STUB YO PHONE LINGING PATH IS " << path << frg::endlog;
++	__syscall_ret ret = __syscall1(24, (uint64_t)path);
++	if (ret.err != 0)
++		return ret.err;
++	return ret.ret;
++}
  int sys_getcwd(char *buffer, size_t size) {
 -  __syscall_ret ret = __syscall2(SYSCALL_GETCWD, (uint64_t)buffer, size);
 +	__syscall_ret ret = __syscall2(SYSCALL_GETCWD, (uint64_t)buffer, size);
++
++	if (ret.err != 0)
++		return ret.err;
++
++	return ret.ret;
++}
++int sys_pipe(int *fds, int flags) {
++	__syscall_ret ret = __syscall2(25, (uint64_t)fds, flags);
  
 -  if (ret.err != 0)
 -    return ret.err;
-+	if (ret.err != 0)
++	if (ret.err != 0) {
 +		return ret.err;
++	}
  
 -  return 0;
-+	return 0;
++	return ret.ret;
  }
  int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) {
 -  __syscall_ret ret = __syscall3(SYSCALL_WRITE, fd, (uint64_t)buf, count);
@@ -329,6 +345,8 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
 +	return 0;
  }
  
++
++
  pid_t sys_getpid() {
 -  __syscall_ret ret = __syscall0(16);
 -  return ret.ret;
@@ -346,13 +364,13 @@ diff -urN --no-dereference mlibc-clean/sysdeps/nyaux/generic/generic.cpp mlibc-w
  #ifndef MLIBC_BUILDING_RTLD
  int sys_fork(pid_t *child) {
 -  __syscall_ret ret = __syscall0(SYSCALL_FORK);
--
--  if (ret.err != 0) {
--    return ret.err;
--  }
 +	int rett = 0;
 +	__syscall_ret ret = __syscall1(SYSCALL_FORK, (uint64_t)&rett);
  
+-  if (ret.err != 0) {
+-    return ret.err;
+-  }
+-
 -  *child = (pid_t)ret.ret;
 -  return 0;
 +	if (ret.err != 0) {

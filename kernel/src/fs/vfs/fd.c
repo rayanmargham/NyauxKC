@@ -1,5 +1,6 @@
 #include "fd.h"
 
+#include "fs/vfs/vfs.h"
 #include "sched/sched.h"
 #include "utils/basic.h"
 #include "utils/hashmap.h"
@@ -46,6 +47,9 @@ int fdmake(int oldfd, int fd) {
 int fddup(int fromfd) {
   struct FileDescriptorHandle *res = get_fd(fromfd);
   refcount_inc(&res->ref);
+  if (res->node) {
+    refcount_inc(&res->node->cnt);
+  }
   int newfd = fddalloc(res->node);
   struct FileDescriptorHandle *other = get_fd(newfd);
   other->dummy = true;
@@ -92,6 +96,7 @@ void duplicate_process_fd(struct process_t *from, struct process_t *to) {
             from->fds, &(struct FileDescriptorHandle){.fd = i});
     if (!hnd)
       continue;
+    refcount_inc(&hnd->ref);
     hashmap_set(to->fds, (const struct FileDescriptorHandle *)hnd);
   }
 }

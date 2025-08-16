@@ -141,8 +141,63 @@ uint8_t pause_buf[7];
 int pause_pos;
 static struct vnode *node = NULL;
 KBDSTATE state = INIT;
+char ps2_scancode_to_uppercase(enum ps2_scancode sc) {
+     switch (sc) {
+        case PS2_SC_A: return 'A';
+        case PS2_SC_B: return 'B';
+        case PS2_SC_C: return 'C';
+        case PS2_SC_D: return 'D';
+        case PS2_SC_E: return 'E';
+        case PS2_SC_F: return 'F';
+        case PS2_SC_G: return 'G';
+        case PS2_SC_H: return 'H';
+        case PS2_SC_I: return 'I';
+        case PS2_SC_J: return 'J';
+        case PS2_SC_K: return 'K';
+        case PS2_SC_L: return 'L';
+        case PS2_SC_M: return 'M';
+        case PS2_SC_N: return 'N';
+        case PS2_SC_O: return 'O';
+        case PS2_SC_P: return 'P';
+        case PS2_SC_Q: return 'Q';
+        case PS2_SC_R: return 'R';
+        case PS2_SC_S: return 'S';
+        case PS2_SC_T: return 'T';
+        case PS2_SC_U: return 'U';
+        case PS2_SC_V: return 'V';
+        case PS2_SC_W: return 'W';
+        case PS2_SC_X: return 'X';
+        case PS2_SC_Y: return 'Y';
+        case PS2_SC_Z: return 'Z';
+        case PS2_SC_1: return '!';
+        case PS2_SC_2: return '@';
+        case PS2_SC_3: return '#';
+        case PS2_SC_4: return '$';
+        case PS2_SC_5: return '%';
+        case PS2_SC_6: return '^';
+        case PS2_SC_7: return '&';
+        case PS2_SC_8: return '*';
+        case PS2_SC_9: return '(';
+        case PS2_SC_0: return ')';
+        case PS2_SC_SPACE:     return ' ';
+        case PS2_SC_ENTER:     return '\r';
+        case PS2_SC_TAB:       return '\t';
+        case PS2_SC_BACKTICK:  return '~';
+        case PS2_SC_MINUS:     return '_';
+        case PS2_SC_EQUAL:     return '+';
+        case PS2_SC_LBRACKET:  return '{';
+        case PS2_SC_RBRACKET:  return '}';
+        case PS2_SC_BACKSLASH: return '|';
+        case PS2_SC_SEMICOLON: return ':';
+        case PS2_SC_APOSTROPHE:return '"';
+        case PS2_SC_COMMA:     return '<';
+        case PS2_SC_DOT:       return '>';
+        case PS2_SC_SLASH:     return '?';
+        case PS2_SC_BACKSPACE: return '\b';
+        default:               return '\0';
+    }
+  }
 void mike_rebuild_my_kids(nyauxps2kbdpacket packet) {
-  sprintf("adding\r\n");
   if (!node)  {
     sprintf("node is %p\r\r", node);
     return;

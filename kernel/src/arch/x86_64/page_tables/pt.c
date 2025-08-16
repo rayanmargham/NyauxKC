@@ -163,6 +163,22 @@ uint64_t x86_64_get_phys(pagemap *take, uint64_t virt) {
   }
   return 0;
 }
+bool x86_64_is_mapped(pagemap *take, uint64_t virt) {
+  uint64_t *f = find_pte(take->root, virt);
+  if (f != NULL) {
+    return true;
+  }
+  return false;
+}
+bool x86_64_is_mapped_buf(pagemap *take, uint64_t virt, size_t size) {
+  uint64_t inpages = align_up(size, PAGESIZE) / PAGESIZE;
+  for (uint64_t i = 0; i != inpages; i++) {
+    if (x86_64_is_mapped(take, virt + (i * PAGESIZE)) == false) {
+      return false;
+    }
+  }
+  return true;
+}
 void x86_64_unmap_vmm_region(pagemap *take, uint64_t base,
                              uint64_t length_in_bytes) {
   uint64_t amount_to_allocateinpages = length_in_bytes / PAGESIZE;

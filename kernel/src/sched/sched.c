@@ -274,7 +274,7 @@ void do_funny() {
   struct thread_t *fun = create_uthread(0, FUCKYOU, 2);
   pagemap *curpagemap = fun->proc->cur_map;
   load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/bash", NULL},
-           (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame);
+           (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame, NULL);
   ThreadReady(fun);
 }
 int scheduler_fork() {

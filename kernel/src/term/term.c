@@ -107,7 +107,7 @@ void prettytime(enum LOGLEVEL lvl) {
     break;
   }
 }
-
+#ifndef NONDEBUG
 void kprintf_log(enum LOGLEVEL lvl, const char *format, ...) {
 #ifdef __x86_64__
   uint64_t flags;
@@ -132,6 +132,12 @@ void kprintf_log(enum LOGLEVEL lvl, const char *format, ...) {
   }
 #endif
 }
+#else
+void kprintf_log(enum LOGLEVEL lvl, const char *format, ...) {
+
+}
+#endif
+#ifndef NONDEBUG
 void kprintf(const char *format, ...) {
 #ifdef __x86_64__
   uint64_t flags;
@@ -155,7 +161,11 @@ void kprintf(const char *format, ...) {
   }
 #endif
 }
+#else
+void kprintf(const char *format, ...) {
 
+}
+#endif
 void sputc(int ch, void *) {
 #if defined(__x86_64__)
   char c = ch;
@@ -169,12 +179,19 @@ void sprintf_write(char *buf, size_t size) {
     sputc(buf[i], NULL);
   }
 }
+#ifndef NONDEBUG
 void sprintf(const char *format, ...) {
   va_list args;
   va_start(args, format);
   npf_vpprintf(sputc, NULL, format, args);
   va_end(args);
 }
+#else
+void sprintf(const char *format, ...) {
+
+}
+#endif
+#ifndef NONDEBUG
 void sprintf_log(enum LOGLEVEL log, const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -182,6 +199,11 @@ void sprintf_log(enum LOGLEVEL log, const char *format, ...) {
   npf_vpprintf(sputc, NULL, format, args);
   va_end(args);
 }
+#else
+void sprintf_log(enum LOGLEVEL log, const char *format, ...) {
+
+}
+#endif
 void stolen_osdevwikiserialinit() {
 #if defined(__x86_64__)
   outb(0x3F8 + 1, 0x00); // Disable all interrupts
