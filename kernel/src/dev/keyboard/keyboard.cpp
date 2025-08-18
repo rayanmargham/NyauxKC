@@ -101,14 +101,14 @@ int result = i8042_init();
 static void open(struct vnode *curvnode, void *data, int *res,
                  struct FileDescriptorHandle *hnd) {
 
-ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd->fd);
+ps2keyboard *set = static_cast<ps2allstars*>(data)->add_one(hnd);
   hnd->privatedata = set;
   *res = 0;
   return;
 }
 static int close(struct vnode *curvnode, void *data,
                  struct FileDescriptorHandle *hnd) {
-  static_cast<ps2allstars*>(data)->remove_one(hnd->fd);
+  static_cast<ps2allstars*>(data)->remove_one(hnd);
   hnd->privatedata = nullptr;
   return 0;
 }

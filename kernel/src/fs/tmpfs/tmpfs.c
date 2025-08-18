@@ -243,7 +243,7 @@ int hardlink(struct vnode *curvnode, struct vnode *with, const char *name) {
   return 0;
 }
 static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) {
-  int fd = fddalloc(curvnode);
+  int fd = alloc_fd_struct(curvnode);
   struct FileDescriptorHandle *hnd = get_fd(fd);
   hnd->flags = flags;
   *res = 0;

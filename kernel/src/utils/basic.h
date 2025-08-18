@@ -71,12 +71,23 @@ extern "C" {
   extern void *memcpy(void *dest, const void *src, size_t n);
   // stolen from mr gpt
 
-  static inline void refcount_inc(refcount_t *ref) {
-    __atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST);
-  }
-  static inline int refcount_dec(refcount_t *ref) {
-    return __atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL);
-  }
+
+  #define refcount_inc(ref) ({\
+\
+    int i = __atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST); \
+    if (i == 0) { \
+      panic("tried to increment 0 at file %s:%s", __FILE__, __LINE__); \
+    } \
+    i; \
+  }) 
+  #define refcount_dec(ref) ({\
+\
+    int i = __atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL); \
+    if (i == 0) { \
+      panic("tried to decreremnt 0 at file %s:%s", __FILE__, __LINE__); \
+    } \
+    i; \
+  }) 
   static inline void spinlock_lock(spinlock_t *lock) {
 
     while (!__sync_bool_compare_and_swap(lock, 0, 1)) {
@@ -86,6 +97,7 @@ extern "C" {
 #endif
     }
   }
+
   static inline size_t str_hash(const char *s) {
     size_t h = 0;
 

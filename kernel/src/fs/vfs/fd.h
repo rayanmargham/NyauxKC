@@ -10,21 +10,23 @@
 extern "C" {
 #endif
 struct FileDescriptorHandle {
-  int fd;
   uint64_t offset;
   bool dummy; // if true use realhnd
   struct vnode *node;
   unsigned int mode;
   unsigned int flags;
-  struct FileDescriptorHandle *realhnd;
   refcount_t ref;
   void *privatedata;
   // ops here
 };
+struct hfd {
+  struct FileDescriptorHandle *hnd;
+  int fd;
+};
 int fd_compare(const void *a, const void *b, void *udata);
 bool fd_iter(const void *item, void *udata);
 uint64_t fd_hash(const void *item, uint64_t seed0, uint64_t seed1);
-int fddalloc(struct vnode *node);
+int alloc_fd_struct(struct vnode *node);
 void fddfree(int fd);
 int fddup(int fromfd);
 int fdmake(int oldfd, int fd);

@@ -19,9 +19,9 @@ extern "C" {
 
 class ps2keyboard {
 public:
-  int fd;
+  struct FileDescriptorHandle *fd;
   ring_buf *buf;
-  ps2keyboard(int fdd) {
+  ps2keyboard(struct FileDescriptorHandle *fdd) {
     fd = fdd;
     kprintf("initing ps2 device\r\n");
     buf = init_ringbuf(100);
@@ -68,18 +68,35 @@ ps2allstars() {
     ourguys[i] = nullptr;
   }
 }
-ps2keyboard *get_from_fd(int fd) {
-  return ourguys[fd];
+ps2keyboard *get_from_fd(struct FileDescriptorHandle *fd) {
+  for (int i = 0; i < 256; i++) {
+    if (ourguys[i] != NULL) {
+      ps2keyboard *meow = static_cast<ps2keyboard*>(ourguys[i]);
+      if (meow->fd == fd) {
+        return meow;
+      }
+    }
+  }
+  return NULL;
 }
-ps2keyboard *add_one(int fd) {
-  ps2keyboard *meow = new ps2keyboard(fd);
-  ourguys[fd] = meow;
+ps2keyboard *add_one(struct FileDescriptorHandle *hnd) {
+  ps2keyboard *meow = new ps2keyboard(hnd);
+  for (int i = 0; i < 256; i++) {
+    if (ourguys[i] == NULL) {
+      ourguys[i] = meow;
+    }
+  }
   return meow;
 }
-void remove_one(int fd) {
-  ps2keyboard *ok = ourguys[fd];
-  delete ok;
-  ourguys[fd] = NULL;
+void remove_one(struct FileDescriptorHandle *fd) {
+  for (int i = 0; i < 256; i++) {
+    if (ourguys[i] != NULL) {
+      ps2keyboard *m = static_cast<ps2keyboard*>(ourguys[i]);
+      if (m->fd == fd) {
+        delete m;
+      }
+    }
+  }
 }
 };
 

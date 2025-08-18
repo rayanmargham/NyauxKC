@@ -200,7 +200,7 @@ void ps2_put_input() {
 					nyauxps2kbdpacket pac;
 					int res = 0;
 					lah->ops->rw(lah, 0, sizeof(nyauxps2kbdpacket), &pac, 0,
-								 get_fd(fd), &res);
+								 get_fd(fd), &res); // also should be changed
 					if (res != 0) {
 						sprintf("exitting\r\n");
 						// spinlock_unlock(&curtty->rxlock);

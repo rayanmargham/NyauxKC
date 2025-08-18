@@ -615,7 +615,7 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
 					// fifo close would be called
 					continue;
 				}
-				hnd->node->ops->close(hnd->node, hnd->fd);
+				hnd->node->ops->close(hnd->node, hnd->fd); // this should be changed waiting for tmrw
 			}
 		}
 	sprintf("syscall_execve(): loading elf %s\r\n", path);

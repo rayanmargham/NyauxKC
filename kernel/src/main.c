@@ -184,7 +184,7 @@ void kmain(void) {
   kprintf_log(TRACE, "kmain(): We are chilling i guess\n");
   hcf(); // We just chill.
 }
-extern void do_funny();
+extern void start_init();
 void kentry() {
   // init vfs, load font from initramfs, change font or smthin for flanterm or
   // use a custom made terminal idk, lots of things to do
@@ -209,7 +209,7 @@ void kentry() {
   // struct process_t *proc = get_process_start();
   // proc->cur_map = test;
   // get_process_finish(proc);
-  do_funny();
+  start_init();
   // rsh();
   exit_thread();
 }

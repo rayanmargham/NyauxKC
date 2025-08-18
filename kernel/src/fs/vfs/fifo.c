@@ -30,7 +30,7 @@ void fifo_open(struct FileDescriptorHandle *hnd) {
 	refcount_inc(&hnd->node->cnt);
 }
 void fifo_close(struct FileDescriptorHandle *hnd) { 
-    sprintf("attempt at fifo close on fd %d, vnode %p, FD PTR THIS IS IMPORTANT %p\r\n", hnd->fd, hnd->node, hnd);
+    sprintf("attempt at fifo close on vnode %p, FD PTR THIS IS IMPORTANT %p\r\n", hnd->node, hnd);
     if (hnd->node == NULL) {
         panic("we already dealt with ya\r\n");
     }
@@ -61,15 +61,14 @@ void fifo_close(struct FileDescriptorHandle *hnd) {
         }
     }
 
-    fddfree(hnd->fd);
 }
 void pipe_create(int output[2]) {
 	struct vnode *newnode = kmalloc(sizeof(struct vnode));
 	struct fifo *feet = kmalloc(sizeof(struct fifo));
 	newnode->data = feet;
 	newnode->v_type = VFIFO;
-	output[0] = fddalloc(newnode);
-	output[1] = fddalloc(newnode);
+	output[0] = alloc_fd_struct(newnode);
+	output[1] = alloc_fd_struct(newnode);
 	struct FileDescriptorHandle *read = get_fd(output[0]);
 	struct FileDescriptorHandle *write = get_fd(output[1]);
 	read->node = newnode;

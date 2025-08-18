@@ -60,11 +60,9 @@ struct process_t *create_process(pagemap *map) {
   kprintf("allocated to pid %lu\r\n", him->pid);
   him->lock = SPINLOCK_INITIALIZER;
   him->cnt = 0;
-  him->fds = hashmap_new(sizeof(struct FileDescriptorHandle), 0, 0, 0, fd_hash,
+  him->fds = hashmap_new(sizeof(struct hfd*), 0, 0, 0, fd_hash,
                          fd_compare, NULL, NULL);
-  him->fdalloc[0] = 1;
-  him->fdalloc[1] = 1;
-  him->fdalloc[2] = 1;
+
   him->children = NULL;
   him->children_next = NULL;
   if (vfs_list) {
@@ -72,9 +70,7 @@ struct process_t *create_process(pagemap *map) {
     him->cwd = him->root;
     him->cwdpath = "/";
   }
-  hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 0});
-  hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 1});
-  hashmap_set(him->fds, &(struct FileDescriptorHandle){.fd = 2});
+
   return him;
 }
 
@@ -164,7 +160,6 @@ void exit_process(uint64_t exit_code) {
   // }
   exit_thread();
 }
-void collect_exit_code() {}
 void ThreadBlock(struct thread_t *whichqueue) {
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->state = BLOCKED;
@@ -256,20 +251,12 @@ void attach_child(struct process_t *from, struct process_t *child) {
     from->children = child;
   }
 }
-void do_funny() {
+void start_init() {
   struct process_t *aa = get_process_start();
   struct process_t *FUCKYOU = create_process(aa->cur_map);
   FUCKYOU->parent = NULL; // do NOT link it to the kernel proc
   aa->children = NULL;
-  for (int i = 0; i < 256; i++) {
-    FUCKYOU->fdalloc[i] = aa->fdalloc[i];
-    struct FileDescriptorHandle *hnd =
-        (struct FileDescriptorHandle *)hashmap_get(
-            aa->fds, &(struct FileDescriptorHandle){.fd = i});
-    if (!hnd)
-      continue;
-    hashmap_set(FUCKYOU->fds, (const struct FileDescriptorHandle *)hnd);
-  }
+
   get_process_finish(aa);
   struct thread_t *fun = create_uthread(0, FUCKYOU, 2);
   pagemap *curpagemap = fun->proc->cur_map;
