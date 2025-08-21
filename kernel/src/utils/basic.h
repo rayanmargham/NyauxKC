@@ -76,7 +76,7 @@ extern "C" {
 \
     int i = __atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST); \
     if (i == 0) { \
-      panic("tried to increment 0 at file %s:%s", __FILE__, __LINE__); \
+      panic("tried to increment 0 at file %s:%d", __FILE__, __LINE__); \
     } \
     i; \
   }) 
@@ -84,7 +84,7 @@ extern "C" {
 \
     int i = __atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL); \
     if (i == 0) { \
-      panic("tried to decreremnt 0 at file %s:%s", __FILE__, __LINE__); \
+      panic("tried to decreremnt 0 at file %s:%d", __FILE__, __LINE__); \
     } \
     i; \
   }) 

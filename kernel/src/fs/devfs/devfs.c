@@ -24,7 +24,7 @@ static int mount(struct vfs *curvfs, char *path, void *data);
 static int poll(struct vnode *curvnode, struct pollfd *requested);
 static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res);
 static int readdir(struct vnode *curvnode, struct FileDescriptorHandle *hnd, const char *name);
-static int close (struct vnode *curvnode, int fd);
+static int close (struct vnode *curvnode, struct FileDescriptorHandle *hnd);
 static int hardlink(struct vnode *curvnode, struct vnode *with,
                     const char *name);
 static struct dirstream *getdirents(struct vnode *curvnode, int *res);
@@ -232,21 +232,17 @@ static int open(struct vnode *curvnode, int flags, unsigned int mode, int *res) 
   node->info->ops->open(curvnode, node->info->data, res, hnd);
   return fd;
 }
-static int close (struct vnode *curvnode, int fd) {
-  struct FileDescriptorHandle *hnd = get_fd(fd);
+static int close (struct vnode *curvnode, struct FileDescriptorHandle *hnd) {
   if (hnd == NULL) {
     return EBADF;
   }
   struct devfsnode *node = (struct devfsnode*)curvnode->data;
-  if (node->info == NULL) {
-    fddfree(fd);
-    return 0;
-  } 
+
   int res = node->info->ops->close(curvnode, node->info->data, hnd);
-  fddfree(fd);
+
   return res;
 }
 
 static struct dirstream *getdirents(struct vnode *curvnode, int *res) {
-
+  
 }

@@ -17,7 +17,7 @@ struct FileDescriptorHandle {
   unsigned int flags;
   refcount_t ref;
   void *privatedata;
-  // ops here
+
 };
 struct hfd {
   struct FileDescriptorHandle *hnd;
@@ -32,6 +32,7 @@ int fddup(int fromfd);
 int fdmake(int oldfd, int fd);
 struct FileDescriptorHandle *get_fd(int fd);
 void duplicate_process_fd(struct process_t *from, struct process_t *to);
+int ialloc_fd_struct(struct process_t *proc);
 #ifdef __cplusplus
 }
 #endif

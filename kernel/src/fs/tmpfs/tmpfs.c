@@ -16,7 +16,7 @@ int node_compare(const void *a, const void *b, void *udata) {
   return strcmp(ua->name, ub->name);
 }
 static int open(struct vnode *cur_vnode, int flags, unsigned int mode, int *res);
-static int close(struct vnode *curvnode, int fd);
+static int close(struct vnode *curvnode, struct FileDescriptorHandle *hnd);
 static int create(struct vnode *curvnode, char *name, enum vtype type,
                   struct vnodeops *ops, struct vnode **res, void *data,
                   struct vnode *todifferentnode);
@@ -294,11 +294,9 @@ static struct dirstream *getdirents(struct vnode *curvnode, int *res) {
   *res = 0;
   return star;
 }
-static int close(struct vnode *curvnode, int fd) {
-  struct FileDescriptorHandle *hnd = get_fd(fd);
+static int close(struct vnode *curvnode, struct FileDescriptorHandle *hnd) {
   if (hnd == NULL) {
     return EBADF;
   }
-  fddfree(fd);
   return 0;
 }

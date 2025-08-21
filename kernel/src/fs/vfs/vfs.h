@@ -69,7 +69,7 @@ struct vnode {
   refcount_t cnt;
 };
 struct vnodeops {
-  int (*close)(struct vnode *curvnode, int fd);
+  int (*close)(struct vnode *curvnode, struct FileDescriptorHandle *hnd);
   int (*open)(struct vnode *curvnode, int flags, unsigned int mode, int *res);
   int (*lookup)(struct vnode *curvnode, char *name, struct vnode **res);
   int (*create)(struct vnode *curvnode, char *name, enum vtype type,

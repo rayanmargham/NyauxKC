@@ -60,8 +60,11 @@ struct process_t *create_process(pagemap *map) {
   kprintf("allocated to pid %lu\r\n", him->pid);
   him->lock = SPINLOCK_INITIALIZER;
   him->cnt = 0;
-  him->fds = hashmap_new(sizeof(struct hfd*), 0, 0, 0, fd_hash,
+  him->fds = hashmap_new(sizeof(struct hfd), 0, 0, 0, fd_hash,
                          fd_compare, NULL, NULL);
+  int stdin = ialloc_fd_struct(him);
+  int stdout = ialloc_fd_struct(him);
+  int stderr = ialloc_fd_struct(him);
 
   him->children = NULL;
   him->children_next = NULL;
@@ -114,7 +117,7 @@ void exit_thread() {
   assert(cpu->cur_thread->proc != NULL);
   refcount_dec(&cpu->cur_thread->proc->cnt);
   refcount_dec(&cpu->cur_thread->count);
-  refcount_dec(&cpu->cur_thread->count);
+  // refcount_dec(&cpu->cur_thread->count);
 
   cpu->cur_thread->next = cpu->to_be_reapered;
   cpu->to_be_reapered = cpu->cur_thread;
@@ -260,6 +263,7 @@ void start_init() {
   get_process_finish(aa);
   struct thread_t *fun = create_uthread(0, FUCKYOU, 2);
   pagemap *curpagemap = fun->proc->cur_map;
+  duplicate_process_fd(aa, FUCKYOU);
   load_elf(curpagemap, "/bin/bash", (char *[]){"/bin/bash", NULL},
            (char *[]){"TERM=linux", NULL}, &fun->arch_data.frame, NULL);
   ThreadReady(fun);

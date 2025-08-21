@@ -7,10 +7,10 @@
 
 uint64_t fd_hash(const void *item, uint64_t seed0, uint64_t seed1) {
   const struct hfd *user = item;
-  return hashmap_sip((const void *)&user->fd, sizeof(int), seed0, seed1);
+  return hashmap_sip((const void*)(size_t*)&user->fd, sizeof(int), seed0, seed1);
 }
 bool fd_iter(const void *item, void *udata) {
-  const struct hfd*user = item;
+  const struct hfd *user = item;
   kprintf("-> %d \n", user->fd);
   return true;
 }
@@ -24,13 +24,34 @@ int alloc_fd(struct FileDescriptorHandle *hnd) {
   for (int i = 0; i < 256; i++) {
     if (proc->fdalloc[i] == 0) {
       proc->fdalloc[i] = 1;
-      hashmap_set(proc->fds, &hnd);
+      hashmap_set(proc->fds, &(struct hfd){.fd = i, .hnd = hnd});
+      refcount_inc(&hnd->ref);
       get_process_finish(proc);
       return i;
     }
   }
   get_process_finish(proc);
   return -1;
+}
+int ialloc_fd_struct(struct process_t *proc) {
+  struct FileDescriptorHandle *hnd = kmalloc(sizeof(struct FileDescriptorHandle));
+  hnd->flags = 0;
+  hnd->mode = 0;
+  hnd->offset = 0;
+  hnd->ref = 1;
+  hnd->privatedata = 0;
+  hnd->node = NULL;
+   for (int i = 0; i < 256; i++) {
+    if (proc->fdalloc[i] == 0) {
+      proc->fdalloc[i] = 1;
+      hashmap_set(proc->fds, &(struct hfd){.fd = i, .hnd = hnd});
+      refcount_inc(&hnd->ref);
+      return i;
+    }
+  }
+  return -1;
+
+ 
 }
 int alloc_fd_struct(struct vnode *node) {
   struct FileDescriptorHandle *hnd = kmalloc(sizeof(struct FileDescriptorHandle));
@@ -60,22 +81,27 @@ int fdmake(int oldfd, int fd) {
       proc->fds,
       &(struct hfd){
           .fd = fd, .hnd = g});
+        refcount_inc(&g->ref);
   get_process_finish(proc);
   return fd;
 }
 int fddup(int fromfd) {
   struct FileDescriptorHandle *res = get_fd(fromfd);
-  if (res->node) {
-    refcount_inc(&res->node->cnt);
-  }
-  int newfd = alloc_fd_struct(res->node);
 
+  int newfd = alloc_fd(res);
+  if (newfd == -1) {
+    return -1;
+  }
   return newfd;
 }
 struct FileDescriptorHandle *get_fd(int fd) {
   struct process_t *proc = get_process_start();
-  struct FileDescriptorHandle *res =
-      ((struct hfd*)hashmap_get(proc->fds, &(struct hfd){.fd = fd}))->hnd;
+  struct hfd *object = (struct hfd*)hashmap_get(proc->fds, &(struct hfd){.fd = fd});
+  if (object == NULL) {
+    get_process_finish(proc);
+    return NULL;
+  }
+  struct FileDescriptorHandle *res = object->hnd;
   if (!res) {
     get_process_finish(proc);
     return NULL;
@@ -86,7 +112,7 @@ struct FileDescriptorHandle *get_fd(int fd) {
 }
 void fddfree(int fd) {
   struct FileDescriptorHandle *ourguy = get_fd(fd);
-  int maybe = refcount_dec(&ourguy->ref) + 1;
+  int maybe = refcount_dec(&ourguy->ref);
   struct process_t *proc = get_process_start();
   if (proc->fdalloc[fd] == 1 && maybe == 0) {
     proc->fdalloc[fd] = 0;
@@ -104,9 +130,11 @@ void duplicate_process_fd(struct process_t *from, struct process_t *to) {
                         fd_compare, NULL, NULL);
   for (int i = 0; i < 256; i++) {
     to->fdalloc[i] = from->fdalloc[i];
-    struct FileDescriptorHandle *hnd =
-        ((struct hfd*)hashmap_get(
-            from->fds, &(struct hfd){.fd = i}))->hnd;
+    struct hfd *yo = (struct hfd*)hashmap_get(from->fds, &(struct hfd){.fd = i});
+    if (!yo)
+      continue;
+    struct FileDescriptorHandle *hnd = yo->hnd;
+
     if (!hnd)
       continue;
     refcount_inc(&hnd->ref);

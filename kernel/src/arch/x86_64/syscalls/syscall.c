@@ -79,8 +79,8 @@ struct __syscall_ret syscall_free(void *pointer, size_t size) {
 }
 struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 									unsigned int mode) {
-	sprintf("syscall_openat(): opening %s from thread %lu with flags %d\r\n",
-			path, arch_get_per_cpu_data()->cur_thread->tid, flags);
+	sprintf("syscall_openat(): opening %s from thread %lu with flags %d, dirfd %d\r\n",
+			path, arch_get_per_cpu_data()->cur_thread->tid, flags, dirfd);
 
 	struct vnode *node = NULL;
 	if (dirfd == AT_FDCWD) {
@@ -126,6 +126,7 @@ struct __syscall_ret syscall_openat(int dirfd, const char *path, int flags,
 		break;
 	}
 	struct FileDescriptorHandle *h = get_fd(fd);
+	sprintf("KANKER_openat(): %d\r\n", fd);
 	h->flags = flags;
 	h->mode = mode;
 	return (struct __syscall_ret){.ret = fd, .errno = 0};
@@ -188,6 +189,7 @@ struct __syscall_ret syscall_poll(struct pollfd *fds, nfds_t nfds,
 struct __syscall_ret syscall_readdir(int fd, void *buf, size_t size) {
 	size = ROUND_DOWN(size, sizeof(struct linux_dirent64));
 	struct FileDescriptorHandle *hnd = get_fd(fd);
+	sprintf("KANKER_readdir(): %d\r\n", fd);
 	if (hnd == NULL) {
 
 		return (struct __syscall_ret){.ret = -1, .errno = EBADF};
@@ -242,6 +244,7 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
 	struct per_cpu_data *cpu = arch_get_per_cpu_data();
 
 	struct FileDescriptorHandle *hnd = get_fd(fd);
+	sprintf("KANKER_read(): %d\r\n", fd);
 	// sprintf("syscall_read(): reading fd %d, has flags %d\r\n", fd,
 	// hnd->flags);
 	if (hnd == NULL) {
@@ -288,15 +291,18 @@ struct __syscall_ret syscall_close(int fd) {
 		fifo_close(hnd);
 		return (struct __syscall_ret){.ret = 0, .errno = 0};
 	}
-	int ret = hnd->node->ops->close(hnd->node, fd);
+	int ret = hnd->node->ops->close(hnd->node, hnd);
+	
 	if (ret != 0) {
 
 		return (struct __syscall_ret){.ret = -1, .errno = ret};
 	}
+	fddfree(fd);
 	return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_seek(int fd, long int long offset, int whence) {
 	struct FileDescriptorHandle *hnd = get_fd(fd);
+	sprintf("KANKER_seek(): %d\r\n", fd);
 	if (hnd == NULL) {
 		return (struct __syscall_ret){.ret = -1, .errno = EBADF};
 	}
@@ -615,7 +621,7 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
 					// fifo close would be called
 					continue;
 				}
-				hnd->node->ops->close(hnd->node, hnd->fd); // this should be changed waiting for tmrw
+				hnd->node->ops->close(hnd->node, hnd);
 			}
 		}
 	sprintf("syscall_execve(): loading elf %s\r\n", path);
