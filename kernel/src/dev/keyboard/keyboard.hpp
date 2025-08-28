@@ -84,6 +84,7 @@ ps2keyboard *add_one(struct FileDescriptorHandle *hnd) {
   for (int i = 0; i < 256; i++) {
     if (ourguys[i] == NULL) {
       ourguys[i] = meow;
+      break;
     }
   }
   return meow;
@@ -94,6 +95,8 @@ void remove_one(struct FileDescriptorHandle *fd) {
       ps2keyboard *m = static_cast<ps2keyboard*>(ourguys[i]);
       if (m->fd == fd) {
         delete m;
+        ourguys[i] = NULL;
+        break;
       }
     }
   }

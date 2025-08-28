@@ -114,13 +114,10 @@ void fddfree(int fd) {
   struct FileDescriptorHandle *ourguy = get_fd(fd);
   int maybe = refcount_dec(&ourguy->ref);
   struct process_t *proc = get_process_start();
-  if (proc->fdalloc[fd] == 1 && maybe == 0) {
+  if (proc->fdalloc[fd] == 1 && maybe == 1) {
     proc->fdalloc[fd] = 0;
     const void *e =
         hashmap_delete(proc->fds, ourguy);
-    if (e == NULL) {
-      kprintf("couldnt find handle\r\n");
-    }
   }
   get_process_finish(proc);
 }

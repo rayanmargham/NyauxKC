@@ -54,7 +54,7 @@ void fifo_close(struct FileDescriptorHandle *hnd) {
         sprintf("i have run\r\n");
 
         int rah = refcount_dec(&hnd->node->cnt);
-        if (rah == 0) {
+        if (rah == 1) {
         kfree(hnd->node->data, sizeof(struct fifo));
         kfree(hnd->node, sizeof(struct vnode));
         hnd->node = NULL;

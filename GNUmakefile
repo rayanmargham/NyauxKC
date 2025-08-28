@@ -24,6 +24,10 @@ lsp:
 	bear -- meson setup kernel/build kernel
 	ninja -C kernel/build
 	cp -r kernel/build/compile_commands.json compile_commands.json
+.PHONY: rebuild-system
+rebuild-system:
+	./jinx rebuild kernel
+	$(MAKE) all
 .PHONY: run-kvm
 run-kvm: nyaux.iso
 	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS)

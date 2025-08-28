@@ -38,14 +38,14 @@ static size_t rw(struct vnode *curvnode, void *data, size_t offset, size_t size,
     }
     
     *res = 0;
-    return sizeof(nyauxps2kbdpacket);
+    return sizeof(nyauxps2kbdpacket) * 256;
   } else {
     ps2keyboard *kbd = static_cast<ps2keyboard *>(hnd->privatedata);
     uint64_t val = 0;
     nyauxps2kbdpacket *pac;
     int ress = get_ringbuf(kbd->buf, &val);
     pac = reinterpret_cast<nyauxps2kbdpacket*>(val);
-    if (!ress) {
+    if (ress == 0) {
       *res = 0;
       return 0;
     }
@@ -71,6 +71,7 @@ static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
       cringeevents &= ~(POLLIN);
     } 
   }
+
   requested->revents = cringeevents;
   return 0;
 }

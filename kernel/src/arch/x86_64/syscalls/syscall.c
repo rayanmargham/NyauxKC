@@ -613,15 +613,17 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
 	struct vnode *result;
 	size_t iter = 0;
 	void *item;
-	while (hashmap_iter(cpu->cur_thread->proc->fds, &iter, &item)) {
-		struct FileDescriptorHandle *hnd =
-				(struct FileDescriptorHandle *)item;
+	while (hashmap_iter(proc->fds, &iter, &item)) {
+		struct hfd *e =
+				(struct hfd*)item;
+		struct FileDescriptorHandle *hnd = e->hnd;
 			if (hnd->flags & O_CLOEXEC) {
 				if (hnd->node->v_type == VFIFO) {
 					// fifo close would be called
 					continue;
 				}
 				hnd->node->ops->close(hnd->node, hnd);
+				fddfree(e->fd);
 			}
 		}
 	sprintf("syscall_execve(): loading elf %s\r\n", path);
