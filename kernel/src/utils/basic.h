@@ -74,15 +74,12 @@ extern "C" {
 
   #define refcount_inc(ref) ({\
 \
-    int i = __atomic_add_fetch(ref, 1, __ATOMIC_SEQ_CST); \
-    if (i == 0) { \
-      panic("tried to increment 0 at file %s:%d", __FILE__, __LINE__); \
-    } \
+    int i = __atomic_fetch_add(ref, 1, __ATOMIC_SEQ_CST); \
     i; \
   }) 
   #define refcount_dec(ref) ({\
 \
-    int i = __atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL); \
+    int i = __atomic_fetch_sub(ref, 1, __ATOMIC_SEQ_CST); \
     if (i == 0) { \
       panic("tried to decreremnt 0 at file %s:%d", __FILE__, __LINE__); \
     } \

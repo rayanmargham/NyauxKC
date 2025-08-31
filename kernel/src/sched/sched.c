@@ -109,22 +109,22 @@ struct thread_t *pop_from_list(struct thread_t **list) {
   return old;
 }
 void exit_thread() {
+  arch_disable_interrupts();
   struct per_cpu_data *cpu = arch_get_per_cpu_data();
   cpu->cur_thread->state = ZOMBIE;
   assert(cpu->cur_thread->proc != NULL);
 
   // assert(cpu->to_be_reapered != NULL);
-  assert(cpu->cur_thread->proc != NULL);
-  refcount_dec(&cpu->cur_thread->proc->cnt);
   refcount_dec(&cpu->cur_thread->count);
   // refcount_dec(&cpu->cur_thread->count);
-
+  
   cpu->cur_thread->next = cpu->to_be_reapered;
   cpu->to_be_reapered = cpu->cur_thread;
 
   // hcf();
   // no need to assert
   // reaper thread is always running
+
   sched_yield();
 }
 void exit_process(uint64_t exit_code) {
@@ -185,7 +185,6 @@ void create_kthread(uint64_t entry, struct process_t *proc, uint64_t tid) {
   newthread->kernel_stack_ptr = kstack;
   newthread->arch_data.frame = hh;
   refcount_inc(&newthread->count);
-  refcount_inc(&newthread->count);
   ThreadReady(newthread);
 }
 void build_fpu_state(void *area) {
@@ -214,7 +213,6 @@ struct thread_t *create_uthread(uint64_t entry, struct process_t *proc,
   newthread->kernel_stack_ptr = kstack;
   build_fpu_state(newthread->fpu_state);
   newthread->arch_data.frame = hh;
-  refcount_inc(&newthread->count);
   refcount_inc(&newthread->count);
   return newthread;
 }
@@ -330,7 +328,7 @@ int scheduler_fork() {
   fun->arch_data.fs_base = calledby->arch_data.fs_base;
   get_process_finish(oldprocess);
 #endif
-
+  refcount_inc(&fun->count);
   ThreadReady(fun);
   return fun->proc->pid;
 }

@@ -283,12 +283,15 @@ struct __syscall_ret syscall_read(int fd, void *buf, size_t count) {
 struct __syscall_ret syscall_close(int fd) {
 	sprintf("syscall_close(): closing fd %d\r\n", fd);
 	struct FileDescriptorHandle *hnd = get_fd(fd);
+	sprintf("hnd is %p\r\n", hnd);
 	if (hnd == NULL) {
 		return (struct __syscall_ret){.ret = -1, .errno = EBADF};
 	}
+
 	if (hnd->node->v_type == VFIFO) {
 		// sure we def did
 		fifo_close(hnd);
+		fddfree(fd);
 		return (struct __syscall_ret){.ret = 0, .errno = 0};
 	}
 	int ret = hnd->node->ops->close(hnd->node, hnd);
@@ -590,6 +593,7 @@ struct __syscall_ret syscall_faccessat(int dirfd, const char *pathname,
 }
 struct __syscall_ret syscall_pipe(int outputs[2], int flags) {
 	struct process_t *proc = get_process_start();
+	sprintf("syscall_pipe(): with flags %d\r\n", flags);
 	if (outputs == NULL && arch_is_mapped_buf(proc->cur_map, (uint64_t)outputs,
 											  sizeof(int[2])) == false) {
 		get_process_finish(proc);
@@ -599,8 +603,9 @@ struct __syscall_ret syscall_pipe(int outputs[2], int flags) {
 	pipe_create(outputs);
 	struct FileDescriptorHandle *read = get_fd(outputs[0]);
 	struct FileDescriptorHandle *write = get_fd(outputs[1]);
-	read->flags = flags;
-	write->flags = flags;
+	read->flags |= flags;
+	write->flags |= flags;
+	sprintf("syscall_pipe(): with outputs %d and outputs %d\r\n", outputs[0], outputs[1]);
 	return (struct __syscall_ret){.ret = 0, .errno = 0};
 }
 struct __syscall_ret syscall_execve(const char *path, char *const argv[],

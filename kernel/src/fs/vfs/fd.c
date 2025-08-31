@@ -60,7 +60,7 @@ int alloc_fd_struct(struct vnode *node) {
   hnd->flags = 0;
   hnd->mode = 0;
   hnd->offset = 0;
-  hnd->ref = 1;
+  hnd->ref = 0;
   hnd->privatedata = 0;
   hnd->node = node;
   int fd = alloc_fd(hnd);
@@ -82,6 +82,7 @@ int fdmake(int oldfd, int fd) {
       &(struct hfd){
           .fd = fd, .hnd = g});
         refcount_inc(&g->ref);
+        refcount_inc(&g->node->cnt);
   get_process_finish(proc);
   return fd;
 }
@@ -91,6 +92,8 @@ int fddup(int fromfd) {
   int newfd = alloc_fd(res);
   if (newfd == -1) {
     return -1;
+  } else {
+    refcount_inc(&res->node->cnt);
   }
   return newfd;
 }
@@ -112,12 +115,15 @@ struct FileDescriptorHandle *get_fd(int fd) {
 }
 void fddfree(int fd) {
   struct FileDescriptorHandle *ourguy = get_fd(fd);
+
   int maybe = refcount_dec(&ourguy->ref);
+  sprintf("maybe is %d\r\n", maybe);
   struct process_t *proc = get_process_start();
-  if (proc->fdalloc[fd] == 1 && maybe == 1) {
-    proc->fdalloc[fd] = 0;
     const void *e =
-        hashmap_delete(proc->fds, ourguy);
+        hashmap_delete(proc->fds, &(struct hfd){.fd = fd, .hnd = ourguy});
+    proc->fdalloc[fd] = 0;
+  if (maybe == 1) {
+    kfree(ourguy, sizeof(struct FileDescriptorHandle));
   }
   get_process_finish(proc);
 }

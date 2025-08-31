@@ -52,12 +52,11 @@ void fifo_close(struct FileDescriptorHandle *hnd) {
 
     if (!feet->namedpipe) {
         sprintf("i have run\r\n");
-
-        int rah = refcount_dec(&hnd->node->cnt);
-        if (rah == 1) {
+		int meow = -1;
+		__atomic_store(&hnd->ref, &meow, __ATOMIC_SEQ_CST);
+        if (meow == 0) {
+			
         kfree(hnd->node->data, sizeof(struct fifo));
-        kfree(hnd->node, sizeof(struct vnode));
-        hnd->node = NULL;
         }
     }
 
@@ -79,8 +78,6 @@ void pipe_create(int output[2]) {
 	feet->write_count++;
     feet->namedpipe = false;
 	feet->ballbuffer = init_ringbuf(1024);
-	refcount_inc(&newnode->cnt);
-	refcount_inc(&newnode->cnt);
 }
 // TODO
 // if a pipe was in a middle of a write and the read end was closed, you must

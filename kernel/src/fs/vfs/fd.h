@@ -11,7 +11,6 @@ extern "C" {
 #endif
 struct FileDescriptorHandle {
   uint64_t offset;
-  bool dummy; // if true use realhnd
   struct vnode *node;
   unsigned int mode;
   unsigned int flags;
