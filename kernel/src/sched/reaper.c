@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "arch/x86_64/fpu/xsave.h"
+#include "fs/vfs/fd.h"
 #include "mem/vmm.h"
 #include "sched.h"
 #include "utils/basic.h"
@@ -54,7 +55,14 @@ void reaper() {
 
         //free_pagemap(proc->cur_map);
       }
-      //hashmap_free(proc->fds); // this was a memory leak i forgot existed :sob:
+      size_t iter = 0;
+	    void *item;
+      while (hashmap_iter(proc->fds, &iter, &item)) {
+        struct hfd *e =
+            (struct hfd*)item;
+        fddfree(e->fd);
+      }
+      hashmap_free(proc->fds);
       // process is getting deleted anyway so yea no need to unlock, waste of puter cycle
 
       cpu->to_be_reapered = reaper->next;

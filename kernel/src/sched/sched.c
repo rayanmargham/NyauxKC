@@ -285,7 +285,7 @@ int scheduler_fork() {
   fun->fpu_state = (void *)align_up(
       (uint64_t)kmalloc(align_up(get_fpu_storage_size(), 0x1000) + 64), 64);
   memcpy(fun->fpu_state, calledby->fpu_state, get_fpu_storage_size());
-  fun->count = calledby->count;
+  fun->count = 1;
   fun->tid = calledby->tid + 1;
   uint64_t kstack = (uint64_t)(kmalloc(KSTACKSIZE) + KSTACKSIZE);
   fun->kernel_stack_base = kstack;
@@ -328,7 +328,7 @@ int scheduler_fork() {
   fun->arch_data.fs_base = calledby->arch_data.fs_base;
   get_process_finish(oldprocess);
 #endif
-  refcount_inc(&fun->count);
+  // refcount_inc(&fun->count);
   ThreadReady(fun);
   return fun->proc->pid;
 }

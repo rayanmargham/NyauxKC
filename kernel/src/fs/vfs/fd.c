@@ -1,5 +1,6 @@
 #include "fd.h"
 
+#include "fs/vfs/fifo.h"
 #include "fs/vfs/vfs.h"
 #include "sched/sched.h"
 #include "utils/basic.h"
@@ -81,8 +82,12 @@ int fdmake(int oldfd, int fd) {
       proc->fds,
       &(struct hfd){
           .fd = fd, .hnd = g});
-        refcount_inc(&g->ref);
-        refcount_inc(&g->node->cnt);
+  refcount_inc(&g->ref);
+  refcount_inc(&g->node->cnt);
+  // if (g->node->v_type == VFIFO)
+  //   fifo_open(g);
+  // else
+  //   ; // TODO: Reopen the file?
   get_process_finish(proc);
   return fd;
 }
@@ -94,6 +99,10 @@ int fddup(int fromfd) {
     return -1;
   } else {
     refcount_inc(&res->node->cnt);
+    // if (res->node->v_type == VFIFO)
+    //   fifo_open(res);
+    // else
+    //   ; // TODO: Reopen the file?
   }
   return newfd;
 }
@@ -115,6 +124,8 @@ struct FileDescriptorHandle *get_fd(int fd) {
 }
 void fddfree(int fd) {
   struct FileDescriptorHandle *ourguy = get_fd(fd);
+  if (!ourguy)
+    return;
 
   int maybe = refcount_dec(&ourguy->ref);
   sprintf("maybe is %d\r\n", maybe);
@@ -141,6 +152,10 @@ void duplicate_process_fd(struct process_t *from, struct process_t *to) {
     if (!hnd)
       continue;
     refcount_inc(&hnd->ref);
+    // if (hnd->node->v_type == VFIFO)
+    //   fifo_open(hnd);
+    // else
+    //   ; // TODO: Reopen the file?
     hashmap_set(to->fds, &(const struct hfd){.fd = i, .hnd = hnd});
   }
 }

@@ -5,6 +5,7 @@
 #include "sched/sched.h"
 #include "utils/basic.h"
 #include "utils/libc.h"
+#include "term/term.h"
 
 void fifo_open(struct FileDescriptorHandle *hnd) {
 	int accessmode = hnd->flags & O_ACCMODE;
@@ -114,6 +115,7 @@ size_t fifo_read(struct fifo *hoot, uint8_t *buffer, size_t size, int *res,
 			spinlock_unlock(&hoot->readlock);
 			if (hoot->write_count == 0) {
 				*res = 0;
+				sprintf("exiting fifo_read because of write_count=0\n");
 				return 0;
 			}
 			sched_yield();

@@ -616,21 +616,6 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
 	cwd = proc->cwd;
 	get_process_finish(proc);
 	struct vnode *result;
-	size_t iter = 0;
-	void *item;
-	while (hashmap_iter(proc->fds, &iter, &item)) {
-		struct hfd *e =
-				(struct hfd*)item;
-		struct FileDescriptorHandle *hnd = e->hnd;
-			if (hnd->flags & O_CLOEXEC) {
-				if (hnd->node->v_type == VFIFO) {
-					// fifo close would be called
-					continue;
-				}
-				hnd->node->ops->close(hnd->node, hnd);
-				fddfree(e->fd);
-			}
-		}
 	sprintf("syscall_execve(): loading elf %s\r\n", path);
 	char *kernelpath = strdup(path);
 	int res = vfs_lookup(cpu->cur_thread->proc->cwd, path, &result);
@@ -661,10 +646,30 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
 		deallocate_all_user_regions(cpu->cur_thread->proc->cur_map);
 		clear_and_prepare_thread(cpu->cur_thread);
 		sprintf("syscall_execve(): Ready To Execute\r\n");
+		// NOTE(oberrow): this should be here so that everything that 
+		// needs to be freed gets freed before yielding.
+		arch_disable_interrupts();
+
 		load_elf(cpu->cur_thread->proc->cur_map, kernelpath, newargv, newenvp,
 				 &cpu->cur_thread->arch_data.frame, cwd);
 		kfree(newenvp, (g + 1) * 8);
 		kfree(newargv, (argc + 1) * 8);
+
+		size_t iter = 0;
+		void *item;
+		while (hashmap_iter(proc->fds, &iter, &item)) {
+			struct hfd *e =
+					(struct hfd*)item;
+			struct FileDescriptorHandle *hnd = e->hnd;
+			if (hnd->flags & O_CLOEXEC) {
+				if (hnd->node->v_type == VFIFO) {
+					// fifo close would be called
+					continue;
+				}
+				hnd->node->ops->close(hnd->node, hnd);
+				fddfree(e->fd);
+			}
+		}
 
 		schedd(NULL);
 		panic("hello?\r\n");
@@ -673,6 +678,7 @@ struct __syscall_ret syscall_execve(const char *path, char *const argv[],
 		// its so dark..
 		// can anyone hear me?
 		// anyone?...
+		// (oberrow) i hear u
 	}
 }
 extern void syscall_entry();
