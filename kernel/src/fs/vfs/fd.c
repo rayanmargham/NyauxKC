@@ -84,8 +84,8 @@ int fdmake(int oldfd, int fd) {
           .fd = fd, .hnd = g});
   refcount_inc(&g->ref);
   refcount_inc(&g->node->cnt);
-  // if (g->node->v_type == VFIFO)
-  //   fifo_open(g);
+  if (g->node->v_type == VFIFO)
+    fifo_open(g);
   // else
   //   ; // TODO: Reopen the file?
   get_process_finish(proc);
@@ -99,8 +99,8 @@ int fddup(int fromfd) {
     return -1;
   } else {
     refcount_inc(&res->node->cnt);
-    // if (res->node->v_type == VFIFO)
-    //   fifo_open(res);
+    if (res->node->v_type == VFIFO)
+      fifo_open(res);
     // else
     //   ; // TODO: Reopen the file?
   }
@@ -152,8 +152,8 @@ void duplicate_process_fd(struct process_t *from, struct process_t *to) {
     if (!hnd)
       continue;
     refcount_inc(&hnd->ref);
-    // if (hnd->node->v_type == VFIFO)
-    //   fifo_open(hnd);
+    if (hnd->node->v_type == VFIFO)
+      fifo_open(hnd);
     // else
     //   ; // TODO: Reopen the file?
     hashmap_set(to->fds, &(const struct hfd){.fd = i, .hnd = hnd});
