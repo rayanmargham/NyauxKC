@@ -8,20 +8,21 @@
 #include "term/term.h"
 
 void fifo_open(struct FileDescriptorHandle *hnd) {
-	int accessmode = hnd->flags & O_ACCMODE;
+	// int accessmode = hnd->flags & O_ACCMODE;
+	int accessmode = hnd->mode;
 	struct fifo *balljaw = hnd->node->data;
 	switch (accessmode) {
 	case O_RDONLY:
 		balljaw->read_count++;
-		while (balljaw->write_count == 0) {
-			sched_yield();
-		}
+		// while (balljaw->write_count == 0) {
+		// 	sched_yield();
+		// }
 		break;
 	case O_WRONLY:
 		balljaw->write_count++;
-		while (balljaw->read_count == 0) {
-			sched_yield();
-		}
+		// while (balljaw->read_count == 0) {
+		// 	sched_yield();
+		// }
 		break;
 	case O_RDWR:
 		balljaw->read_count++;
