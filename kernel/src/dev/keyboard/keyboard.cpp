@@ -63,7 +63,13 @@ static int ioctl(struct vnode *curvnode, void *data, unsigned long request,
 }
 static int poll(struct vnode *curvnode, struct pollfd *requested, void *data) {
  
-  ps2keyboard *kbd = static_cast<ps2keyboard *>(get_fd(requested->fd)->privatedata);
+  FileDescriptorHandle* hnd = get_fd(requested->fd);
+  // NOTE(oberrow): this is to workaround a crash, there is still a bug where the file descriptor just disappears
+  // maybe check the reaper? I don't know.
+  // < end note >
+  if (!hnd)
+    return EBADFD; 
+  ps2keyboard *kbd = static_cast<ps2keyboard *>(hnd->privatedata);
   short cringeevents = requested->events;
   if (requested->events & POLLIN) {
     if (empty_ringbuf(kbd->buf)) {
