@@ -6,17 +6,17 @@ NyauxKC is an unix like operating system, the Nyaux kernel is monolithic, the ke
 
 ## Goals for the Project
 
-[X] Basic x86_64 setup and abstraction
-[X] PMM using buddy
-[X] Page Tables
-[X] Slab Allocation
-[X] VMM
-...
-
-
-
-[X] Port Xorg
-..
+[X] Basic x86_64 setup and abstraction\
+[X] PMM using buddy\
+[X] Page Tables\
+[X] Slab Allocation\
+[X] VMM\
+...\
+\
+\
+\
+[X] Port Xorg\
+..\
 [X] Port Wayland
 
 ### Nya!
