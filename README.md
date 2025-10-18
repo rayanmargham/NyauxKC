@@ -1,6 +1,6 @@
 # NyauxKC
 
-NyauxKC is an unix like operating system, the Nyaux kernel is monolithic, the kernel is written in rust
+NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the kernel is written in rust.
 
 
 
