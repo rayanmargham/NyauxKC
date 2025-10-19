@@ -4,7 +4,7 @@ MAKEFLAGS += -rR
 
 # This is the name that our final executable will have.
 # Change as needed.
-override OUTPUT := kernel
+override OUTPUT := Nyaux
 
 # Convenience macro to reliably declare user overridable variables.
 override USER_VARIABLE = $(if $(filter $(origin $(1)),default undefined),$(eval override $(1) := $(2)))
@@ -32,7 +32,8 @@ endif
 .PHONY: all
 all:
 	RUSTFLAGS="-C relocation-model=static" cargo build --target $(RUST_TARGET) --profile $(RUST_PROFILE)
-	cp target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR)/$$(cd target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR) && find -maxdepth 1 -perm -111 -type f) kernel
+	cp $$(find target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR) -maxdepth 1 -perm -111 -type f) $(OUTPUT)
+
 
 # Remove object files and the final executable.
 .PHONY: clean

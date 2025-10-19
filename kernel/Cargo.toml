@@ -1,7 +1,13 @@
 [package]
-name = "limine-rust-template"
-version = "0.1.0"
+name = "Nyaux"
+version = "0.0.1"
 edition = "2024"
+[profile.release-with-debug]
+inherits = "release"
+debug = true
 
 [dependencies]
-limine = "0.5"
+bytemuck = { version = "1.24.0", features = ["derive"] }
+bytemuck_derive = "1.10.2"
+flantermbindings = "0.1.2"
+limine = {git = "https://github.com/jasondyoungberg/limine-rs"}
