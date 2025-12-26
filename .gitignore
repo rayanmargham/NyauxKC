@@ -2,3 +2,4 @@ template-riscv64.iso
 template-x86_64.iso
 ovmf/
 .vscode/
+edk2-ovmf/
