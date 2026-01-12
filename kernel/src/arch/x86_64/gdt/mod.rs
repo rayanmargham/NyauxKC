@@ -50,8 +50,8 @@ impl GDTdesc {
 #[repr(C, align(16))]
 pub struct GdtTable {
     null: GDTdesc,
-    kernelcode: GDTdesc,
-    kerneldata: GDTdesc,
+    pub kernelcode: GDTdesc,
+    pub kerneldata: GDTdesc,
 }
 
 static GDT_TABLE: GdtTable = GdtTable {

@@ -107,9 +107,9 @@ checksum = "645cbb3a84e60b7531617d5ae4e57f7e27308f6445f5abf653209ea76dec8dff"
 
 [[package]]
 name = "flantermbindings"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4a512abfb8bff47bf4c3f5e0ce802156fbcdd5dde8faa44001f814b6f615851"
+checksum = "b32d626e002a693b923f246fa0bc37c3dea111a4351512ef616a95fe4e3c9a0d"
 dependencies = [
  "bindgen",
  "cc",
@@ -162,6 +162,7 @@ dependencies = [
  "bytemuck",
  "flantermbindings",
  "limine",
+ "seq-macro",
 ]
 
 [[package]]
@@ -254,6 +255,12 @@ name = "rustc-hash"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
+
+[[package]]
+name = "seq-macro"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
 
 [[package]]
 name = "shlex"

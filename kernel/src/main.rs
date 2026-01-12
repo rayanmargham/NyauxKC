@@ -6,7 +6,7 @@ use core::arch::asm;
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine::BaseRevision;
 use limine::request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker};
-use limine_rust_template::arch::gdt::gdt_init;
+use limine_rust_template::arch::{Arch, Processor};
 use limine_rust_template::ft::init_terminal;
 use limine_rust_template::println;
 
@@ -41,7 +41,7 @@ unsafe extern "C" fn kmain() -> ! {
             unsafe {
                 init_terminal(flanterm_fb_init(None, None, framebuffer.addr() as *mut u32, framebuffer.width() as usize, framebuffer.height() as usize, framebuffer.pitch() as usize, framebuffer.red_mask_size(), framebuffer.red_mask_shift(), framebuffer.green_mask_size(), framebuffer.green_mask_shift(), framebuffer.blue_mask_size(), framebuffer.blue_mask_shift(), 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut _, 0, 0, 0, 1, 1, 50));
             }
-            gdt_init();
+            Processor::arch_init();
             println!(
                 "y0o"
             );
@@ -53,6 +53,7 @@ unsafe extern "C" fn kmain() -> ! {
 
 #[panic_handler]
 fn rust_panic(_info: &core::panic::PanicInfo) -> ! {
+    println!("you have died we have paniced");
     hcf();
 }
 

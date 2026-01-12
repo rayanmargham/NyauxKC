@@ -19,7 +19,7 @@ impl Write for Ball {
         }
 
         unsafe {
-            flanterm_write(self.0, s.as_ptr() as *const i8, s.len());
+            flanterm_write(self.0, s.as_ptr() as *const core::ffi::c_char, s.len());
         }
         Ok(())
     }
