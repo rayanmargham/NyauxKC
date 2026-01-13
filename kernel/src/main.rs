@@ -52,8 +52,8 @@ unsafe extern "C" fn kmain() -> ! {
 }
 
 #[panic_handler]
-fn rust_panic(_info: &core::panic::PanicInfo) -> ! {
-    println!("you have died we have paniced");
+fn rust_panic(info: &core::panic::PanicInfo) -> ! {
+    println!("{}: {}", info.location().unwrap(), info.message()); 
     hcf();
 }
 

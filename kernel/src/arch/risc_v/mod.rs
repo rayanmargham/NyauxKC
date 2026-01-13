@@ -6,10 +6,8 @@ use crate::println;
 
 #[cfg(target_arch = "riscv64")]
 impl Arch for Processor{
-    fn arch_init() -> Result<(), &'static str> {
-
+    fn arch_init(){
         println!("Hello from the Nyaux kernel on risc-v!");
-        Ok(())
     }
 }
 

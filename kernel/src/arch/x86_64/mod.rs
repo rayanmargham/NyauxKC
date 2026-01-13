@@ -8,7 +8,7 @@ pub mod idt;
 
 #[cfg(target_arch = "x86_64")]
 impl Arch for Processor{
-    fn arch_init() -> Result<(), &'static str> {
+    fn arch_init() {
         use crate::println;
 
         gdt::gdt_init();
@@ -16,9 +16,9 @@ impl Arch for Processor{
         println!("trying out explosion tactic (causing page fault)");
         unsafe {
             let v = 0 as *mut i32;
-            *v = 5;
+            let bl = v.read_volatile();
+            
         }
-        Ok(())
     }
 }
 

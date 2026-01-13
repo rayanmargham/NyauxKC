@@ -69,10 +69,9 @@ static GDT_TABLE: GdtTable = GdtTable {
 
 pub fn gdt_init() {
     let gdtrr: gdtr = gdtr {
-        size: (size_of::<[GDTdesc; 3]>() - 1) as u16,
+        size: (size_of::<GdtTable>() - 1) as u16,
         offset: addr_of!(GDT_TABLE) as u64,
     };
-
     unsafe {
         core::arch::asm!(
             "lgdt [{}]",

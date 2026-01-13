@@ -57,10 +57,10 @@ pub struct CPUContext {
 }
 
 #[derive(Pod, Zeroable, Clone, Copy)]
-#[repr(C,packed)]
+#[repr(C, packed)]
 pub struct IDTR {
     size: u16,
-    offset: u64
+    offset: u64,
 }
 
 #[derive(Pod, Zeroable, Clone, Copy)]
@@ -72,7 +72,7 @@ pub struct GateDesc {
     flags: u8,
     offset_mid: u16,
     offset_hi: u32,
-    reversed: u32
+    reversed: u32,
 }
 impl GateDesc {
     const fn new(offset: u64, seg: u16, dpl: u8, gate_type: u8, ist: u8) -> Self {
@@ -81,10 +81,10 @@ impl GateDesc {
             seg_sel: seg,
             flags: (1 << 7) | ((dpl & 0x3) << 6) | gate_type & 0xF,
             ist: ist,
-            offset_mid: (((offset>> 16) as u16) & 0xFFFF),
+            offset_mid: (((offset >> 16) as u16) & 0xFFFF),
             offset_hi: (((offset >> 32) as u32) & 0xFFFFFFFF),
-            reversed: 0
-        }
+            reversed: 0,
+        };
     }
 }
 
@@ -123,9 +123,7 @@ unsafe extern "C" fn inter_stub~N() {
     );
 }}}
 unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
-    let int = unsafe {
-        frame.as_ref().unwrap().int
-    };
+    let int = unsafe { frame.as_ref().unwrap().int };
     match int {
         _ => {
             panic!("unhandled exception");
@@ -134,7 +132,8 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
 }
 #[unsafe(naked)]
 unsafe extern "C" fn inter_return() {
-    naked_asm!("
+    naked_asm!(
+        "
         pop r15
         pop r14
         pop r13
@@ -151,32 +150,38 @@ unsafe extern "C" fn inter_return() {
         pop rbx
         pop rax
         add rsp, 0x16
-        iretq");
+        iretq"
+    );
 }
 #[derive(Pod, Zeroable, Clone, Copy)]
 #[repr(C)]
 pub struct IDT {
-    entries: [GateDesc; 256]
+    entries: [GateDesc; 256],
 }
 
 static mut IDT: IDT = IDT {
-    entries: [GateDesc::new(0,0,0,0,0); 256]
+    entries: [GateDesc::new(0, 0, 0, 0, 0); 256],
 };
 
 pub fn idt_init() {
-
-        unsafe {
+    println!("correct segment selector for kernel is 0x{:x}", (offset_of!(GdtTable, kernelcode)) as u16);
+    unsafe {
         seq!(N in 0..256 {
-            IDT.entries[N] = GateDesc::new((inter_stub~N as *const ()) as u64, (offset_of!(GdtTable, kernelcode) as u16) << 3,0,INTERRUPT_GATE, 0);});};
-            let s = addr_of!(IDT);
-        let idtr: IDTR = IDTR {
-    size: size_of_val(&s) as u16,
-    offset: &raw const IDT as u64
-};
-unsafe {
-    core::arch::asm!("
+            IDT.entries[N] = GateDesc::new((inter_stub~N as *const ()) as u64, (offset_of!(GdtTable, kernelcode)) as u16,0,INTERRUPT_GATE, 0);});
+        
+    assert_eq!(IDT.entries[0].seg_sel, ((offset_of!(GdtTable, kernelcode)) as u16));
+    };
+    let idtr: IDTR = IDTR {
+        size: (size_of::<IDT>() as u16) - 1,
+        offset: &raw const IDT as u64,
+    };
+    let blah = idtr.size;
+    let goo = idtr.offset;
+    println!("size: {}, offset: {:x}", blah, goo);
+   
+    unsafe {
+        core::arch::asm!("
     lidt [{}]", in(reg) &idtr);
-}
-println!("done? we need to try out an interrupt now");
-
+    }
+    println!("done? we need to try out an interrupt now");
 }

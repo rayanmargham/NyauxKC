@@ -8,3 +8,6 @@ bytemuck = { version = "1.21", default-features = false, features = ["derive"] }
 flantermbindings = "0.1.4"
 limine = "0.5"
 seq-macro = "0.3.6"
+
+[profile.release]
+debug = true
