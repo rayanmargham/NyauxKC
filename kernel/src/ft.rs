@@ -5,7 +5,6 @@ use core::fmt::Write;
 use flantermbindings::*;
 pub use flanterm::{flanterm_context, flanterm_write};
 
-use crate::MAXLENGTHOFMSG;
 pub struct Ball(*mut flanterm_context);
 
 impl Write for Ball {

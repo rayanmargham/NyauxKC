@@ -8,17 +8,13 @@ pub mod idt;
 
 #[cfg(target_arch = "x86_64")]
 impl Arch for Processor{
+    const PAGE_SIZE: usize = 4096;
     fn arch_init() {
-        use crate::println;
-
+        use crate::{memory::pmm, println};
+        println!("x86_64 init");
         gdt::gdt_init();
         idt::idt_init();
-        println!("trying out explosion tactic (causing page fault)");
-        unsafe {
-            let v = 0 as *mut i32;
-            let bl = v.read_volatile();
-            
-        }
+        pmm::init();
+        
     }
 }
-

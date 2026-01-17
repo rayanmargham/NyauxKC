@@ -8,6 +8,7 @@ use limine::BaseRevision;
 use limine::request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker};
 use limine_rust_template::arch::{Arch, Processor};
 use limine_rust_template::ft::init_terminal;
+use limine_rust_template::memory::pmm::{self, allocate_page, deallocate_page};
 use limine_rust_template::println;
 
 /// Sets the base revision to the latest revision supported by the crate.
@@ -42,9 +43,27 @@ unsafe extern "C" fn kmain() -> ! {
                 init_terminal(flanterm_fb_init(None, None, framebuffer.addr() as *mut u32, framebuffer.width() as usize, framebuffer.height() as usize, framebuffer.pitch() as usize, framebuffer.red_mask_size(), framebuffer.red_mask_shift(), framebuffer.green_mask_size(), framebuffer.green_mask_shift(), framebuffer.blue_mask_size(), framebuffer.blue_mask_shift(), 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut _, 0, 0, 0, 1, 1, 50));
             }
             Processor::arch_init();
+            
             println!(
-                "y0o"
+                "Nyaux on the Nya Kernel!"
             );
+            println!("testing freelist allocation");
+            let x: *mut u128 = allocate_page();
+            unsafe {
+                x.write(6767676767);
+                assert_eq!(x.read(), 6767676767);
+                println!("works!, attemption deallocation");
+                deallocate_page(x);
+                println!("attempting again");
+                let y: *mut u64 = allocate_page();
+                println!("allocated page, writing");
+                y.write(core::u64::MAX);
+                println!("wrote");
+                assert_eq!(y.read(), core::u64::MAX);
+                println!("assert done, deallocating");
+                deallocate_page(y);
+                println!("im humble like that");
+            }
         }
     }
 

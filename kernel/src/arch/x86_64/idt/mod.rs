@@ -124,9 +124,10 @@ unsafe extern "C" fn inter_stub~N() {
 }}}
 unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
     let int = unsafe { frame.as_ref().unwrap().int };
+    let err = unsafe { frame.as_ref().unwrap().error};
     match int {
         _ => {
-            panic!("unhandled exception");
+            panic!("unhandled exception 0x{:x}, error code 0x{:b}", int, err);
         }
     }
 }
@@ -183,5 +184,4 @@ pub fn idt_init() {
         core::arch::asm!("
     lidt [{}]", in(reg) &idtr);
     }
-    println!("done? we need to try out an interrupt now");
 }

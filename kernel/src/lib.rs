@@ -2,5 +2,10 @@
 
 pub mod ft;
 pub mod arch;
+pub mod memory;
 
-pub const MAXLENGTHOFMSG: usize = 512;
+use limine::request::HhdmRequest;
+
+#[used]
+#[unsafe(link_section = ".requests")]
+static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
