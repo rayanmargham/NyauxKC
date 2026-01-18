@@ -48,20 +48,20 @@ unsafe extern "C" fn kmain() -> ! {
                 "Nyaux on the Nya Kernel!"
             );
             println!("testing freelist allocation");
-            let x: *mut u128 = allocate_page();
+            let x: *mut u128 = allocate_page().cast();
             unsafe {
                 x.write(6767676767);
                 assert_eq!(x.read(), 6767676767);
                 println!("works!, attemption deallocation");
-                deallocate_page(x);
+                deallocate_page(x.cast());
                 println!("attempting again");
-                let y: *mut u64 = allocate_page();
+                let y: *mut u64 = allocate_page().cast();
                 println!("allocated page, writing");
                 y.write(core::u64::MAX);
                 println!("wrote");
                 assert_eq!(y.read(), core::u64::MAX);
                 println!("assert done, deallocating");
-                deallocate_page(y);
+                deallocate_page(y.cast());
                 println!("im humble like that");
             }
         }

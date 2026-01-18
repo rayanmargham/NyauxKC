@@ -6,6 +6,7 @@ use limine::memory_map::EntryType;
 use limine::request::MemoryMapRequest;
 
 use crate::arch::{Arch, Processor};
+use crate::memory::slab::init_slab;
 use crate::{HHDM_REQUEST, println};
 #[used]
 #[unsafe(link_section = ".requests")]
@@ -45,21 +46,22 @@ pub fn init() {
         }
     };
     println!("i suppose it worked?? freelist created? {:?}", FREELIST.unwrap());
+    init_slab();
     
 }
 
-pub fn allocate_page<T>() -> *mut T {
+pub fn allocate_page() -> *mut () {
     unsafe {
     if let Some(phy) = FREELIST {
         let bro = phy.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize);
         bro.write_bytes(0, Processor::PAGE_SIZE);
-        return bro as *mut T;
+        return bro as *mut ();
     } else {
         panic!("gbr");
     }};
 }
 
-pub fn deallocate_page<T>(ptr: *mut T) {
+pub fn deallocate_page(ptr: *mut ()) {
     unsafe {
       let o = FREELIST.unwrap();
       ptr.write_bytes(0, Processor::PAGE_SIZE);
