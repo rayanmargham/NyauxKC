@@ -1,15 +1,24 @@
 #![no_std]
 #![no_main]
+pub mod ft;
+pub mod arch;
+pub mod memory;
 
+use limine::request::HhdmRequest;
+
+#[used]
+#[unsafe(link_section = ".requests")]
+static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
 use core::arch::asm;
+use core::u64;
 
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine::BaseRevision;
 use limine::request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker};
-use nyaux::arch::{Arch, Processor};
-use nyaux::ft::init_terminal;
-use nyaux::memory::pmm::{self, allocate_page, deallocate_page};
-use nyaux::println;
+use crate::arch::{Arch, Processor};
+use crate::ft::init_terminal;
+use crate::memory::pmm::{self, allocate_page, deallocate_page};
+use crate::memory::slab::{slab_alloc, slab_dealloc};
 
 /// Sets the base revision to the latest revision supported by the crate.
 /// See specification for further info.
@@ -62,7 +71,12 @@ unsafe extern "C" fn kmain() -> ! {
                 assert_eq!(y.read(), core::u64::MAX);
                 println!("assert done, deallocating");
                 deallocate_page(y.cast());
-                println!("im humble like that");
+                println!("im humble like that, attempting slab allocation");
+                let me: *mut u64 = slab_alloc(size_of::<u64>()).unwrap().cast();
+                me.write(u64::MAX);
+                assert_eq!(me.read(), u64::MAX);
+                slab_dealloc(me.cast());
+                println!("worked");
             }
         }
     }

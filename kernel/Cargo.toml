@@ -3,6 +3,9 @@ name = "nyaux"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "nyaux"
+
 [dependencies]
 bytemuck = { version = "1.21", default-features = false, features = ["derive"] }
 flantermbindings = "0.1.4"
