@@ -1,5 +1,4 @@
 #![no_std]
-
 pub mod ft;
 pub mod arch;
 pub mod memory;

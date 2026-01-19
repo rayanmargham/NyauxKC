@@ -42,10 +42,29 @@ macro_rules! print {
     }};
 }
 
+
+
+
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
     ($($arg:tt)*) => {{
-        $crate::print!("{}\n", format_args!($($arg)*));
+fn clean_function_name(full_name: &'static str) -> &'static str {
+    // Find the last occurrence of "::" and take everything before it
+    let mut who = full_name;
+    if let Some(pos) = full_name.rfind("::") {
+        who = &who[pos..];
+    };
+    who
+
+}
+fn get_function_name<F>(_: F) -> &'static str 
+where
+    F: Fn(),
+{
+    let full = core::any::type_name::<F>();
+    clean_function_name(full)
+}
+        $crate::print!("{}->{}: {}\n", module_path!(), get_function_name(|| {}), format_args!($($arg)*));
     }};
 }

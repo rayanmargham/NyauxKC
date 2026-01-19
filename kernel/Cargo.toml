@@ -1,5 +1,5 @@
 [package]
-name = "limine-rust-template"
+name = "nyaux"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,6 +7,7 @@ edition = "2024"
 bytemuck = { version = "1.21", default-features = false, features = ["derive"] }
 flantermbindings = "0.1.4"
 limine = "0.5"
+rustc-demangle = {version = "0.1.27", default-features = false, features = ["core"] }
 seq-macro = "0.3.6"
 
 [profile.release]

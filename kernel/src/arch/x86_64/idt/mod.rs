@@ -1,4 +1,4 @@
-use core::{arch::naked_asm, mem::offset_of, ptr::addr_of};
+use core::{arch::naked_asm, fmt::Debug, mem::offset_of, ptr::addr_of};
 
 use bytemuck::{Pod, Zeroable};
 use seq_macro::seq;
@@ -55,7 +55,36 @@ pub struct CPUContext {
     pub rsp: u64,
     pub ss: u64,
 }
-
+// clanker wrote this impl
+impl Debug for CPUContext {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("CPUContext")
+            .field("r15", &self.r15)
+            .field("r14", &self.r14)
+            .field("r13", &self.r13)
+            .field("r12", &self.r12)
+            .field("r11", &self.r11)
+            .field("r10", &self.r10)
+            .field("r9", &self.r9)
+            .field("r8", &self.r8)
+            .field("rsi", &self.rsi)
+            .field("rdi", &self.rdi)
+            .field("rbp", &self.rbp)
+            .field("rdx", &self.rdx)
+            .field("rcx", &self.rcx)
+            .field("rbx", &self.rbx)
+            .field("rax", &self.rax)
+            .field("int", &self.int)
+            .field("error", &self.error)
+            .field("rip", &self.rip)
+            .field("cs", &self.cs)
+            .field("rflags", &self.rflags)
+            .field("rsp", &self.rsp)
+            .field("ss", &self.ss)
+            .finish()
+    }
+}
+// dw about it im lazy to write it myself
 #[derive(Pod, Zeroable, Clone, Copy)]
 #[repr(C, packed)]
 pub struct IDTR {
@@ -126,6 +155,9 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
     let int = unsafe { frame.as_ref().unwrap().int };
     let err = unsafe { frame.as_ref().unwrap().error};
     match int {
+        0xe => {
+          panic!("page fault my dude, {:#?}", unsafe {frame.as_ref().unwrap()});
+        },
         _ => {
             panic!("unhandled exception 0x{:x}, error code 0x{:b}", int, err);
         }
@@ -165,7 +197,6 @@ static mut IDT: IDT = IDT {
 };
 
 pub fn idt_init() {
-    println!("correct segment selector for kernel is 0x{:x}", (offset_of!(GdtTable, kernelcode)) as u16);
     unsafe {
         seq!(N in 0..256 {
             IDT.entries[N] = GateDesc::new((inter_stub~N as *const ()) as u64, (offset_of!(GdtTable, kernelcode)) as u16,0,INTERRUPT_GATE, 0);});

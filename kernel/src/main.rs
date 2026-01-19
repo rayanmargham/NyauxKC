@@ -6,10 +6,10 @@ use core::arch::asm;
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine::BaseRevision;
 use limine::request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker};
-use limine_rust_template::arch::{Arch, Processor};
-use limine_rust_template::ft::init_terminal;
-use limine_rust_template::memory::pmm::{self, allocate_page, deallocate_page};
-use limine_rust_template::println;
+use nyaux::arch::{Arch, Processor};
+use nyaux::ft::init_terminal;
+use nyaux::memory::pmm::{self, allocate_page, deallocate_page};
+use nyaux::println;
 
 /// Sets the base revision to the latest revision supported by the crate.
 /// See specification for further info.
@@ -73,7 +73,16 @@ unsafe extern "C" fn kmain() -> ! {
 #[panic_handler]
 fn rust_panic(info: &core::panic::PanicInfo) -> ! {
     println!("{}: {}", info.location().unwrap(), info.message()); 
-    hcf();
+    loop {
+        unsafe {
+            #[cfg(target_arch = "x86_64")]
+            asm!("hlt");
+            #[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
+            asm!("wfi");
+            #[cfg(target_arch = "loongarch64")]
+            asm!("idle 0");
+        }
+    }
 }
 
 fn hcf() -> ! {
