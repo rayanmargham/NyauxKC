@@ -10,6 +10,7 @@ use limine::request::HhdmRequest;
 #[unsafe(link_section = ".requests")]
 static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
 use core::arch::asm;
+use core::ptr::addr_of;
 use core::u64;
 
 use flantermbindings::flanterm::flanterm_fb_init;
@@ -19,7 +20,15 @@ use crate::arch::{Arch, Processor};
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
+#[inline]
+const fn align_up(value: u64, alignment: u64) -> u64 {
+    (value + alignment - 1) & !(alignment - 1)
+}
 
+#[inline]
+const fn align_down(value: u64, alignment: u64) -> u64 {
+    value & !(alignment - 1)
+}
 /// Sets the base revision to the latest revision supported by the crate.
 /// See specification for further info.
 /// Be sure to mark all limine requests with #[used], otherwise they may be removed by the compiler.
@@ -58,13 +67,15 @@ unsafe extern "C" fn kmain() -> ! {
             );
             println!("testing freelist allocation");
             let x: *mut u128 = allocate_page().cast();
+
+                let y: *mut u64 = allocate_page().cast();
+            println!("0x{:x}, {:x}", addr_of!(x) as u64, addr_of!(y) as u64);
             unsafe {
                 x.write(6767676767);
                 assert_eq!(x.read(), 6767676767);
                 println!("works!, attemption deallocation");
                 deallocate_page(x.cast());
                 println!("attempting again");
-                let y: *mut u64 = allocate_page().cast();
                 println!("allocated page, writing");
                 y.write(core::u64::MAX);
                 println!("wrote");

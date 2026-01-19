@@ -9,9 +9,11 @@ use crate::arch::Processor;
 use crate::memory::pmm::allocate_page;
 use crate::println;
 
+#[derive(Debug)]
 pub struct slab_obj {
     next: *mut slab_obj,
 }
+#[derive(Debug)]
 pub struct slab_header {
     obj_am: usize,
     obj_size: usize,
@@ -19,7 +21,7 @@ pub struct slab_header {
     other_slabs: *mut slab_header,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct slabcache {
     size: usize,
     slabs: *mut slab_header,
@@ -90,10 +92,14 @@ impl slabcache {
             return Err(());
         }
         let h = slab_header::init(size);
+
+        println!("{:?}", h.read());
+
         Ok(slabcache { size, slabs: h })
     }
     fn alloc(&mut self) -> Result<*mut (), ()> {
         if self.slabs != core::ptr::null_mut() {
+            println!("{:?}", self.slabs.read());
             return unsafe {(*self.slabs).alloc()};
         } else {
             panic!("slab cache not inited yet");
