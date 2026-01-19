@@ -69,7 +69,7 @@ unsafe extern "C" fn kmain() -> ! {
             let x: *mut u128 = allocate_page().cast();
 
                 let y: *mut u64 = allocate_page().cast();
-            println!("0x{:x}, {:x}", addr_of!(x) as u64, addr_of!(y) as u64);
+            println!("0x{:x}, {:x}", x.addr(), y.addr() as u64);
             unsafe {
                 x.write(6767676767);
                 assert_eq!(x.read(), 6767676767);

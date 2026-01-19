@@ -29,17 +29,11 @@ pub struct slabcache {
 impl slab_header {
     fn init(size: usize) -> *mut slab_header {
         let page = allocate_page();
-        println!("page allocated");
         let obj_am = (Processor::PAGE_SIZE - size_of::<slab_header>()) / size;
-        println!("obj: {}, size {}", obj_am, size);
         let slab_heade: *mut slab_header = page.cast();
         let mut obj: *mut slab_obj = unsafe { (page as *mut slab_header).add(1).cast() };
 
-        unsafe {
-            (*slab_heade).obj_am = obj_am;
-            (*slab_heade).obj_size = size;
-        }
-        println!("okay");
+       
         for i in 1..obj_am {
             let new_obj: *mut slab_obj =
                 unsafe { (page as *mut slab_header).add(1).byte_add(i * size).cast() };
@@ -48,10 +42,8 @@ impl slab_header {
                 obj = new_obj;
             }
         }
-        unsafe {
-            (*slab_heade).obj = obj;
-            (*slab_heade).other_slabs = core::ptr::null_mut();
-        }
+     
+        unsafe {slab_heade.write(slab_header { obj_am, obj_size: size, obj, other_slabs: core::ptr::null_mut() })};
         return slab_heade;
     }
     fn alloc(&mut self) -> Result<*mut (), ()> {
@@ -64,12 +56,12 @@ impl slab_header {
                     unsafe {
                         (*cur_slab.obj).next = (*bro).next;
 
-                        bro.write_bytes(0, cur_slab.obj_size);
+                        bro.cast::<u8>().write_bytes(0, cur_slab.obj_size);
                     };
                     return Ok(bro.cast());
                 } else {
                     unsafe {
-                        cur_slab.obj.write_bytes(0, cur_slab.obj_size);
+                        cur_slab.obj.cast::<u8>().write_bytes(0, cur_slab.obj_size);
                     };
                     return Ok(cur_slab.obj.cast());
                 }
@@ -144,7 +136,7 @@ pub fn slab_dealloc(addr: *mut ()) {
         }
        let hehe = addr.map_addr(|a| a & !0xFFF).cast() as *mut slab_header;
         let sizeofobj = unsafe { (*hehe).obj_size };
-        unsafe { addr.write_bytes(0, sizeofobj) };
+        unsafe { addr.cast::<u8>().write_bytes(0, sizeofobj) };
         let old = unsafe { (*hehe).obj };
         if old == core::ptr::null_mut() {
             unsafe {

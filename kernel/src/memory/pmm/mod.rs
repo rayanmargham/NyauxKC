@@ -7,7 +7,7 @@ use limine::request::MemoryMapRequest;
 
 use crate::arch::{Arch, Processor};
 use crate::memory::slab::init_slab;
-use crate::{HHDM_REQUEST, println};
+use crate::{HHDM_REQUEST, print, println};
 #[used]
 #[unsafe(link_section = ".requests")]
 static MEMMAP_REQUEST: MemoryMapRequest = MemoryMapRequest::new();
@@ -24,49 +24,58 @@ pub fn init() {
     if let Some(memap_response) = MEMMAP_REQUEST.get_response() {
         for i in memap_response.entries() {
             'a: {
-            match i.entry_type {
-                EntryType::USABLE => {
-                    unsafe {
-                        if let None = FREELIST {
-                            FREELIST = Some(i.base as *mut PMMNode);
-                            break 'a;
-                        };
-                        println!("hex: {:x?}", (i.base, i.length));
-                        let mut x = FREELIST.expect("no usable pages lmaoooooooooo");
-                        for i in (i.base..(i.base + i.length)).step_by(Processor::PAGE_SIZE) {
-                            (*(x.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize))).next = i as *mut PMMNode;
-                            x = i as *mut PMMNode;
-                            FREELIST = Some(i as *mut PMMNode);
-                        }
+                match i.entry_type {
+                    EntryType::USABLE => {
+                        unsafe {
+                           
+                            for i in (i.base..(i.base + i.length)).step_by(Processor::PAGE_SIZE) {
+                                if i == 0 {
+                                    continue;
+                                }
 
-                    };
+                                if let Some(f) = FREELIST {
+                                    (i as *mut PMMNode).byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(PMMNode { next: f });
+                                    FREELIST = Some(i as *mut PMMNode);
+                                } else {
+                                    FREELIST = Some(i as *mut PMMNode);
+                                }
+                            }
+                        };
+                    }
+                    _ => {}
                 }
-                _ => {}
-            } }
+            }
         }
     };
-    println!("i suppose it worked?? freelist created? {:?}", FREELIST.unwrap());
+    println!(
+        "i suppose it worked?? freelist created? {:?}",
+        FREELIST.unwrap()
+    );
     init_slab();
-    
 }
 
 pub fn allocate_page() -> *mut () {
     unsafe {
-    if let Some(phy) = FREELIST {
-        let bro = phy.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize);
-        bro.write_bytes(0, Processor::PAGE_SIZE);
-        return bro as *mut ();
-    } else {
-        panic!("gbr");
-    }};
+        if let Some(phy) = FREELIST {
+            println!("giving phy {:x}", phy.addr());
+            let bro = phy.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize);
+            FREELIST = Some((*bro).next);
+            
+            bro.cast::<u8>().write_bytes(0, Processor::PAGE_SIZE);
+            return bro as *mut ();
+        } else {
+            panic!("gbr");
+        }
+    };
 }
 
 pub fn deallocate_page(ptr: *mut ()) {
     unsafe {
-      let o = FREELIST.unwrap();
-      ptr.write_bytes(0, Processor::PAGE_SIZE);
-      let real = ptr as *mut PMMNode;
-      (*real).next = o;
-      FREELIST = Some(real.byte_sub(HHDM_REQUEST.get_response().unwrap().offset() as usize));  
+        println!("ptr addr: 0x{:x}", ptr.addr());
+        let o = FREELIST.unwrap();
+        ptr.cast::<u8>().write_bytes(0, Processor::PAGE_SIZE);
+        let real = ptr as *mut PMMNode;
+        real.write(PMMNode { next: o });
+        FREELIST = Some(real.byte_sub(HHDM_REQUEST.get_response().unwrap().offset() as usize));
     }
 }
