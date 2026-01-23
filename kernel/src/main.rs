@@ -11,7 +11,7 @@ use limine::request::HhdmRequest;
 static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
 use core::arch::asm;
 use core::ptr::addr_of;
-use core::u64;
+use core::{alloc, u64};
 
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine::BaseRevision;
@@ -65,31 +65,19 @@ unsafe extern "C" fn kmain() -> ! {
             println!(
                 "Nyaux on the Nya Kernel!"
             );
-            println!("testing freelist allocation");
-            let x: *mut u128 = allocate_page().cast();
-
-                let y: *mut u64 = allocate_page().cast();
-            println!("0x{:x}, {:x}", x.addr(), y.addr() as u64);
+            println!("testing slab allocation");
+            let bro = slab_alloc(size_of::<[u8; 256]>()).unwrap().cast::<[u8; 256]>();
             unsafe {
-                x.write(6767676767);
-                assert_eq!(x.read(), 6767676767);
-                println!("works!, attemption deallocation");
-                deallocate_page(x.cast());
-                println!("attempting again");
-                println!("allocated page, writing");
-                y.write(core::u64::MAX);
-                println!("wrote");
-                assert_eq!(y.read(), core::u64::MAX);
-                println!("assert done, deallocating");
-                deallocate_page(y.cast());
-                println!("im humble like that, attempting slab allocation");
-                let me: *mut u64 = slab_alloc(size_of::<u64>()).unwrap().cast();
-                me.write(u64::MAX);
-                assert_eq!(me.read(), u64::MAX);
-                slab_dealloc(me.cast());
-                println!("worked");
+            assert_eq!(bro.read(), [0; 256]);
             }
-        }
+            slab_dealloc(bro.cast());
+            println!("slab allocation OK");
+
+
+
+     
+
+        } 
     }
 
     hcf();

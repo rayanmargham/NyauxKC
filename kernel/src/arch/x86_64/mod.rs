@@ -5,7 +5,7 @@ use crate::arch::{Arch, Processor};
 pub mod gdt;
 pub mod idt;
 
-
+pub mod pt;
 #[cfg(target_arch = "x86_64")]
 impl Arch for Processor{
     const PAGE_SIZE: usize = 4096;
@@ -15,6 +15,7 @@ impl Arch for Processor{
         gdt::gdt_init();
         idt::idt_init();
         pmm::init();
+        pt::pt_init();
         
     }
 }

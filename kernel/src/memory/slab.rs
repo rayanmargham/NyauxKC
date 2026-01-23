@@ -135,17 +135,17 @@ pub fn slab_dealloc(addr: *mut ()) {
             return;
         }
        let hehe = addr.map_addr(|a| a & !0xFFF).cast() as *mut slab_header;
-        let sizeofobj = unsafe { (*hehe).obj_size };
+        let sizeofobj = unsafe { hehe.read().obj_size };
         unsafe { addr.cast::<u8>().write_bytes(0, sizeofobj) };
-        let old = unsafe { (*hehe).obj };
+        let old = unsafe { hehe.read().obj };
         if old == core::ptr::null_mut() {
             unsafe {
-                (*hehe).obj = addr.cast();
+                hehe.read().obj = addr.cast();
             }
         } else {
             unsafe {
                 (*(addr.cast() as *mut slab_obj)).next = old;
-                (*hehe).obj = addr.cast();
+                hehe.read().obj = addr.cast();
             }
         }
 }
