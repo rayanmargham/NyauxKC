@@ -6,13 +6,13 @@ use crate::{arch::PAGING_MODE_REQUEST, println};
 
 bitflags! {
     struct PT: u8 {
-        const PRESENT = 1;
-        const WRITE = 2;
-        const USER = 3;
-        const NEXEC = 4;
-        const GLOBAL = 5;
-        const GIGAPAGE = 6;
-        const MEGAPAGE = 7;
+        const PRESENT   = 1 << 0;
+        const WRITE     = 1 << 1;
+        const USER      = 1 << 2;
+        const NEXEC     = 1 << 3;
+        const GLOBAL    = 1 << 4; 
+        const GIGAPAGE  = 1 << 5; 
+        const MEGAPAGE  = 1 << 6; 
     }
 }
 #[repr(C)]
@@ -115,6 +115,10 @@ pub fn pt_init() {
             println!("unknown paging level we booted at");
         }
     }
+    println!("{:b}", 0xFFFFF);
+    let test: PT = PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC;
+
+    println!("built thingy {:b}", PTENT::build_table(0xFFFF, PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC, 3).0);
 
 
 }
