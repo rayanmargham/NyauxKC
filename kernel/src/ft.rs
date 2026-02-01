@@ -53,3 +53,14 @@ macro_rules! println {
         $crate::print!("{}: {}\n", module_path!(), format_args!($($arg)*));
     }};
 }
+// most useless function
+#[macro_export]
+macro_rules! status {
+    () => {
+        
+    };
+    ($($arg:tt)*) => {{
+
+        $crate::print!("{}: {} \x1b[32mOK\x1b[0m\n", module_path!(), format_args!($($arg)*));
+    }};
+}

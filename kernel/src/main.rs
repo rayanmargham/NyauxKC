@@ -66,15 +66,15 @@ unsafe extern "C" fn kmain() -> ! {
                 "Nyaux on the Nya Kernel!"
             );
             println!("testing slab allocation");
-            let bro = slab_alloc(size_of::<[u8; 256]>()).unwrap().cast::<[u8; 256]>();
+            let bro = slab_alloc(size_of::<[i32; 100]>()).unwrap().cast::<[i32; 100]>();
             unsafe {
-            assert_eq!(bro.read(), [0; 256]);
-            }
+            for i in 0..100 {
+                bro.add(i).cast::<i32>().write(i as i32);
+                assert_eq!(bro.add(i).cast::<i32>().read(), i as i32);
+            } }
             slab_dealloc(bro.cast());
-            println!("slab allocation OK");
 
-
-
+            status!("slab");
      
 
         } 

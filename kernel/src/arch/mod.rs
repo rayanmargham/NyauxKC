@@ -1,5 +1,6 @@
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 use limine::paging;
+use limine::paging::Mode;
 use limine::request::PagingModeRequest;
 
 
@@ -9,10 +10,10 @@ pub mod x86_64;
 pub mod risc_v;
 #[unsafe(link_section = ".requests")]
 #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))] // x86_64 and AArch64 share the same modes
-static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new().with_mode(paging::Mode::FOUR_LEVEL);
+static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new().with_mode(limine::paging::Mode::FOUR_LEVEL);
 #[unsafe(link_section = ".requests")]
 #[cfg(target_arch = "riscv64")] // RISC-V has different modes
-static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new().with_mode(paging::Mode::SV48);
+static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new().with_mode(limine::paging::Mode::SV48);
 pub trait Arch {
     const PAGE_SIZE: usize;
     fn arch_init();

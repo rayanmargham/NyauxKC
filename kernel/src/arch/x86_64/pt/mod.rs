@@ -3,8 +3,9 @@ use bytemuck::Pod;
 use limine::paging::{self, Mode};
 
 use crate::{arch::PAGING_MODE_REQUEST, println};
-
 bitflags! {
+
+    #[derive(PartialEq, Debug)]
     struct PT: u8 {
         const PRESENT   = 1 << 0;
         const WRITE     = 1 << 1;
@@ -18,6 +19,48 @@ bitflags! {
 #[repr(C)]
 pub struct PTENT(u64);
 impl PT {
+    fn new(table: PTENT, lvl: u8) -> PT {
+        let check = table.0;
+        let mut r: PT = PT::empty();
+        if check & 1 == 1{
+            r |= PT::PRESENT;
+        }
+        println!("{:?}", check & (1 << 63));
+        if (check & (1 << 1)) != 0 {
+            r |= PT::WRITE
+        }
+        if (check & (1 << 2)) != 0 {
+            r |= PT::USER;
+        }
+        if (check & (1 << 63)) != 0 {
+            r |= PT::NEXEC;
+        }
+        match lvl {
+            3 => {
+                if check & (1 << 7) != 0 {
+                    r |= PT::GIGAPAGE;
+                    if check & (1 << 8) != 0 {
+                        r |= PT::GLOBAL;
+                    }
+                }
+            },
+            2 => {
+                if check & (1 << 7) != 0 {
+                    r |= PT::MEGAPAGE;
+                    if check & (1 << 8) != 0 {
+                        r |= PT::GLOBAL;
+                    }
+                }
+            },
+            1 => {
+                if check & (1 << 8) != 0 {
+                    r |= PT::GLOBAL;
+                }
+            }
+            _ => {}
+        }
+        r
+    }
     const fn build_permissions(&self, lvl: u8) -> u64{
         let mut final_val: u64 = 0;
         if self.contains(PT::PRESENT) {
@@ -97,6 +140,9 @@ impl PTENT {
         };
         PTENT(arranged_bro)
     }
+    // fn rallocate_table(pml4: PTENT, virt: u64, phys: u64, permissions: PT) {
+    //     pml4.0.
+    // }
     
 
 }
@@ -117,8 +163,9 @@ pub fn pt_init() {
     }
     println!("{:b}", 0xFFFFF);
     let test: PT = PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC;
-
-    println!("built thingy {:b}", PTENT::build_table(0xFFFF, PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC, 3).0);
+    let new = PT::new(PTENT(test.build_permissions(4)), 4);
+    assert_eq!(test, new);
+    println!("built thingy {:b}", PTENT::build_table(0xFFFF, PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC, 4).0);
 
 
 }
