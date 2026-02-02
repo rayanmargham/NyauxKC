@@ -1,8 +1,9 @@
+
 use bitflags::bitflags;
 use bytemuck::Pod;
 use limine::paging::{self, Mode};
 
-use crate::{arch::PAGING_MODE_REQUEST, println};
+use crate::{HHDM_REQUEST, arch::PAGING_MODE_REQUEST, print, println};
 bitflags! {
 
     #[derive(PartialEq, Debug)]
@@ -16,10 +17,19 @@ bitflags! {
         const MEGAPAGE  = 1 << 6; 
     }
 }
+fn get_cr3() -> u64 {
+    let bro: u64;
+    unsafe {
+        core::arch::asm!("mov {}, cr3" ,out(reg) bro);
+ 
+   }
+   bro
+}
 #[repr(C)]
+#[derive(core::fmt::Debug)]
 pub struct PTENT(u64);
 impl PT {
-    fn new(table: PTENT, lvl: u8) -> PT {
+    fn new(table: &PTENT, lvl: u8) -> PT {
         let check = table.0;
         let mut r: PT = PT::empty();
         if check & 1 == 1{
@@ -140,9 +150,45 @@ impl PTENT {
         };
         PTENT(arranged_bro)
     }
-    // fn rallocate_table(pml4: PTENT, virt: u64, phys: u64, permissions: PT) {
-    //     pml4.0.
-    // }
+    // // we assume we are pml4
+    fn get_table(&self, virt: u64, alloc: bool) -> Result<(), &'static str>{
+
+        let mut targetted_table = unsafe {core::ptr::without_provenance_mut::<[PTENT; 512]>(self.0 as usize + HHDM_REQUEST.get_response().unwrap().offset() as usize).as_mut().unwrap()};
+        for i in targetted_table {
+            if i.0 == 0 {
+                continue;
+            }
+            println!("found this 0x{:x}, perms: {:?}", i.0, PT::new(i, 3));
+        }
+        // for i in (0..=4).rev() {
+        //     let vi = virt >> {
+        //         match i {
+        //             4 => {
+        //                 39
+        //             },
+        //             3 => {
+        //                 30
+        //             },
+        //             2 => {
+        //                 21
+        //             },
+        //             1 => {
+        //                 12
+        //             },
+        //             0 => {
+        //                 0
+        //             }
+        //             _ => {
+        //                 panic!("unexpected page level");
+        //             }
+        //         }
+        //     } & 0x1ff;
+        //     println!("index: {}", vi);
+        //     println!("found this at index 0x{:x}", targetted_table[vi as usize].0);
+            
+        // }
+        Ok(())
+    }
     
 
 }
@@ -162,10 +208,21 @@ pub fn pt_init() {
         }
     }
     println!("{:b}", 0xFFFFF);
-    let test: PT = PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC;
-    let new = PT::new(PTENT(test.build_permissions(4)), 4);
+    let test: PT = PT::PRESENT | PT::WRITE | PT::NEXEC;
+    let new = PT::new(&PTENT(test.build_permissions(4)), 4);
     assert_eq!(test, new);
     println!("built thingy {:b}", PTENT::build_table(0xFFFF, PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC, 4).0);
+    println!("got phy 0x{:x}", (get_cr3() & !0xFFF));
+    let limine_pml4 = unsafe {core::ptr::without_provenance_mut::<[u64; 512]>((get_cr3() & !0xFFF) as usize).cast::<u8>().byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).cast::<[PTENT; 512]>().as_mut().unwrap()};
+    for i in limine_pml4.iter() {
+        if i.0 == 0 {
+            continue;
+        }
+        println!("pml4e entry: {:?}, permissions: {:?}", i, PT::new(i, 4));
+        i.get_table(HHDM_REQUEST.get_response().unwrap().offset(), false).unwrap();
+    }
+
+
 
 
 }
