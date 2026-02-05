@@ -19,6 +19,12 @@ impl Write for Ball {
 
         unsafe {
             flanterm_write(self.0, s.as_ptr() as *const core::ffi::c_char, s.len());
+            #[cfg(target_arch = "x86_64")]
+            for i in s.chars() {
+                use crate::arch::x86_64::serial::serial_putc;
+
+                serial_putc(i);
+            }
         }
         Ok(())
     }

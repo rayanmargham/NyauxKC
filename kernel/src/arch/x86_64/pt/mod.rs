@@ -1,9 +1,10 @@
-
 use bitflags::bitflags;
-use bytemuck::Pod;
+use bytemuck::{Pod, Zeroable};
 use limine::paging::{self, Mode};
 
-use crate::{HHDM_REQUEST, arch::PAGING_MODE_REQUEST, print, println};
+use crate::{
+    HHDM_REQUEST, arch::PAGING_MODE_REQUEST, memory::pmm::allocate_page, print, println, status,
+};
 bitflags! {
 
     #[derive(PartialEq, Debug)]
@@ -12,27 +13,26 @@ bitflags! {
         const WRITE     = 1 << 1;
         const USER      = 1 << 2;
         const NEXEC     = 1 << 3;
-        const GLOBAL    = 1 << 4; 
-        const GIGAPAGE  = 1 << 5; 
-        const MEGAPAGE  = 1 << 6; 
+        const GLOBAL    = 1 << 4;
+        const GIGAPAGE  = 1 << 5;
+        const MEGAPAGE  = 1 << 6;
     }
 }
 fn get_cr3() -> u64 {
     let bro: u64;
     unsafe {
         core::arch::asm!("mov {}, cr3" ,out(reg) bro);
- 
-   }
-   bro
+    }
+    bro
 }
 #[repr(C)]
-#[derive(core::fmt::Debug)]
-pub struct PTENT(u64);
+#[derive(core::fmt::Debug, Copy, Clone)]
+pub struct PTENT(*mut u64);
 impl PT {
     fn new(table: &PTENT, lvl: u8) -> PT {
-        let check = table.0;
+        let check = table.0.addr();
         let mut r: PT = PT::empty();
-        if check & 1 == 1{
+        if (check & 1) != 0 {
             r |= PT::PRESENT;
         }
         println!("{:?}", check & (1 << 63));
@@ -40,6 +40,7 @@ impl PT {
             r |= PT::WRITE
         }
         if (check & (1 << 2)) != 0 {
+            println!("che: {:b}", check);
             r |= PT::USER;
         }
         if (check & (1 << 63)) != 0 {
@@ -53,7 +54,7 @@ impl PT {
                         r |= PT::GLOBAL;
                     }
                 }
-            },
+            }
             2 => {
                 if check & (1 << 7) != 0 {
                     r |= PT::MEGAPAGE;
@@ -61,7 +62,7 @@ impl PT {
                         r |= PT::GLOBAL;
                     }
                 }
-            },
+            }
             1 => {
                 if check & (1 << 8) != 0 {
                     r |= PT::GLOBAL;
@@ -71,7 +72,7 @@ impl PT {
         }
         r
     }
-    const fn build_permissions(&self, lvl: u8) -> u64{
+    const fn build_permissions(&self, lvl: u8) -> u64 {
         let mut final_val: u64 = 0;
         if self.contains(PT::PRESENT) {
             final_val |= 1;
@@ -95,19 +96,16 @@ impl PT {
                 if giga && self.contains(PT::GLOBAL) {
                     final_val |= 1 << 8;
                 }
-
-
-            },
+            }
             2 => {
                 let mut mega = false;
                 if self.contains(PT::MEGAPAGE) {
                     mega = true;
-                    final_val |= 1 << 7;   
+                    final_val |= 1 << 7;
                 }
                 if mega && self.contains(PT::GLOBAL) {
                     final_val |= 1 << 8;
                 }
-
             }
             1 => {
                 if self.contains(PT::GLOBAL) {
@@ -122,75 +120,117 @@ impl PT {
 
 impl PTENT {
     fn build_table(phyaddress: u64, permissions: PT, lvl: u8) -> PTENT {
-        
         let arranged_bro: u64 = permissions.build_permissions(lvl) | {
             match lvl {
-                4 => {
-                    phyaddress << 12
-                },
+                4 => phyaddress << 12,
                 3 => {
                     if permissions.contains(PT::GIGAPAGE) {
                         phyaddress << 30
                     } else {
                         phyaddress << 12
                     }
-                },
+                }
                 2 => {
                     if permissions.contains(PT::MEGAPAGE) {
                         phyaddress << 21
                     } else {
                         phyaddress << 12
                     }
-                },
-                1 => {
-                    phyaddress << 12
-                },
-                _ => {0}
+                }
+                1 => phyaddress << 12,
+                _ => 0,
             }
         };
-        PTENT(arranged_bro)
+        PTENT(core::ptr::without_provenance_mut::<u64>(
+            arranged_bro as usize,
+        ))
     }
     // // we assume we are pml4
-    fn get_table(&self, virt: u64, alloc: bool) -> Result<(), &'static str>{
-
-        let mut targetted_table = unsafe {core::ptr::without_provenance_mut::<[PTENT; 512]>(self.0 as usize + HHDM_REQUEST.get_response().unwrap().offset() as usize).as_mut().unwrap()};
-        for i in targetted_table {
-            if i.0 == 0 {
-                continue;
+    fn get_table(&self, virt: u64, alloc: bool) -> Result<PTENT, &'static str> {
+        // we needa mask off those 12 bits cause those contain flags, i was confused for an hour over this lmao
+        let mut targetted_table = unsafe {
+            core::ptr::without_provenance_mut::<[PTENT; 512]>(
+                (((self.0 as usize) & !0xFFF) & !(1 << 63))
+                    + HHDM_REQUEST.get_response().unwrap().offset() as usize,
+            )
+            .as_mut()
+            .unwrap()
+        };
+        for j in (0..=4).rev() {
+            if j == 0 {
+                return Ok(PTENT(unsafe {
+                    targetted_table
+                        .as_mut_ptr()
+                        .cast::<u8>()
+                        .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+                        .cast::<u64>()
+                        .map_addr(|a| (a & !0xFFF) & !(1 << 63))
+                }));
             }
-            println!("found this 0x{:x}, perms: {:?}", i.0, PT::new(i, 3));
-        }
-        // for i in (0..=4).rev() {
-        //     let vi = virt >> {
-        //         match i {
-        //             4 => {
-        //                 39
-        //             },
-        //             3 => {
-        //                 30
-        //             },
-        //             2 => {
-        //                 21
-        //             },
-        //             1 => {
-        //                 12
-        //             },
-        //             0 => {
-        //                 0
-        //             }
-        //             _ => {
-        //                 panic!("unexpected page level");
-        //             }
-        //         }
-        //     } & 0x1ff;
-        //     println!("index: {}", vi);
-        //     println!("found this at index 0x{:x}", targetted_table[vi as usize].0);
-            
-        // }
-        Ok(())
-    }
-    
+            let vi = virt >> {
+                match j {
+                    4 => 39,
+                    3 => 30,
+                    2 => 21,
+                    1 => 12,
+                    0 => 0,
+                    _ => {
+                        panic!("unexpected page level");
+                    }
+                }
+            } & 0x1ff;
+            println!("h");
+            let mut next = targetted_table[vi as usize];
+            println!("d");
+            if next.0.is_null() {
+                if alloc {
+                    let page = allocate_page();
+                    println!("bef");
+                    targetted_table[vi as usize] = PTENT(
+                        unsafe {
+                            page.cast::<u8>()
+                                .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+                        }
+                        .map_addr(|a| a | (PT::PRESENT | PT::USER | PT::WRITE).bits() as usize)
+                        .cast::<u64>(),
+                    );
+                    println!("a");
+                    next = targetted_table[vi as usize];
+                } else {
+                    return Err("bru");
+                }
+            }
+            let perm = PT::new(&next, j);
 
+            println!("perm: {:?}", perm);
+            if perm.contains(PT::MEGAPAGE) || perm.contains(PT::GIGAPAGE) || j == 1 {
+                return Ok(PTENT(core::ptr::without_provenance_mut::<u64>(
+                    (next.0 as usize & !0xFFF) & !(1 << 63),
+                )));
+            }
+            targetted_table = unsafe {
+                core::ptr::without_provenance_mut::<[PTENT; 512]>(
+                    ((next.0 as usize & !0xFFF) & !(1 << 63))
+                        + HHDM_REQUEST.get_response().unwrap().offset() as usize,
+                )
+                .as_mut()
+                .unwrap()
+            };
+        }
+
+        Err("fuck")
+    }
+    fn unmap(&self, virt: u64) {
+        let bro = self.get_table(virt, false);
+        if bro.is_err() {
+            return;
+        }
+        let h = bro.unwrap().0;
+        unsafe {
+            h.write(0);
+            core::arch::asm!("invlpg {}", in(reg) h);
+        }
+    }
 }
 
 pub fn pt_init() {
@@ -199,7 +239,7 @@ pub fn pt_init() {
     match pagingresponse.mode() {
         Mode::FOUR_LEVEL => {
             println!("Booted with 4-lvl paging")
-        },
+        }
         Mode::FIVE_LEVEL => {
             println!("Booted with 5-lvl paging");
         }
@@ -207,22 +247,42 @@ pub fn pt_init() {
             println!("unknown paging level we booted at");
         }
     }
-    println!("{:b}", 0xFFFFF);
-    let test: PT = PT::PRESENT | PT::WRITE | PT::NEXEC;
-    let new = PT::new(&PTENT(test.build_permissions(4)), 4);
-    assert_eq!(test, new);
-    println!("built thingy {:b}", PTENT::build_table(0xFFFF, PT::PRESENT | PT::WRITE | PT::GLOBAL | PT::NEXEC, 4).0);
-    println!("got phy 0x{:x}", (get_cr3() & !0xFFF));
-    let limine_pml4 = unsafe {core::ptr::without_provenance_mut::<[u64; 512]>((get_cr3() & !0xFFF) as usize).cast::<u8>().byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).cast::<[PTENT; 512]>().as_mut().unwrap()};
-    for i in limine_pml4.iter() {
-        if i.0 == 0 {
-            continue;
-        }
-        println!("pml4e entry: {:?}, permissions: {:?}", i, PT::new(i, 4));
-        i.get_table(HHDM_REQUEST.get_response().unwrap().offset(), false).unwrap();
+    let limine_pml4 = PTENT(core::ptr::without_provenance_mut(
+        (get_cr3() as usize & !0xFFF) & !(1 << 63),
+    ));
+
+    println!(
+        "got physical address {:p}",
+        limine_pml4.get_table(0xffffffff80015000, false).unwrap().0
+    );
+    let test = PTENT(unsafe {
+        allocate_page()
+            .cast::<u8>()
+            .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+            .cast::<u64>()
+    });
+    println!("HERE: 0x{:x}", unsafe {
+        test.get_table(0xABCD, true)
+            .unwrap()
+            .0
+            .byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+            .addr()
+    });
+    unsafe {
+        test.get_table(0xABCD, false)
+            .unwrap()
+            .0
+            .byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+            .write(0xBA116767)
+    };
+    unsafe {
+        status!(
+            "page table mapping function works? 0x{:x}",
+            test.get_table(0xABCD, false)
+                .unwrap()
+                .0
+                .byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+                .read()
+        )
     }
-
-
-
-
 }

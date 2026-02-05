@@ -159,7 +159,7 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
           panic!("page fault my dude, {:#?}", unsafe {frame.as_ref().unwrap()});
         },
         _ => {
-            panic!("unhandled exception 0x{:x}, error code 0x{:b}", int, err);
+            panic!("unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}", int, err, unsafe {frame.as_ref()}.unwrap().rip);
         }
     }
 }
