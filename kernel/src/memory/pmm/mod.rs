@@ -10,7 +10,7 @@ use crate::memory::slab::init_slab;
 use crate::{HHDM_REQUEST, print, println};
 #[used]
 #[unsafe(link_section = ".requests")]
-static MEMMAP_REQUEST: MemoryMapRequest = MemoryMapRequest::new();
+pub static MEMMAP_REQUEST: MemoryMapRequest = MemoryMapRequest::new();
 
 #[repr(C)]
 #[derive(Zeroable)]
@@ -33,12 +33,9 @@ pub fn init() {
                                     continue;
                                 }
 
-                                if let Some(f) = FREELIST {
-                                    (i as *mut PMMNode).byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(PMMNode { next: f });
-                                    FREELIST = Some(i as *mut PMMNode);
-                                } else {
-                                    FREELIST = Some(i as *mut PMMNode);
-                                }
+                                let prev = FREELIST.unwrap_or(core::ptr::null_mut());
+                                (i as *mut PMMNode).byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(PMMNode { next: prev });
+                                FREELIST = Some(i as *mut PMMNode);
                             }
                         };
                     }
@@ -57,7 +54,6 @@ pub fn init() {
 pub fn allocate_page() -> *mut () {
     unsafe {
         if let Some(phy) = FREELIST {
-            println!("giving phy {:x}", phy.addr());
             let bro = phy.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize);
             FREELIST = Some((*bro).next);
             

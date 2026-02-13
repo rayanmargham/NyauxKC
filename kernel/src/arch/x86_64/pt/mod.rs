@@ -1,10 +1,18 @@
+use core::ptr::addr_of;
+
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
-use limine::paging::{self, Mode};
+use limine::{memory_map::EntryType, paging::{self, Mode}, request::ExecutableAddressRequest};
 
 use crate::{
-    HHDM_REQUEST, arch::PAGING_MODE_REQUEST, memory::pmm::allocate_page, print, println, status,
+    HHDM_REQUEST, KS, align_up, arch::PAGING_MODE_REQUEST, memory::pmm::{MEMMAP_REQUEST, allocate_page}, print, println, status
 };
+const fn setup_phys_for_pte(phys: u64) -> u64 {
+    phys & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
+}
+#[used]
+#[unsafe(link_section = ".requests")]
+static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::new();
 bitflags! {
 
     #[derive(PartialEq, Debug)]
@@ -25,6 +33,11 @@ fn get_cr3() -> u64 {
     }
     bro
 }
+fn write_cr3(bro: u64) {
+    unsafe {
+        core::arch::asm!("mov cr3, {}", in(reg) bro);
+    }
+}
 #[repr(C)]
 #[derive(core::fmt::Debug, Copy, Clone)]
 pub struct PTENT(*mut u64);
@@ -35,12 +48,10 @@ impl PT {
         if (check & 1) != 0 {
             r |= PT::PRESENT;
         }
-        println!("{:?}", check & (1 << 63));
         if (check & (1 << 1)) != 0 {
             r |= PT::WRITE
         }
         if (check & (1 << 2)) != 0 {
-            println!("che: {:b}", check);
             r |= PT::USER;
         }
         if (check & (1 << 63)) != 0 {
@@ -119,32 +130,32 @@ impl PT {
 }
 
 impl PTENT {
-    fn build_table(phyaddress: u64, permissions: PT, lvl: u8) -> PTENT {
-        let arranged_bro: u64 = permissions.build_permissions(lvl) | {
-            match lvl {
-                4 => phyaddress << 12,
-                3 => {
-                    if permissions.contains(PT::GIGAPAGE) {
-                        phyaddress << 30
-                    } else {
-                        phyaddress << 12
-                    }
-                }
-                2 => {
-                    if permissions.contains(PT::MEGAPAGE) {
-                        phyaddress << 21
-                    } else {
-                        phyaddress << 12
-                    }
-                }
-                1 => phyaddress << 12,
-                _ => 0,
-            }
-        };
-        PTENT(core::ptr::without_provenance_mut::<u64>(
-            arranged_bro as usize,
-        ))
-    }
+    // fn build_table(phyaddress: u64, permissions: PT, lvl: u8) -> PTENT {
+    //     let arranged_bro: u64 = permissions.build_permissions(lvl) | {
+    //         match lvl {
+    //             4 => phyaddress << 12,
+    //             3 => {
+    //                 if permissions.contains(PT::GIGAPAGE) {
+    //                     phyaddress << 30
+    //                 } else {
+    //                     phyaddress << 12
+    //                 }
+    //             }
+    //             2 => {
+    //                 if permissions.contains(PT::MEGAPAGE) {
+    //                     phyaddress << 21
+    //                 } else {
+    //                     phyaddress << 12
+    //                 }
+    //             }
+    //             1 => phyaddress << 12,
+    //             _ => 0,
+    //         }
+    //     };
+    //     PTENT(core::ptr::without_provenance_mut::<u64>(
+    //         arranged_bro as usize,
+    //     ))
+    // }
     // // we assume we are pml4
     fn get_table(&self, virt: u64, alloc: bool) -> Result<PTENT, &'static str> {
         // we needa mask off those 12 bits cause those contain flags, i was confused for an hour over this lmao
@@ -156,17 +167,8 @@ impl PTENT {
             .as_mut()
             .unwrap()
         };
-        for j in (0..=4).rev() {
-            if j == 0 {
-                return Ok(PTENT(unsafe {
-                    targetted_table
-                        .as_mut_ptr()
-                        .cast::<u8>()
-                        .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
-                        .cast::<u64>()
-                        .map_addr(|a| (a & !0xFFF) & !(1 << 63))
-                }));
-            }
+        for j in (1..=4).rev() {
+
             let vi = virt >> {
                 match j {
                     4 => 39,
@@ -179,13 +181,17 @@ impl PTENT {
                     }
                 }
             } & 0x1ff;
-            println!("h");
+
             let mut next = targetted_table[vi as usize];
-            println!("d");
+            let perm = PT::new(&next, j);
+            if perm.contains(PT::MEGAPAGE) || perm.contains(PT::GIGAPAGE) || j == 1 {
+                let blah = vi * 8; // get the pte's address and prepare shit
+                unsafe {
+                return Ok(PTENT(targetted_table.as_mut_ptr().byte_add(blah as usize).byte_sub(HHDM_REQUEST.get_response().unwrap().offset() as usize).cast::<u64>()));}
+            }
             if next.0.is_null() {
                 if alloc {
                     let page = allocate_page();
-                    println!("bef");
                     targetted_table[vi as usize] = PTENT(
                         unsafe {
                             page.cast::<u8>()
@@ -194,20 +200,13 @@ impl PTENT {
                         .map_addr(|a| a | (PT::PRESENT | PT::USER | PT::WRITE).bits() as usize)
                         .cast::<u64>(),
                     );
-                    println!("a");
                     next = targetted_table[vi as usize];
                 } else {
                     return Err("bru");
                 }
             }
-            let perm = PT::new(&next, j);
 
-            println!("perm: {:?}", perm);
-            if perm.contains(PT::MEGAPAGE) || perm.contains(PT::GIGAPAGE) || j == 1 {
-                return Ok(PTENT(core::ptr::without_provenance_mut::<u64>(
-                    (next.0 as usize & !0xFFF) & !(1 << 63),
-                )));
-            }
+
             targetted_table = unsafe {
                 core::ptr::without_provenance_mut::<[PTENT; 512]>(
                     ((next.0 as usize & !0xFFF) & !(1 << 63))
@@ -226,16 +225,35 @@ impl PTENT {
             return;
         }
         let h = bro.unwrap().0;
-        unsafe {
-            h.write(0);
-            core::arch::asm!("invlpg {}", in(reg) h);
+        if !h.is_null() {
+            unsafe {
+                h.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(0);
+                core::arch::asm!("invlpg [{}]", in(reg) h.addr());
+            }
+        }
+    }
+    // @brief this function always maps 4 byte pages
+    fn map4kib(&self, virt: u64, phys: u64, flags: PT) -> Result<(), &'static str> {
+        let answer = self.get_table(virt, true);
+        if answer.is_ok() {
+            unsafe {
+                let p_t = answer.unwrap();
+                let calculated_pt_val = setup_phys_for_pte(phys) | PT::build_permissions(&flags, 1) as u64;
+                
+                p_t.0.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(calculated_pt_val);
+                return Ok(());
+            }
+        } else {
+            return Err(answer.err().unwrap());
         }
     }
 }
 
 pub fn pt_init() {
-    println!("trying shit out");
+    let kernel_size = align_up(addr_of!(KS) as u64, 4096) as usize;
+    println!("trying shit out, kernel size 0x{:x}", kernel_size);
     let pagingresponse = PAGING_MODE_REQUEST.get_response().unwrap();
+    
     match pagingresponse.mode() {
         Mode::FOUR_LEVEL => {
             println!("Booted with 4-lvl paging")
@@ -255,34 +273,37 @@ pub fn pt_init() {
         "got physical address {:p}",
         limine_pml4.get_table(0xffffffff80015000, false).unwrap().0
     );
-    let test = PTENT(unsafe {
+    let pml4= PTENT(unsafe {
         allocate_page()
             .cast::<u8>()
             .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
             .cast::<u64>()
     });
-    println!("HERE: 0x{:x}", unsafe {
-        test.get_table(0xABCD, true)
-            .unwrap()
-            .0
-            .byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)
-            .addr()
-    });
-    unsafe {
-        test.get_table(0xABCD, false)
-            .unwrap()
-            .0
-            .byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)
-            .write(0xBA116767)
-    };
-    unsafe {
-        status!(
-            "page table mapping function works? 0x{:x}",
-            test.get_table(0xABCD, false)
-                .unwrap()
-                .0
-                .byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)
-                .read()
-        )
+    let kaddrv = KERNELADDR_REQUEST.get_response().unwrap().virtual_base() as usize;
+    let kaddrp = KERNELADDR_REQUEST.get_response().unwrap().physical_base() as usize;
+    for i in (0..kernel_size).step_by(4096) {
+        //println!("virtual address to map of kernel 0x{:x}", i);
+        pml4.map4kib((kaddrv + i) as u64, (kaddrp + i) as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
     }
+    let mut max_hhdm_phys = 0 as usize;
+    if let Some(memap_res) = MEMMAP_REQUEST.get_response() {
+        for i in memap_res.entries() {
+            match i.entry_type {
+                EntryType::USABLE | EntryType::BOOTLOADER_RECLAIMABLE | EntryType::EXECUTABLE_AND_MODULES | EntryType::FRAMEBUFFER | EntryType::ACPI_NVS | EntryType::ACPI_RECLAIMABLE => {
+                    max_hhdm_phys = (i.base + i.length).max(max_hhdm_phys as u64) as usize;
+                },
+                _ => {
+
+                }
+            }
+        }
+    }
+    max_hhdm_phys = align_up(max_hhdm_phys as u64, 4096) as usize;
+    for i in (0..max_hhdm_phys).step_by(4096) {
+        pml4.map4kib(HHDM_REQUEST.get_response().unwrap().offset() + (i as u64), i as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
+    }
+    println!("writing pml4 address to cr3 {}", pml4.0.addr());
+    write_cr3(pml4.0.addr() as u64);
+    status!("page tables switched to Nyaux!");
+
 }

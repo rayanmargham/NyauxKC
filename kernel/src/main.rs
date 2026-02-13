@@ -5,7 +5,9 @@ pub mod arch;
 pub mod memory;
 
 use limine::request::HhdmRequest;
-
+unsafe extern "C" {
+    pub static KS: u8;
+}
 #[used]
 #[unsafe(link_section = ".requests")]
 static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();

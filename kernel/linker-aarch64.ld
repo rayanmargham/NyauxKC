@@ -21,7 +21,7 @@ SECTIONS
     /* Any address in this region will do, but often 0xffffffff80000000 is chosen as */
     /* that is the beginning of the region. */
     . = 0xffffffff80000000;
-
+    KS_TMP_VAR = .;
     .text : {
         *(.text .text.*)
     } :text
@@ -60,4 +60,5 @@ SECTIONS
         *(.eh_frame*)
         *(.note .note.*)
     }
+    KS = . - KS_TMP_VAR;
 }
