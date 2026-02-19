@@ -5,7 +5,7 @@ use bytemuck::{Pod, Zeroable};
 use limine::{memory_map::EntryType, paging::{self, Mode}, request::ExecutableAddressRequest};
 
 use crate::{
-    HHDM_REQUEST, KS, align_up, arch::PAGING_MODE_REQUEST, memory::pmm::{MEMMAP_REQUEST, allocate_page}, print, println, status
+    HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::pmm::{MEMMAP_REQUEST, allocate_page}, print, println, status
 };
 const fn setup_phys_for_pte(phys: u64) -> u64 {
     phys & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
@@ -250,7 +250,7 @@ impl PTENT {
 }
 
 pub fn pt_init() {
-    let kernel_size = align_up(addr_of!(KS) as u64, 4096) as usize;
+    let kernel_size = align_up(addr_of!(KS) as u64,Processor::PAGE_SIZE as u64) as usize;
     println!("trying shit out, kernel size 0x{:x}", kernel_size);
     let pagingresponse = PAGING_MODE_REQUEST.get_response().unwrap();
     
@@ -281,7 +281,7 @@ pub fn pt_init() {
     });
     let kaddrv = KERNELADDR_REQUEST.get_response().unwrap().virtual_base() as usize;
     let kaddrp = KERNELADDR_REQUEST.get_response().unwrap().physical_base() as usize;
-    for i in (0..kernel_size).step_by(4096) {
+    for i in (0..kernel_size).step_by(Processor::PAGE_SIZE) {
         //println!("virtual address to map of kernel 0x{:x}", i);
         pml4.map4kib((kaddrv + i) as u64, (kaddrp + i) as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
     }
@@ -298,8 +298,8 @@ pub fn pt_init() {
             }
         }
     }
-    max_hhdm_phys = align_up(max_hhdm_phys as u64, 4096) as usize;
-    for i in (0..max_hhdm_phys).step_by(4096) {
+    max_hhdm_phys = align_up(max_hhdm_phys as u64, Processor::PAGE_SIZE as u64) as usize;
+    for i in (0..max_hhdm_phys).step_by(Processor::PAGE_SIZE) {
         pml4.map4kib(HHDM_REQUEST.get_response().unwrap().offset() + (i as u64), i as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
     }
     println!("writing pml4 address to cr3 {}", pml4.0.addr());

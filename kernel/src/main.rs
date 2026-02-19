@@ -99,7 +99,7 @@ fn rust_panic(info: &core::panic::PanicInfo) -> ! {
         }
     }
 }
-
+#[inline]
 fn hcf() -> ! {
     loop {
         unsafe {
