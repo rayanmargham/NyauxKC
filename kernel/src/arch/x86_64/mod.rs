@@ -1,4 +1,6 @@
 use crate::arch::{Arch, Processor};
+#[cfg(target_arch = "x86_64")]
+use crate::memory::vmm::Pagemap;
 
 
 
@@ -26,5 +28,17 @@ impl Arch for Processor{
         pmm::init();
         pt::pt_init();
         
+    }
+    fn arch_map_region(pagemap: Pagemap, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
+            use crate::arch::x86_64::pt::PTENT;
+
+            
+            let yo = PTENT(pagemap.arch_page);
+            for i in (base..length).step_by(Processor::PAGE_SIZE) {
+                use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
+
+                yo.map4kib(i as u64, allocate_page().addr() as u64, PT::from_vmmflags(flags)).unwrap();
+                
+            } 
     }
 }

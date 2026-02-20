@@ -5,7 +5,7 @@ use bytemuck::{Pod, Zeroable};
 use limine::{memory_map::EntryType, paging::{self, Mode}, request::ExecutableAddressRequest};
 
 use crate::{
-    HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::pmm::{MEMMAP_REQUEST, allocate_page}, print, println, status
+    HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{pmm::{MEMMAP_REQUEST, allocate_page}, vmm::VMMFlags}, print, println, status
 };
 const fn setup_phys_for_pte(phys: u64) -> u64 {
     phys & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
@@ -16,7 +16,7 @@ static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::
 bitflags! {
 
     #[derive(PartialEq, Debug)]
-    struct PT: u8 {
+    pub struct PT: u8 {
         const PRESENT   = 1 << 0;
         const WRITE     = 1 << 1;
         const USER      = 1 << 2;
@@ -40,8 +40,24 @@ fn write_cr3(bro: u64) {
 }
 #[repr(C)]
 #[derive(core::fmt::Debug, Copy, Clone)]
-pub struct PTENT(*mut u64);
+pub struct PTENT(pub *mut u64);
 impl PT {
+    pub fn from_vmmflags(fla: VMMFlags) -> PT {
+        let mut val: PT = PT::empty();
+        if fla.contains(VMMFlags::WRITE) {
+            val |= PT::WRITE;
+        }
+        if !fla.contains(VMMFlags::EXECUTABLE) {
+            val |= PT::NEXEC;
+        }
+        if fla.contains(VMMFlags::GLOBAL) {
+            val |= PT::GLOBAL;
+        }
+        if fla.contains(VMMFlags::USER) {
+            val |= PT::USER
+        }
+        val
+    }
     fn new(table: &PTENT, lvl: u8) -> PT {
         let check = table.0.addr();
         let mut r: PT = PT::empty();
@@ -233,7 +249,7 @@ impl PTENT {
         }
     }
     // @brief this function always maps 4 byte pages
-    fn map4kib(&self, virt: u64, phys: u64, flags: PT) -> Result<(), &'static str> {
+    pub fn map4kib(&self, virt: u64, phys: u64, flags: PT) -> Result<(), &'static str> {
         let answer = self.get_table(virt, true);
         if answer.is_ok() {
             unsafe {
@@ -248,7 +264,6 @@ impl PTENT {
         }
     }
 }
-
 pub fn pt_init() {
     let kernel_size = align_up(addr_of!(KS) as u64,Processor::PAGE_SIZE as u64) as usize;
     println!("trying shit out, kernel size 0x{:x}", kernel_size);
@@ -279,6 +294,7 @@ pub fn pt_init() {
             .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
             .cast::<u64>()
     });
+
     let kaddrv = KERNELADDR_REQUEST.get_response().unwrap().virtual_base() as usize;
     let kaddrp = KERNELADDR_REQUEST.get_response().unwrap().physical_base() as usize;
     for i in (0..kernel_size).step_by(Processor::PAGE_SIZE) {

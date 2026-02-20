@@ -3,6 +3,8 @@ use limine::paging;
 use limine::paging::Mode;
 use limine::request::PagingModeRequest;
 
+use crate::memory::vmm::{Pagemap, VMMFlags};
+
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64;
@@ -17,5 +19,6 @@ static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new().with_mo
 pub trait Arch {
     const PAGE_SIZE: usize;
     fn arch_init();
+    fn arch_map_region(pagemap: Pagemap, base: usize, length: usize, flags: VMMFlags);
 }
 pub struct Processor{}

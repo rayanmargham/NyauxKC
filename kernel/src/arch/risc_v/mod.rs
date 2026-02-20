@@ -7,6 +7,7 @@ use crate::arch::risc_v::interrupts::setup_interrupts;
 use crate::println;
 #[cfg(target_arch = "riscv64")]
 pub mod interrupts;
+pub mod pt;
 impl Arch for Processor{
     const PAGE_SIZE: usize = 4096;
     fn arch_init(){
@@ -20,9 +21,11 @@ impl Arch for Processor{
             setup_interrupts();
         }
         pmm::init();
-        unsafe {
-            core::ptr::null::<u64>().read_volatile();
-        }
+        pt::pt_init();
+
+    }
+    fn arch_map_region(base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
+        panic!("todo");
     }
 }
 
