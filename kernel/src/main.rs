@@ -22,6 +22,7 @@ use crate::arch::{Arch, Processor};
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
+use crate::memory::vmm::{VMMFlags, kermap};
 #[inline]
 const fn align_up(value: u64, alignment: u64) -> u64 {
     (value + alignment - 1) & !(alignment - 1)
@@ -75,9 +76,20 @@ unsafe extern "C" fn kmain() -> ! {
                 assert_eq!(bro.add(i).cast::<i32>().read(), i as i32);
             } }
             slab_dealloc(bro.cast());
-
+            
             status!("slab");
-     
+            let yaho = unsafe {(&mut *core::ptr::addr_of_mut!(kermap)).as_mut().unwrap().vmm_alloc(Processor::PAGE_SIZE * 10, VMMFlags::WRITE).unwrap()};
+            let yaho = yaho.cast::<u8>();
+            println!("vmm_alloc returned: 0x{:x}", yaho.addr());
+            unsafe {
+                for i in 0..(Processor::PAGE_SIZE * 10) {
+                    yaho.add(i).write(0xAB);
+                }
+                for i in 0..(Processor::PAGE_SIZE * 10) {
+                    assert_eq!(yaho.add(i).read(), 0xAB);
+                }
+            }
+            status!("vmm_alloc works");
 
         } 
     }

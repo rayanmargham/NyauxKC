@@ -21,24 +21,16 @@ pub fn outb(port: u16, data: u8) {
 impl Arch for Processor{
     const PAGE_SIZE: usize = 4096;
     fn arch_init() {
-        use crate::{memory::pmm, println};
+        use crate::{memory::{pmm, vmm}, println};
         println!("x86_64 init");
         gdt::gdt_init();
         idt::idt_init();
         pmm::init();
-        pt::pt_init();
-        
+        vmm::vmm_init();
     }
-    fn arch_map_region(pagemap: Pagemap, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
-            use crate::arch::x86_64::pt::PTENT;
+    fn get_root_table() -> *mut u64 {
+        use crate::arch::x86_64::pt::read_cr3;
 
-            
-            let yo = PTENT(pagemap.arch_page);
-            for i in (base..length).step_by(Processor::PAGE_SIZE) {
-                use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
-
-                yo.map4kib(i as u64, allocate_page().addr() as u64, PT::from_vmmflags(flags)).unwrap();
-                
-            } 
+        core::ptr::with_exposed_provenance_mut::<u64>((read_cr3() as usize & !0xFFF) & !(1 << 63))
     }
 }

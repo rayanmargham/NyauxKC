@@ -19,6 +19,6 @@ static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new().with_mo
 pub trait Arch {
     const PAGE_SIZE: usize;
     fn arch_init();
-    fn arch_map_region(pagemap: Pagemap, base: usize, length: usize, flags: VMMFlags);
+    fn get_root_table() -> *mut u64;
 }
 pub struct Processor{}

@@ -5,14 +5,14 @@ use bytemuck::{Pod, Zeroable};
 use limine::{memory_map::EntryType, paging::{self, Mode}, request::ExecutableAddressRequest};
 
 use crate::{
-    HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{pmm::{MEMMAP_REQUEST, allocate_page}, vmm::VMMFlags}, print, println, status
+    HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page}, vmm::{Pagemap, VMMFlags, kermap}}, print, println, status
 };
 const fn setup_phys_for_pte(phys: u64) -> u64 {
     phys & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
 }
 #[used]
 #[unsafe(link_section = ".requests")]
-static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::new();
+pub static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::new();
 bitflags! {
 
     #[derive(PartialEq, Debug)]
@@ -26,7 +26,7 @@ bitflags! {
         const MEGAPAGE  = 1 << 6;
     }
 }
-fn get_cr3() -> u64 {
+pub fn read_cr3() -> u64 {
     let bro: u64;
     unsafe {
         core::arch::asm!("mov {}, cr3" ,out(reg) bro);
@@ -43,7 +43,7 @@ fn write_cr3(bro: u64) {
 pub struct PTENT(pub *mut u64);
 impl PT {
     pub fn from_vmmflags(fla: VMMFlags) -> PT {
-        let mut val: PT = PT::empty();
+        let mut val: PT = PT::PRESENT;
         if fla.contains(VMMFlags::WRITE) {
             val |= PT::WRITE;
         }
@@ -240,11 +240,14 @@ impl PTENT {
         if bro.is_err() {
             return;
         }
-        let h = bro.unwrap().0;
+        let h = unsafe {bro.unwrap().0.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)};
+        
         if !h.is_null() {
             unsafe {
-                h.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(0);
-                core::arch::asm!("invlpg [{}]", in(reg) h.addr());
+                let page = core::ptr::with_exposed_provenance::<u64>(setup_phys_for_pte(h.read()) as usize).byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).cast_mut();
+                deallocate_page(page.cast());
+                h.write(0);
+                core::arch::asm!("invlpg [{}]", in(reg) virt);
             }
         }
     }
@@ -264,7 +267,29 @@ impl PTENT {
         }
     }
 }
-pub fn pt_init() {
+impl Pagemap {
+    pub fn archpt(&self) -> PTENT {
+        PTENT(self.arch_page)
+    }
+    pub fn arch_map_region(&self, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
+
+            
+            let yo = self.archpt();
+            for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
+                use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
+
+                yo.map4kib(i as u64, allocate_page().addr() as u64 - HHDM_REQUEST.get_response().unwrap().offset(), PT::from_vmmflags(flags)).unwrap();
+                
+            } 
+    }
+    pub fn arch_unmap_region(&self, base: usize, length: usize) {
+        let pml = self.archpt();
+        for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
+            pml.unmap(i as u64);
+        }
+    }
+}
+pub fn pt_init() -> (usize, usize) {
     let kernel_size = align_up(addr_of!(KS) as u64,Processor::PAGE_SIZE as u64) as usize;
     println!("trying shit out, kernel size 0x{:x}", kernel_size);
     let pagingresponse = PAGING_MODE_REQUEST.get_response().unwrap();
@@ -281,7 +306,7 @@ pub fn pt_init() {
         }
     }
     let limine_pml4 = PTENT(core::ptr::without_provenance_mut(
-        (get_cr3() as usize & !0xFFF) & !(1 << 63),
+        (read_cr3() as usize & !0xFFF) & !(1 << 63),
     ));
 
     println!(
@@ -321,5 +346,6 @@ pub fn pt_init() {
     println!("writing pml4 address to cr3 {}", pml4.0.addr());
     write_cr3(pml4.0.addr() as u64);
     status!("page tables switched to Nyaux!");
+    (max_hhdm_phys, kernel_size)
 
 }
