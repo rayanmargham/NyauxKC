@@ -48,6 +48,7 @@ static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new();
 unsafe extern "C" fn kmain() -> ! {
     // All limine requests must also be referenced in a called function, otherwise they may be
     // removed by the linker.
+    
     assert!(BASE_REVISION.is_supported());
 
     if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.response() {
