@@ -2,7 +2,8 @@ use core::ptr::addr_of;
 
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
-use limine::{memory_map::EntryType, paging::{self, Mode}, request::ExecutableAddressRequest};
+use limine_boot::request::ExecutableAddressRequest;
+use limine_boot::paging::PagingMode;
 
 use crate::{
     HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page}, vmm::{Pagemap, VMMFlags, kermap}}, print, println, status
@@ -178,7 +179,7 @@ impl PTENT {
         let mut targetted_table = unsafe {
             core::ptr::without_provenance_mut::<[PTENT; 512]>(
                 (((self.0 as usize) & !0xFFF) & !(1 << 63))
-                    + HHDM_REQUEST.get_response().unwrap().offset() as usize,
+                    + HHDM_REQUEST.response().unwrap().offset as usize,
             )
             .as_mut()
             .unwrap()
@@ -203,7 +204,7 @@ impl PTENT {
             if perm.contains(PT::MEGAPAGE) || perm.contains(PT::GIGAPAGE) || j == 1 {
                 let blah = vi * 8; // get the pte's address and prepare shit
                 unsafe {
-                return Ok(PTENT(targetted_table.as_mut_ptr().byte_add(blah as usize).byte_sub(HHDM_REQUEST.get_response().unwrap().offset() as usize).cast::<u64>()));}
+                return Ok(PTENT(targetted_table.as_mut_ptr().byte_add(blah as usize).byte_sub(HHDM_REQUEST.response().unwrap().offset as usize).cast::<u64>()));}
             }
             if next.0.is_null() {
                 if alloc {
@@ -211,7 +212,7 @@ impl PTENT {
                     targetted_table[vi as usize] = PTENT(
                         unsafe {
                             page.cast::<u8>()
-                                .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+                                .sub(HHDM_REQUEST.response().unwrap().offset as usize)
                         }
                         .map_addr(|a| a | (PT::PRESENT | PT::USER | PT::WRITE).bits() as usize)
                         .cast::<u64>(),
@@ -226,7 +227,7 @@ impl PTENT {
             targetted_table = unsafe {
                 core::ptr::without_provenance_mut::<[PTENT; 512]>(
                     ((next.0 as usize & !0xFFF) & !(1 << 63))
-                        + HHDM_REQUEST.get_response().unwrap().offset() as usize,
+                        + HHDM_REQUEST.response().unwrap().offset as usize,
                 )
                 .as_mut()
                 .unwrap()
@@ -240,11 +241,11 @@ impl PTENT {
         if bro.is_err() {
             return;
         }
-        let h = unsafe {bro.unwrap().0.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize)};
+        let h = unsafe {bro.unwrap().0.byte_add(HHDM_REQUEST.response().unwrap().offset as usize)};
         
         if !h.is_null() {
             unsafe {
-                let page = core::ptr::with_exposed_provenance::<u64>(setup_phys_for_pte(h.read()) as usize).byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).cast_mut();
+                let page = core::ptr::with_exposed_provenance::<u64>(setup_phys_for_pte(h.read()) as usize).byte_add(HHDM_REQUEST.response().unwrap().offset as usize).cast_mut();
                 deallocate_page(page.cast());
                 h.write(0);
                 core::arch::asm!("invlpg [{}]", in(reg) virt);
@@ -259,7 +260,7 @@ impl PTENT {
                 let p_t = answer.unwrap();
                 let calculated_pt_val = setup_phys_for_pte(phys) | PT::build_permissions(&flags, 1) as u64;
                 
-                p_t.0.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(calculated_pt_val);
+                p_t.0.byte_add(HHDM_REQUEST.response().unwrap().offset as usize).write(calculated_pt_val);
                 return Ok(());
             }
         } else {
@@ -278,7 +279,7 @@ impl Pagemap {
             for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
                 use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
 
-                yo.map4kib(i as u64, allocate_page().addr() as u64 - HHDM_REQUEST.get_response().unwrap().offset(), PT::from_vmmflags(flags)).unwrap();
+                yo.map4kib(i as u64, allocate_page().addr() as u64 - HHDM_REQUEST.response().unwrap().offset, PT::from_vmmflags(flags)).unwrap();
                 
             } 
     }
@@ -292,13 +293,13 @@ impl Pagemap {
 pub fn pt_init() -> (usize, usize) {
     let kernel_size = align_up(addr_of!(KS) as u64,Processor::PAGE_SIZE as u64) as usize;
     println!("trying shit out, kernel size 0x{:x}", kernel_size);
-    let pagingresponse = PAGING_MODE_REQUEST.get_response().unwrap();
+    let pagingresponse = PAGING_MODE_REQUEST.response().unwrap();
     
-    match pagingresponse.mode() {
-        Mode::FOUR_LEVEL => {
+    match pagingresponse.mode {
+        PagingMode::X86_64_4LVL=> {
             println!("Booted with 4-lvl paging")
         }
-        Mode::FIVE_LEVEL => {
+        PagingMode::X86_64_5LVL=> {
             println!("Booted with 5-lvl paging");
         }
         _ => {
@@ -316,21 +317,21 @@ pub fn pt_init() -> (usize, usize) {
     let pml4= PTENT(unsafe {
         allocate_page()
             .cast::<u8>()
-            .sub(HHDM_REQUEST.get_response().unwrap().offset() as usize)
+            .sub(HHDM_REQUEST.response().unwrap().offset as usize)
             .cast::<u64>()
     });
 
-    let kaddrv = KERNELADDR_REQUEST.get_response().unwrap().virtual_base() as usize;
-    let kaddrp = KERNELADDR_REQUEST.get_response().unwrap().physical_base() as usize;
+    let kaddrv = KERNELADDR_REQUEST.response().unwrap().virtual_base as usize;
+    let kaddrp = KERNELADDR_REQUEST.response().unwrap().physical_base as usize;
     for i in (0..kernel_size).step_by(Processor::PAGE_SIZE) {
         //println!("virtual address to map of kernel 0x{:x}", i);
         pml4.map4kib((kaddrv + i) as u64, (kaddrp + i) as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
     }
     let mut max_hhdm_phys = 0 as usize;
-    if let Some(memap_res) = MEMMAP_REQUEST.get_response() {
+    if let Some(memap_res) = MEMMAP_REQUEST.response() {
         for i in memap_res.entries() {
-            match i.entry_type {
-                EntryType::USABLE | EntryType::BOOTLOADER_RECLAIMABLE | EntryType::EXECUTABLE_AND_MODULES | EntryType::FRAMEBUFFER | EntryType::ACPI_NVS | EntryType::ACPI_RECLAIMABLE => {
+            match i.type_ {
+                limine_boot::memmap::MEMMAP_MAPPED_RESERVED | limine_boot::memmap::MEMMAP_USABLE | limine_boot::memmap::MEMMAP_BOOTLOADER_RECLAIMABLE | limine_boot::memmap::MEMMAP_EXECUTABLE_AND_MODULES | limine_boot::memmap::MEMMAP_FRAMEBUFFER | limine_boot::memmap::MEMMAP_ACPI_NVS | limine_boot::memmap::MEMMAP_ACPI_RECLAIMABLE => {
                     max_hhdm_phys = (i.base + i.length).max(max_hhdm_phys as u64) as usize;
                 },
                 _ => {
@@ -341,7 +342,7 @@ pub fn pt_init() -> (usize, usize) {
     }
     max_hhdm_phys = align_up(max_hhdm_phys as u64, Processor::PAGE_SIZE as u64) as usize;
     for i in (0..max_hhdm_phys).step_by(Processor::PAGE_SIZE) {
-        pml4.map4kib(HHDM_REQUEST.get_response().unwrap().offset() + (i as u64), i as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
+        pml4.map4kib(HHDM_REQUEST.response().unwrap().offset + (i as u64), i as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
     }
     println!("writing pml4 address to cr3 {}", pml4.0.addr());
     write_cr3(pml4.0.addr() as u64);

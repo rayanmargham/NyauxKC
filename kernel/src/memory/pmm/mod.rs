@@ -2,15 +2,14 @@ use core::fmt::Debug;
 use core::slice::Iter;
 
 use bytemuck::{Pod, Zeroable};
-use limine::memory_map::EntryType;
-use limine::request::MemoryMapRequest;
+use limine_boot::request::MemmapRequest;
 
 use crate::arch::{Arch, Processor};
 use crate::memory::slab::init_slab;
 use crate::{HHDM_REQUEST, print, println};
 #[used]
 #[unsafe(link_section = ".requests")]
-pub static MEMMAP_REQUEST: MemoryMapRequest = MemoryMapRequest::new();
+pub static MEMMAP_REQUEST: MemmapRequest=MemmapRequest::new();
 
 #[repr(C)]
 #[derive(Zeroable)]
@@ -21,11 +20,11 @@ pub struct PMMNode {
 static mut FREELIST: Option<*mut PMMNode> = None;
 
 pub fn init() {
-    if let Some(memap_response) = MEMMAP_REQUEST.get_response() {
+    if let Some(memap_response) = MEMMAP_REQUEST.response() {
         for i in memap_response.entries() {
             'a: {
-                match i.entry_type {
-                    EntryType::USABLE => {
+                match i.type_{
+                    limine_boot::memmap::MEMMAP_USABLE => {
                         unsafe {
                            
                             for i in (i.base..(i.base + i.length)).step_by(Processor::PAGE_SIZE) {
@@ -34,7 +33,7 @@ pub fn init() {
                                 }
 
                                 let prev = FREELIST.unwrap_or(core::ptr::null_mut());
-                                (i as *mut PMMNode).byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize).write(PMMNode { next: prev });
+                                (i as *mut PMMNode).byte_add(HHDM_REQUEST.response().unwrap().offset as usize).write(PMMNode { next: prev });
                                 FREELIST = Some(i as *mut PMMNode);
                             }
                         };
@@ -54,7 +53,7 @@ pub fn init() {
 pub fn allocate_page() -> *mut () {
     unsafe {
         if let Some(phy) = FREELIST {
-            let bro = phy.byte_add(HHDM_REQUEST.get_response().unwrap().offset() as usize);
+            let bro = phy.byte_add(HHDM_REQUEST.response().unwrap().offset as usize);
             FREELIST = Some((*bro).next);
             
             bro.cast::<u8>().write_bytes(0, Processor::PAGE_SIZE);
@@ -72,6 +71,6 @@ pub fn deallocate_page(ptr: *mut ()) {
         ptr.cast::<u8>().write_bytes(0, Processor::PAGE_SIZE);
         let real = ptr as *mut PMMNode;
         real.write(PMMNode { next: o });
-        FREELIST = Some(real.byte_sub(HHDM_REQUEST.get_response().unwrap().offset() as usize));
+        FREELIST = Some(real.byte_sub(HHDM_REQUEST.response().unwrap().offset as usize));
     }
 }

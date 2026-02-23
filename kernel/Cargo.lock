@@ -150,13 +150,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "limine"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af6d2ee42712e7bd2c787365cd1dab06ef59a61becbf87bec7b32b970bd2594b"
-dependencies = [
- "bitflags",
-]
+name = "limine-boot"
+version = "0.1.0"
+source = "git+https://github.com/robotman2412/limine-boot-rust#277fe0e4ddf2e8a7ee058c769667b1c98cf91de1"
 
 [[package]]
 name = "log"
@@ -193,7 +189,7 @@ dependencies = [
  "bitflags",
  "bytemuck",
  "flantermbindings",
- "limine",
+ "limine-boot",
  "rustc-demangle",
  "seq-macro",
 ]

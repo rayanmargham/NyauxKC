@@ -4,7 +4,7 @@ pub mod ft;
 pub mod arch;
 pub mod memory;
 
-use limine::request::HhdmRequest;
+use limine_boot::request::HhdmRequest;
 unsafe extern "C" {
     pub static KS: u8;
 }
@@ -16,8 +16,8 @@ use core::ptr::addr_of;
 use core::{alloc, u64};
 
 use flantermbindings::flanterm::flanterm_fb_init;
-use limine::BaseRevision;
-use limine::request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker};
+use limine_boot::BaseRevision;
+use limine_boot::request::{FramebufferRequest};
 use crate::arch::{Arch, Processor};
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
@@ -38,19 +38,11 @@ const fn align_down(value: u64, alignment: u64) -> u64 {
 #[used]
 // The .requests section allows limine to find the requests faster and more safely.
 #[unsafe(link_section = ".requests")]
-static BASE_REVISION: BaseRevision = BaseRevision::new();
+static BASE_REVISION: BaseRevision = BaseRevision::with_revision(4);
 
 #[used]
 #[unsafe(link_section = ".requests")]
 static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new();
-
-/// Define the stand and end markers for Limine requests.
-#[used]
-#[unsafe(link_section = ".requests_start_marker")]
-static _START_MARKER: RequestsStartMarker = RequestsStartMarker::new();
-#[used]
-#[unsafe(link_section = ".requests_end_marker")]
-static _END_MARKER: RequestsEndMarker = RequestsEndMarker::new();
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn kmain() -> ! {
@@ -58,10 +50,12 @@ unsafe extern "C" fn kmain() -> ! {
     // removed by the linker.
     assert!(BASE_REVISION.is_supported());
 
-    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.get_response() {
-        if let Some(framebuffer) = framebuffer_response.framebuffers().next() {
+    if let Some(framebuffer_response) = FRAMEBUFFER_REQUEST.response() {
+        
+        let framebuffer = 
+            framebuffer_response.framebuffers().iter().next().unwrap();
             unsafe {
-                init_terminal(flanterm_fb_init(None, None, framebuffer.addr() as *mut u32, framebuffer.width() as usize, framebuffer.height() as usize, framebuffer.pitch() as usize, framebuffer.red_mask_size(), framebuffer.red_mask_shift(), framebuffer.green_mask_size(), framebuffer.green_mask_shift(), framebuffer.blue_mask_size(), framebuffer.blue_mask_shift(), 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut _, 0, 0, 0, 1, 1, 50));
+                init_terminal(flanterm_fb_init(None, None, framebuffer.address() as *mut u32, framebuffer.width as usize, framebuffer.height as usize, framebuffer.pitch as usize, framebuffer.red_mask_size, framebuffer.red_mask_shift, framebuffer.green_mask_size, framebuffer.green_mask_shift, framebuffer.blue_mask_size, framebuffer.blue_mask_shift, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut _, 0, 0, 0, 1, 1, 50));
             }
             Processor::arch_init();
             
@@ -91,7 +85,7 @@ unsafe extern "C" fn kmain() -> ! {
             }
             status!("vmm_alloc works");
 
-        } 
+        
     }
 
     hcf();
