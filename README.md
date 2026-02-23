@@ -10,7 +10,7 @@ NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the ke
 [✓] PMM using freelist\
 [✓] Slab Allocation\
 [X] Page Tables for x86_64 and RISCV64\
-[X] VMM\
+[✓] VMM\
 ...\
 \
 \
