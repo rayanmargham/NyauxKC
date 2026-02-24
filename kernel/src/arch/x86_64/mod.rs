@@ -1,6 +1,6 @@
 use crate::arch::{Arch, Processor};
 #[cfg(target_arch = "x86_64")]
-use crate::memory::vmm::Pagemap;
+use crate::{arch::x86_64::pt::pt_init, memory::vmm::Pagemap};
 
 
 
@@ -32,5 +32,8 @@ impl Arch for Processor{
         use crate::arch::x86_64::pt::read_cr3;
 
         core::ptr::with_exposed_provenance_mut::<u64>((read_cr3() as usize & !0xFFF) & !(1 << 63))
+    }
+    fn pt_init() -> (usize, usize) {
+        pt_init()
     }
 }

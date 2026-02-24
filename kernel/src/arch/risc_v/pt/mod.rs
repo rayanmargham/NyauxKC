@@ -1,13 +1,10 @@
 use bitflags::bitflags;
-use limine::{paging::Mode, request::ExecutableAddressRequest};
 
-use crate::{arch::PAGING_MODE_REQUEST, println};
-
+use crate::{arch::PAGING_MODE_REQUEST, memory::vmm::{Pagemap, VMMFlags}, println};
 
 
-#[used]
-#[unsafe(link_section = ".requests")]
-static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::new();
+
+
 bitflags! {
     struct PT: u8 {
         const VALID = 1 << 0;
@@ -19,14 +16,22 @@ bitflags! {
         
     }
 }
-pub fn pt_init() {
-    let mode = PAGING_MODE_REQUEST.get_response().unwrap().mode();
+impl Pagemap {
+    pub fn arch_map_region(&self, base: usize, length: usize, flags: VMMFlags) {
+        todo!()
+    }
+    pub fn arch_unmap_region(&self, base: usize, length: usize) {
+        todo!()
+    }
+}
+pub fn pt_init() -> (usize, usize) {
+    let mode = PAGING_MODE_REQUEST.response().unwrap().mode;
     let mut svwhat = false; // sv39 if false, sv48 if true
     match mode {
-        Mode::SV39 => {
+        limine_boot::paging::PagingMode::RISCV_SV39 => {
             println!("we will use sv39");
         },
-        Mode::SV48 | Mode::SV57 => {
+        limine_boot::paging::PagingMode::RISCV_SV48 | limine_boot::paging::PagingMode::RISCV_SV57 => {
             println!("we are going to use sv48");
             svwhat = true;
         },
@@ -35,4 +40,5 @@ pub fn pt_init() {
             
         }
     }
+    todo!()
 }

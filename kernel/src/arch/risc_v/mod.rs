@@ -24,8 +24,14 @@ impl Arch for Processor{
         pt::pt_init();
 
     }
-    fn arch_map_region(base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
-        panic!("todo");
+    
+    fn get_root_table() -> *mut u64 {
+        todo!()
     }
+    
+    fn pt_init() -> (usize, usize) {
+        todo!()
+    }
+
 }
 

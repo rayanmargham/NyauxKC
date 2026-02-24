@@ -10,7 +10,7 @@ name = "nyaux"
 bitflags = { version = "2.10.0", features = ["bytemuck"] }
 bytemuck = { version = "1.21", default-features = false, features = ["derive"] }
 flantermbindings = "0.1.4"
-limine-boot = { git = "https://github.com/robotman2412/limine-boot-rust"}
+limine-boot = { version = "0.6.0", git = "https://github.com/robotman2412/limine-boot-rust"}
 rustc-demangle = {version = "0.1.27", default-features = false, features = ["core"] }
 seq-macro = "0.3.6"
 

@@ -4,7 +4,7 @@ pub mod ft;
 pub mod arch;
 pub mod memory;
 
-use limine_boot::request::HhdmRequest;
+use limine_boot::request::{ExecutableAddressRequest, HhdmRequest};
 unsafe extern "C" {
     pub static KS: u8;
 }
@@ -27,7 +27,9 @@ use crate::memory::vmm::{VMMFlags, kermap};
 const fn align_up(value: u64, alignment: u64) -> u64 {
     (value + alignment - 1) & !(alignment - 1)
 }
-
+#[used]
+#[unsafe(link_section = ".requests")]
+static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::new();
 #[inline]
 const fn align_down(value: u64, alignment: u64) -> u64 {
     value & !(alignment - 1)

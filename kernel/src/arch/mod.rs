@@ -19,5 +19,6 @@ pub trait Arch {
     const PAGE_SIZE: usize;
     fn arch_init();
     fn get_root_table() -> *mut u64;
+    fn pt_init() -> (usize, usize);
 }
 pub struct Processor{}

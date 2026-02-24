@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 
-use crate::{HHDM_REQUEST, align_up, arch::{Arch, Processor, x86_64::pt::{KERNELADDR_REQUEST, pt_init}}, memory::slab::{slab_alloc, slab_dealloc}, println};
+use crate::{HHDM_REQUEST, align_up, arch::{Arch, Processor}, memory::slab::{slab_alloc, slab_dealloc}, println};
 
 
 bitflags! {
@@ -119,8 +119,8 @@ pub fn vmm_dealloc(&mut self, base: *mut (), user_allocated: bool) {
 }
 
 pub fn vmm_init() {
-    let shit= pt_init();
-    let kernel_region = VMMRegion::new(KERNELADDR_REQUEST.response().unwrap().virtual_base as usize,shit.1, VMMFlags::GLOBAL | VMMFlags::EXECUTABLE);
+    let shit= Processor::pt_init();
+    let kernel_region = VMMRegion::new(crate::KERNELADDR_REQUEST.response().unwrap().virtual_base as usize,shit.1, VMMFlags::GLOBAL | VMMFlags::EXECUTABLE);
     let hhdm_region = VMMRegion::new(HHDM_REQUEST.response().unwrap().offset as usize, shit.0, VMMFlags::GLOBAL | VMMFlags::EXECUTABLE | VMMFlags::WRITE);
     unsafe {
         (*hhdm_region).next = Some(kernel_region);

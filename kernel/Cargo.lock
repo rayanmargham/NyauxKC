@@ -151,8 +151,8 @@ dependencies = [
 
 [[package]]
 name = "limine-boot"
-version = "0.1.0"
-source = "git+https://github.com/robotman2412/limine-boot-rust#277fe0e4ddf2e8a7ee058c769667b1c98cf91de1"
+version = "0.6.0"
+source = "git+https://github.com/robotman2412/limine-boot-rust#2e219f1eb6f9be92ed8939d6f92c7b8f98962259"
 
 [[package]]
 name = "log"
