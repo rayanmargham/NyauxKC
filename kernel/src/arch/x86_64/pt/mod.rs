@@ -2,22 +2,24 @@ use core::ptr::addr_of;
 
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
-use limine_boot::request::ExecutableAddressRequest;
 use limine_boot::paging::PagingMode;
+use limine_boot::request::ExecutableAddressRequest;
 
 use crate::{
-    HHDM_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page}, vmm::{Pagemap, VMMFlags, kermap}}, print, println, status
+    HHDM_REQUEST, KERNELADDR_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{
+        pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page},
+        vmm::{Pagemap, VMMFlags, kermap},
+    }, print, println, status
 };
-const fn setup_phys_for_pte(phys: u64) -> u64 {
-    phys & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
+const fn extract_phys_from_pte(pte: u64) -> u64 {
+    pte & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
 }
-#[used]
-#[unsafe(link_section = ".requests")]
-pub static KERNELADDR_REQUEST: ExecutableAddressRequest = ExecutableAddressRequest::new();
+
+
 bitflags! {
 
     #[derive(PartialEq, Debug)]
-    pub struct PT: u8 {
+    pub struct PT: u16 {
         const PRESENT   = 1 << 0;
         const WRITE     = 1 << 1;
         const USER      = 1 << 2;
@@ -25,6 +27,9 @@ bitflags! {
         const GLOBAL    = 1 << 4;
         const GIGAPAGE  = 1 << 5;
         const MEGAPAGE  = 1 << 6;
+        const PWT       = 1 << 7;
+        const PCD       = 1 << 8;
+        const PAT       = 1 << 9;
     }
 }
 pub fn read_cr3() -> u64 {
@@ -71,6 +76,12 @@ impl PT {
         if (check & (1 << 2)) != 0 {
             r |= PT::USER;
         }
+        if (check & (1 << 3)) != 0 {
+            r |= PT::PWT;
+        }
+        if (check & (1 << 4)) != 0 {
+            r |= PT::PCD;
+        }
         if (check & (1 << 63)) != 0 {
             r |= PT::NEXEC;
         }
@@ -81,6 +92,9 @@ impl PT {
                     if check & (1 << 8) != 0 {
                         r |= PT::GLOBAL;
                     }
+                    if check & (1 << 12) != 0 {
+                        r |= PT::PAT;
+                    }
                 }
             }
             2 => {
@@ -89,11 +103,17 @@ impl PT {
                     if check & (1 << 8) != 0 {
                         r |= PT::GLOBAL;
                     }
+                    if check & (1 << 12) != 0 {
+                        r |= PT::PAT;
+                    }
                 }
             }
             1 => {
                 if check & (1 << 8) != 0 {
                     r |= PT::GLOBAL;
+                }
+                if check & (1 << 7) != 0 {
+                    r |= PT::PAT;
                 }
             }
             _ => {}
@@ -111,33 +131,44 @@ impl PT {
         if self.contains(PT::WRITE) {
             final_val |= 1 << 1;
         }
+        if self.contains(PT::PWT) {
+            final_val |= 1 << 3;
+        }
+        if self.contains(PT::PCD) {
+            final_val |= 1 << 4;
+        }
         if self.contains(PT::NEXEC) {
             final_val |= 1 << 63;
         }
         match lvl {
             3 => {
-                let mut giga = false;
                 if self.contains(PT::GIGAPAGE) {
-                    giga = true;
                     final_val |= 1 << 7;
-                }
-                if giga && self.contains(PT::GLOBAL) {
-                    final_val |= 1 << 8;
+                    if self.contains(PT::GLOBAL) {
+                        final_val |= 1 << 8;
+                    }
+                    if self.contains(PT::PAT) {
+                        final_val |= 1 << 12;
+                    }
                 }
             }
             2 => {
-                let mut mega = false;
                 if self.contains(PT::MEGAPAGE) {
-                    mega = true;
                     final_val |= 1 << 7;
-                }
-                if mega && self.contains(PT::GLOBAL) {
-                    final_val |= 1 << 8;
+                    if self.contains(PT::GLOBAL) {
+                        final_val |= 1 << 8;
+                    }
+                    if self.contains(PT::PAT) {
+                        final_val |= 1 << 12;
+                    }
                 }
             }
             1 => {
                 if self.contains(PT::GLOBAL) {
                     final_val |= 1 << 8;
+                }
+                if self.contains(PT::PAT) {
+                    final_val |= 1 << 7;
                 }
             }
             _ => {}
@@ -185,7 +216,6 @@ impl PTENT {
             .unwrap()
         };
         for j in (1..=4).rev() {
-
             let vi = virt >> {
                 match j {
                     4 => 39,
@@ -204,7 +234,14 @@ impl PTENT {
             if perm.contains(PT::MEGAPAGE) || perm.contains(PT::GIGAPAGE) || j == 1 {
                 let blah = vi * 8; // get the pte's address and prepare shit
                 unsafe {
-                return Ok(PTENT(targetted_table.as_mut_ptr().byte_add(blah as usize).byte_sub(HHDM_REQUEST.response().unwrap().offset as usize).cast::<u64>()));}
+                    return Ok(PTENT(
+                        targetted_table
+                            .as_mut_ptr()
+                            .byte_add(blah as usize)
+                            .byte_sub(HHDM_REQUEST.response().unwrap().offset as usize)
+                            .cast::<u64>(),
+                    ));
+                }
             }
             if next.0.is_null() {
                 if alloc {
@@ -223,7 +260,6 @@ impl PTENT {
                 }
             }
 
-
             targetted_table = unsafe {
                 core::ptr::without_provenance_mut::<[PTENT; 512]>(
                     ((next.0 as usize & !0xFFF) & !(1 << 63))
@@ -241,11 +277,18 @@ impl PTENT {
         if bro.is_err() {
             return;
         }
-        let h = unsafe {bro.unwrap().0.byte_add(HHDM_REQUEST.response().unwrap().offset as usize)};
-        
+        let h = unsafe {
+            bro.unwrap()
+                .0
+                .byte_add(HHDM_REQUEST.response().unwrap().offset as usize)
+        };
+
         if !h.is_null() {
             unsafe {
-                let page = core::ptr::with_exposed_provenance::<u64>(setup_phys_for_pte(h.read()) as usize).byte_add(HHDM_REQUEST.response().unwrap().offset as usize).cast_mut();
+                let page = core::ptr::with_exposed_provenance_mut::<u64>(
+                    extract_phys_from_pte(h.read()) as usize,
+                )
+                .byte_add(HHDM_REQUEST.response().unwrap().offset as usize);
                 deallocate_page(page.cast());
                 h.write(0);
                 core::arch::asm!("invlpg [{}]", in(reg) virt);
@@ -258,9 +301,12 @@ impl PTENT {
         if answer.is_ok() {
             unsafe {
                 let p_t = answer.unwrap();
-                let calculated_pt_val = setup_phys_for_pte(phys) | PT::build_permissions(&flags, 1) as u64;
-                
-                p_t.0.byte_add(HHDM_REQUEST.response().unwrap().offset as usize).write(calculated_pt_val);
+                let calculated_pt_val =
+                    extract_phys_from_pte(phys) | PT::build_permissions(&flags, 1) as u64;
+
+                p_t.0
+                    .byte_add(HHDM_REQUEST.response().unwrap().offset as usize)
+                    .write(calculated_pt_val);
                 return Ok(());
             }
         } else {
@@ -273,15 +319,17 @@ impl Pagemap {
         PTENT(self.arch_page)
     }
     pub fn arch_map_region(&self, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
+        let yo = self.archpt();
+        for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
+            use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
 
-            
-            let yo = self.archpt();
-            for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
-                use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
-
-                yo.map4kib(i as u64, allocate_page().addr() as u64 - HHDM_REQUEST.response().unwrap().offset, PT::from_vmmflags(flags)).unwrap();
-                
-            } 
+            yo.map4kib(
+                i as u64,
+                allocate_page().addr() as u64 - HHDM_REQUEST.response().unwrap().offset,
+                PT::from_vmmflags(flags),
+            )
+            .unwrap();
+        }
     }
     pub fn arch_unmap_region(&self, base: usize, length: usize) {
         let pml = self.archpt();
@@ -291,15 +339,15 @@ impl Pagemap {
     }
 }
 pub fn pt_init() -> (usize, usize) {
-    let kernel_size = align_up(addr_of!(KS) as u64,Processor::PAGE_SIZE as u64) as usize;
+    let kernel_size = align_up(addr_of!(KS) as u64, Processor::PAGE_SIZE as u64) as usize;
     println!("trying shit out, kernel size 0x{:x}", kernel_size);
     let pagingresponse = PAGING_MODE_REQUEST.response().unwrap();
-    
+
     match pagingresponse.mode {
-        PagingMode::X86_64_4LVL=> {
+        PagingMode::X86_64_4LVL => {
             println!("Booted with 4-lvl paging")
         }
-        PagingMode::X86_64_5LVL=> {
+        PagingMode::X86_64_5LVL => {
             println!("Booted with 5-lvl paging");
         }
         _ => {
@@ -314,7 +362,7 @@ pub fn pt_init() -> (usize, usize) {
         "got physical address {:p}",
         limine_pml4.get_table(0xffffffff80015000, false).unwrap().0
     );
-    let pml4= PTENT(unsafe {
+    let pml4 = PTENT(unsafe {
         allocate_page()
             .cast::<u8>()
             .sub(HHDM_REQUEST.response().unwrap().offset as usize)
@@ -325,28 +373,52 @@ pub fn pt_init() -> (usize, usize) {
     let kaddrp = KERNELADDR_REQUEST.response().unwrap().physical_base as usize;
     for i in (0..kernel_size).step_by(Processor::PAGE_SIZE) {
         //println!("virtual address to map of kernel 0x{:x}", i);
-        pml4.map4kib((kaddrv + i) as u64, (kaddrp + i) as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
+        pml4.map4kib(
+            (kaddrv + i) as u64,
+            (kaddrp + i) as u64,
+            PT::GLOBAL | PT::PRESENT | PT::WRITE,
+        )
+        .unwrap();
     }
     let mut max_hhdm_phys = 0 as usize;
+    let mut memmap_fb_info: (usize, usize) = (0, 0);
     if let Some(memap_res) = MEMMAP_REQUEST.response() {
         for i in memap_res.entries() {
             match i.type_ {
-                limine_boot::memmap::MEMMAP_MAPPED_RESERVED | limine_boot::memmap::MEMMAP_USABLE | limine_boot::memmap::MEMMAP_BOOTLOADER_RECLAIMABLE | limine_boot::memmap::MEMMAP_EXECUTABLE_AND_MODULES | limine_boot::memmap::MEMMAP_FRAMEBUFFER | limine_boot::memmap::MEMMAP_ACPI_NVS | limine_boot::memmap::MEMMAP_ACPI_RECLAIMABLE => {
+                limine_boot::memmap::MEMMAP_MAPPED_RESERVED
+                | limine_boot::memmap::MEMMAP_USABLE
+                | limine_boot::memmap::MEMMAP_BOOTLOADER_RECLAIMABLE
+                | limine_boot::memmap::MEMMAP_EXECUTABLE_AND_MODULES
+                | limine_boot::memmap::MEMMAP_ACPI_NVS
+                | limine_boot::memmap::MEMMAP_ACPI_RECLAIMABLE => {
                     max_hhdm_phys = (i.base + i.length).max(max_hhdm_phys as u64) as usize;
-                },
-                _ => {
-
                 }
+                limine_boot::memmap::MEMMAP_FRAMEBUFFER => {
+                    max_hhdm_phys = (i.base + i.length).max(max_hhdm_phys as u64) as usize;
+                    memmap_fb_info = (i.base as usize, i.length as usize);
+                }
+                _ => {}
             }
         }
     }
     max_hhdm_phys = align_up(max_hhdm_phys as u64, Processor::PAGE_SIZE as u64) as usize;
     for i in (0..max_hhdm_phys).step_by(Processor::PAGE_SIZE) {
-        pml4.map4kib(HHDM_REQUEST.response().unwrap().offset + (i as u64), i as u64, PT::GLOBAL | PT::PRESENT | PT::WRITE).unwrap();
+        let flags = {
+            if i >= memmap_fb_info.0 && i < (memmap_fb_info.0 + memmap_fb_info.1) {
+                PT::GLOBAL | PT::PRESENT | PT::WRITE | PT::NEXEC | PT::PAT | PT::PWT
+            } else {
+                PT::GLOBAL | PT::PRESENT | PT::WRITE
+            }
+        };
+        pml4.map4kib(
+            HHDM_REQUEST.response().unwrap().offset + (i as u64),
+            i as u64,
+            flags,
+        )
+        .unwrap();
     }
     println!("writing pml4 address to cr3 {}", pml4.0.addr());
     write_cr3(pml4.0.addr() as u64);
     status!("page tables switched to Nyaux!");
     (max_hhdm_phys, kernel_size)
-
 }

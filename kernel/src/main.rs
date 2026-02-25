@@ -12,7 +12,7 @@ unsafe extern "C" {
 #[unsafe(link_section = ".requests")]
 static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
 use core::arch::asm;
-use core::ptr::addr_of;
+use core::ptr::{addr_of, addr_of_mut};
 use core::{alloc, u64};
 
 use flantermbindings::flanterm::flanterm_fb_init;
@@ -22,7 +22,7 @@ use crate::arch::{Arch, Processor};
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
-use crate::memory::vmm::{VMMFlags, kermap};
+use crate::memory::vmm::{self, VMMFlags, kermap};
 #[inline]
 const fn align_up(value: u64, alignment: u64) -> u64 {
     (value + alignment - 1) & !(alignment - 1)
@@ -60,8 +60,10 @@ unsafe extern "C" fn kmain() -> ! {
             unsafe {
                 init_terminal(flanterm_fb_init(None, None, framebuffer.address() as *mut u32, framebuffer.width as usize, framebuffer.height as usize, framebuffer.pitch as usize, framebuffer.red_mask_size, framebuffer.red_mask_shift, framebuffer.green_mask_size, framebuffer.green_mask_shift, framebuffer.blue_mask_size, framebuffer.blue_mask_shift, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut u32, 0 as *mut _, 0, 0, 0, 1, 1, 50));
             }
-            Processor::arch_init();
             
+            pmm::init();
+            Processor::arch_init();
+            vmm::vmm_init();
             println!(
                 "Nyaux on the Nya Kernel!"
             );
@@ -75,6 +77,9 @@ unsafe extern "C" fn kmain() -> ! {
             slab_dealloc(bro.cast());
             
             status!("slab");
+            let map = unsafe {
+                (&mut *addr_of_mut!(kermap)).as_mut().unwrap()
+            };
             let yaho = unsafe {(&mut *core::ptr::addr_of_mut!(kermap)).as_mut().unwrap().vmm_alloc(Processor::PAGE_SIZE * 10, VMMFlags::WRITE).unwrap()};
             let yaho = yaho.cast::<u8>();
             println!("vmm_alloc returned: 0x{:x}", yaho.addr());
@@ -87,6 +92,8 @@ unsafe extern "C" fn kmain() -> ! {
                 }
             }
             status!("vmm_alloc works");
+            map.vmm_dealloc(yaho.cast(), false);
+            status!("it worked");
 
         
     }

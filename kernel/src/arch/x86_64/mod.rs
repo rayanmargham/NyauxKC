@@ -25,8 +25,6 @@ impl Arch for Processor{
         println!("x86_64 init");
         gdt::gdt_init();
         idt::idt_init();
-        pmm::init();
-        vmm::vmm_init();
     }
     fn get_root_table() -> *mut u64 {
         use crate::arch::x86_64::pt::read_cr3;
