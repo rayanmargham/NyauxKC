@@ -190,8 +190,18 @@ dependencies = [
  "bytemuck",
  "flantermbindings",
  "limine-boot",
+ "nyaux_uacpi_bindings",
  "rustc-demangle",
  "seq-macro",
+]
+
+[[package]]
+name = "nyaux_uacpi_bindings"
+version = "0.0.1"
+source = "git+https://github.com/rayanmargham/nyaux_uacpi_bindings#32817c29529ef1e75eafca97d6a0efe2695101f5"
+dependencies = [
+ "bindgen",
+ "cc",
 ]
 
 [[package]]

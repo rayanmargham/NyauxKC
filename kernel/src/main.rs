@@ -3,17 +3,22 @@
 pub mod ft;
 pub mod arch;
 pub mod memory;
-
-use limine_boot::request::{ExecutableAddressRequest, HhdmRequest};
+pub mod uacpi;
+pub mod util;
+extern crate alloc;
+use alloc::boxed::Box;
+use limine_boot::request::{ExecutableAddressRequest, HhdmRequest, RsdpRequest};
 unsafe extern "C" {
     pub static KS: u8;
 }
 #[used]
 #[unsafe(link_section = ".requests")]
 static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
+#[used]
+#[unsafe(link_section = ".requets")]
+static RSDP_REQUEST: RsdpRequest = RsdpRequest::new();
 use core::arch::asm;
 use core::ptr::{addr_of, addr_of_mut};
-use core::{alloc, u64};
 
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine_boot::BaseRevision;
@@ -23,6 +28,7 @@ use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
 use crate::memory::vmm::{self, VMMFlags, kermap};
+use crate::uacpi::init_uacpi;
 #[inline]
 const fn align_up(value: u64, alignment: u64) -> u64 {
     (value + alignment - 1) & !(alignment - 1)
@@ -93,8 +99,7 @@ unsafe extern "C" fn kmain() -> ! {
             }
             status!("vmm_alloc works");
             map.vmm_dealloc(yaho.cast(), false);
-            status!("it worked");
-
+            init_uacpi();
         
     }
 
