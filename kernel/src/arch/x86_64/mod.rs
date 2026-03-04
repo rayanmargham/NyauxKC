@@ -34,4 +34,48 @@ impl Arch for Processor{
     fn pt_init() -> (usize, usize) {
         pt_init()
     }
+    fn raw_io_in(addr: u64, byte_width: u8) -> u64 {
+        match byte_width {
+            1 => {
+                let h: u8;
+                unsafe {
+                core::arch::asm!("in al, dx", out("al") h, in("dx") addr as u16)};
+                return h as u64;
+            },
+            2 => {
+                let h: u16;
+                unsafe {
+                core::arch::asm!("in ax, dx", out("ax") h, in("dx") addr as u16)};
+                return h as u64;
+
+            },
+            4 => {
+                let h: u32;
+                unsafe {
+                core::arch::asm!("in eax, dx", out("eax") h, in("dx") addr as u16)};
+                return h as u64;
+
+            },
+            _ => {panic!("invalid")}
+        }
+    }
+    fn raw_io_out(addr: u64, data: u64, byte_width: u8) {
+        match byte_width {
+            1 => {
+                unsafe {
+                core::arch::asm!("out dx, al", in("dx") addr, in("al") data as u8)};
+            },
+            2 => {
+                 unsafe {
+                core::arch::asm!("out dx, ax", in("dx") addr, in("ax") data as u16)};
+            },
+            4 => {
+                unsafe {
+                core::arch::asm!("out dx, eax", in("dx") addr, in("eax") data as u32)};
+            },
+            _ => {
+
+            }
+        }
+    }
 }

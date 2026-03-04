@@ -48,7 +48,6 @@ impl slab_header {
     }
     fn alloc(&mut self) -> Result<*mut (), ()> {
         let mut cur_slab = self;
-        println!("obj size: {}", cur_slab.obj_size);
         loop {
             if cur_slab.obj != core::ptr::null_mut() {
                 let bro = unsafe { (*cur_slab.obj).next };
@@ -58,19 +57,27 @@ impl slab_header {
 
                         bro.cast::<u8>().write_bytes(0, cur_slab.obj_size);
                     };
+                    cur_slab.obj_am-= 1;
                     return Ok(bro.cast());
                 } else {
                     unsafe {
                         cur_slab.obj.cast::<u8>().write_bytes(0, cur_slab.obj_size);
                     };
-                    return Ok(cur_slab.obj.cast());
+                    cur_slab.obj_am -= 1;
+                    let re = cur_slab.obj;
+                    cur_slab.obj = core::ptr::null_mut();
+                    return Ok(re.cast());
                 }
             }
             unsafe {
                 if let Some(b) = cur_slab.other_slabs.as_mut() {
                     cur_slab = b;
                 } else {
-                    cur_slab = slab_header::init(cur_slab.obj_size).as_mut().unwrap();
+                    let sz = cur_slab.obj_size;
+                    let a = cur_slab;
+                    cur_slab = slab_header::init(sz).as_mut().unwrap();
+                    a.other_slabs = cur_slab
+
                 }
             };
         }
@@ -91,7 +98,6 @@ impl slabcache {
     }
     fn alloc(&mut self) -> Result<*mut (), ()> {
         if self.slabs != core::ptr::null_mut() {
-            println!("{:?}", self.slabs.read());
             return unsafe {(*self.slabs).alloc()};
         } else {
             panic!("slab cache not inited yet");
@@ -120,9 +126,8 @@ pub fn init_slab() {
 
 pub fn slab_alloc(size: usize) -> Result<*mut (), ()> {
     assert!(size <= size.next_power_of_two());
-    for i in 0..6 {
+    for i in 0..7 {
         let mut s = unsafe {slab_caches[i]};
-        println!("index {}, size {}", i, s.size);
         if s.size < size {
             continue;
         }
@@ -140,12 +145,18 @@ pub fn slab_dealloc(addr: *mut ()) {
         let old = unsafe { hehe.read().obj };
         if old == core::ptr::null_mut() {
             unsafe {
-                hehe.read().obj = addr.cast();
+                let mut e = hehe.read();
+                e.obj = addr.cast();
+                e.obj_am += 1;
+                hehe.write(e);
             }
         } else {
             unsafe {
                 (*(addr.cast() as *mut slab_obj)).next = old;
-                hehe.read().obj = addr.cast();
+                let mut e = hehe.read();
+                e.obj = addr.cast();
+                e.obj_am += 1;
+                hehe.write(e);
             }
         }
 }

@@ -20,5 +20,7 @@ pub trait Arch {
     fn arch_init();
     fn get_root_table() -> *mut u64;
     fn pt_init() -> (usize, usize);
+    fn raw_io_in(addr: u64, byte_width: u8) -> u64;
+    fn raw_io_out(addr: u64, data: u64, byte_width: u8);
 }
 pub struct Processor{}

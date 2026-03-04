@@ -1,15 +1,16 @@
-use core::ffi::CStr;
+use core::{ffi::CStr, ptr::{addr_of, addr_of_mut}};
 
 use alloc::{boxed::Box, ffi::CString};
-use nyaux_uacpi_bindings::{UACPI_LOG_DEBUG, UACPI_LOG_ERROR, UACPI_LOG_INFO, UACPI_LOG_TRACE, UACPI_LOG_WARN, UACPI_STATUS_OK, UACPI_STATUS_UNIMPLEMENTED, uacpi_bool, uacpi_char, uacpi_cpu_flags, uacpi_firmware_request, uacpi_handle, uacpi_init_level, uacpi_initialize, uacpi_interrupt_handler, uacpi_io_addr, uacpi_log_level, uacpi_pci_address, uacpi_phys_addr, uacpi_size, uacpi_status, uacpi_status_to_string, uacpi_thread_id, uacpi_u8, uacpi_u16, uacpi_u32, uacpi_u64, uacpi_work_handler, uacpi_work_type};
+use nyaux_uacpi_bindings::{UACPI_LOG_DEBUG, UACPI_LOG_ERROR, UACPI_LOG_INFO, UACPI_LOG_TRACE, UACPI_LOG_WARN, UACPI_STATUS_OK, UACPI_STATUS_UNIMPLEMENTED, uacpi_bool, uacpi_char, uacpi_cpu_flags, uacpi_firmware_request, uacpi_handle, uacpi_init_level, uacpi_initialize, uacpi_interrupt_handler, uacpi_io_addr, uacpi_log_level, uacpi_namespace_initialize, uacpi_namespace_load, uacpi_pci_address, uacpi_phys_addr, uacpi_size, uacpi_status, uacpi_status_to_string, uacpi_thread_id, uacpi_u8, uacpi_u16, uacpi_u32, uacpi_u64, uacpi_work_handler, uacpi_work_type};
 
-use crate::{HHDM_REQUEST, RSDP_REQUEST, memory::slab::{slab_alloc, slab_dealloc}, print, println, util::SpinLock};
+use crate::{HHDM_REQUEST, RSDP_REQUEST, arch::{Arch, Processor}, memory::{slab::{slab_alloc, slab_dealloc}, vmm::{VMMFlags, kermap}}, print, println, util::SpinLock};
 #[unsafe(no_mangle)]
 unsafe extern "C" fn uacpi_kernel_alloc(size: uacpi_size) -> *mut core::ffi::c_void {
     if size <= 1024 {
         return slab_alloc(size).unwrap().cast()
     } else {
-        panic!("shit");
+        // dont question this, this is only temp until I implement the scheduler
+        unsafe {(&mut *addr_of_mut!(kermap))}.as_mut().unwrap().vmm_alloc(size, VMMFlags::WRITE).unwrap().cast()
     }
 }
 #[unsafe(no_mangle)]
@@ -17,7 +18,7 @@ pub unsafe fn uacpi_kernel_free(mem: *mut ::core::ffi::c_void, size_hint: uacpi_
     if size_hint <= 1024 {
         slab_dealloc(mem.cast());
     } else {
-        panic!("shit");
+        unsafe {&mut *addr_of_mut!(kermap)}.as_mut().unwrap().vmm_dealloc(mem.cast(), false);
     }
 }
 #[unsafe(no_mangle)]
@@ -138,6 +139,10 @@ unsafe extern "C" fn uacpi_kernel_pci_write32(
         UACPI_STATUS_UNIMPLEMENTED
 
     }
+pub struct io_range {
+    base: uacpi_io_addr,
+    len: uacpi_size
+}
 #[unsafe(no_mangle)]
 
 unsafe extern "C" fn uacpi_kernel_io_map(
@@ -145,13 +150,19 @@ unsafe extern "C" fn uacpi_kernel_io_map(
         len: uacpi_size,
         out_handle: *mut uacpi_handle,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
+        let h = Box::new(io_range {
+            base,
+            len
+        });
+        unsafe {out_handle.write(Box::into_raw(h).cast())};
+        UACPI_STATUS_OK
 
     }
 #[unsafe(no_mangle)]
 
 unsafe extern "C" fn uacpi_kernel_io_unmap(handle: uacpi_handle) {
-
+    let h: Box<io_range> = unsafe {Box::from_raw(handle.cast())};
+    drop(h);
 }
 #[unsafe(no_mangle)]
 
@@ -160,9 +171,10 @@ unsafe extern "C" fn uacpi_kernel_io_read8(
         offset: uacpi_size,
         out_value: *mut uacpi_u8,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
-
-    }
+        let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
+        unsafe {out_value.write_volatile(Processor::raw_io_in((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, 1) as u8)};
+        UACPI_STATUS_OK
+    }   
 #[unsafe(no_mangle)]
 
 unsafe extern "C" fn uacpi_kernel_io_read16(
@@ -170,7 +182,9 @@ unsafe extern "C" fn uacpi_kernel_io_read16(
         offset: uacpi_size,
         out_value: *mut uacpi_u16,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
+let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
+        unsafe {out_value.write_volatile(Processor::raw_io_in((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, 2) as u16)};
+        UACPI_STATUS_OK
 
     }
 #[unsafe(no_mangle)]
@@ -180,8 +194,10 @@ unsafe extern "C" fn uacpi_kernel_io_read32(
         offset: uacpi_size,
         out_value: *mut uacpi_u32,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
+let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
+        unsafe {out_value.write_volatile(Processor::raw_io_in((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, 4) as u32)};
 
+        UACPI_STATUS_OK
     }
 #[unsafe(no_mangle)]
 
@@ -190,8 +206,10 @@ unsafe extern "C" fn uacpi_kernel_io_write8(
         offset: uacpi_size,
         in_value: uacpi_u8,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
-
+let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
+        Processor::raw_io_out((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, in_value as u64, 1);
+        UACPI_STATUS_OK
+ 
     }
 #[unsafe(no_mangle)]
 
@@ -200,8 +218,10 @@ unsafe extern "C" fn uacpi_kernel_io_write16(
         offset: uacpi_size,
         in_value: uacpi_u16,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
-
+let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
+        Processor::raw_io_out((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, in_value as u64, 2);
+        UACPI_STATUS_OK
+ 
     }
 #[unsafe(no_mangle)]
 
@@ -210,8 +230,10 @@ unsafe extern "C" fn uacpi_kernel_io_write32(
         offset: uacpi_size,
         in_value: uacpi_u32,
     ) -> uacpi_status {
-        UACPI_STATUS_UNIMPLEMENTED
-
+let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
+        Processor::raw_io_out((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, in_value as u64, 4);
+        UACPI_STATUS_OK
+ 
     }
 #[unsafe(no_mangle)]
 
@@ -350,9 +372,18 @@ unsafe extern "C" fn uacpi_kernel_schedule_work(
 unsafe extern "C" fn uacpi_kernel_wait_for_work_completion() -> uacpi_status {
     UACPI_STATUS_UNIMPLEMENTED
 }
+pub fn check_ustatus<'a>(s: u32) -> Result<(), ()>{
+    let m = unsafe {
+        CStr::from_ptr(uacpi_status_to_string(s)).to_str()
+    }.unwrap();
+    println!("{}", m);
+    assert_eq!(s, 0);
+    Ok(())
+}
 pub fn init_uacpi() {
-    let mut status = unsafe {uacpi_initialize(0)};
-    let m = unsafe {CStr::from_ptr(uacpi_status_to_string(status)).to_str()};
-    println!("{}", m.unwrap());
-    assert_eq!(status, 0);
+    unsafe {
+
+    check_ustatus(uacpi_initialize(0)).unwrap();
+    check_ustatus(uacpi_namespace_load()).unwrap();
+    }
 }

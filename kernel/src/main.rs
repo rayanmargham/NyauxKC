@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(debug_closure_helpers)]
 #![no_main]
 pub mod ft;
 pub mod arch;
@@ -6,6 +7,14 @@ pub mod memory;
 pub mod uacpi;
 pub mod util;
 extern crate alloc;
+
+// GCC runtime helper not provided by compiler_builtins on RISC-V without Zbb.
+// ffs(v): index of lowest set bit (1-indexed), or 0 if v == 0.
+#[cfg(target_arch = "riscv64")]
+#[unsafe(no_mangle)]
+extern "C" fn __ffsdi2(v: u64) -> i32 {
+    if v == 0 { 0 } else { v.trailing_zeros() as i32 + 1 }
+}
 use alloc::boxed::Box;
 use limine_boot::request::{ExecutableAddressRequest, HhdmRequest, RsdpRequest};
 unsafe extern "C" {
@@ -77,8 +86,8 @@ unsafe extern "C" fn kmain() -> ! {
             let bro = slab_alloc(size_of::<[i32; 100]>()).unwrap().cast::<[i32; 100]>();
             unsafe {
             for i in 0..100 {
-                bro.add(i).cast::<i32>().write(i as i32);
-                assert_eq!(bro.add(i).cast::<i32>().read(), i as i32);
+                bro.cast::<i32>().add(i).write(i as i32);
+                assert_eq!(bro.cast::<i32>().add(i).read(), i as i32);
             } }
             slab_dealloc(bro.cast());
             
