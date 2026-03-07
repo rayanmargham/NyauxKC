@@ -172,7 +172,7 @@ unsafe extern "C" fn uacpi_kernel_io_read8(
         out_value: *mut uacpi_u8,
     ) -> uacpi_status {
         let a: &io_range = unsafe {&*arg1.cast::<io_range>()};
-        unsafe {out_value.write_volatile(Processor::raw_io_in((a.base as u64) + offset as u64 + if cfg!(target_arch = "riscv64") { HHDM_REQUEST.response().unwrap().offset as u64 } else { 0 }, 1) as u8)};
+        unsafe {out_value.write_volatile(Processor::raw_io_in(a.base + offset as u64, 1) as u8)};
         UACPI_STATUS_OK
     }   
 #[unsafe(no_mangle)]

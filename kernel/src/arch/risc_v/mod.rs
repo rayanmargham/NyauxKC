@@ -6,6 +6,7 @@ use crate::arch::risc_v::interrupts::setup_interrupts;
 use crate::arch::risc_v::pt::PTENT;
 use crate::arch::risc_v::pt::phys_to_virt;
 use crate::println;
+use crate::HHDM_REQUEST;
 #[cfg(target_arch = "riscv64")]
 pub mod interrupts;
 pub mod pt;
@@ -38,6 +39,7 @@ impl Arch for Processor{
         pt::pt_init()
     }
     fn raw_io_in(addr: u64, byte_width: u8) -> u64 {
+        let addr = addr + HHDM_REQUEST.response().unwrap().offset;
         match byte_width {
             1 => {
                 return unsafe {core::ptr::with_exposed_provenance_mut::<u8>(addr as usize).read_volatile()} as u64;

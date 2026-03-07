@@ -6,6 +6,7 @@ pub mod arch;
 pub mod memory;
 pub mod uacpi;
 pub mod util;
+pub mod pci;
 extern crate alloc;
 
 // GCC runtime helper not provided by compiler_builtins on RISC-V without Zbb.
