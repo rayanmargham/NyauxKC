@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(debug_closure_helpers)]
+#![allow(nonstandard_style)]
 #![no_main]
 pub mod ft;
 pub mod arch;
