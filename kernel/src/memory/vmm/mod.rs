@@ -1,6 +1,7 @@
+use alloc::vec::Vec;
 use bitflags::bitflags;
 
-use crate::{HHDM_REQUEST, align_up, arch::{Arch, Processor}, memory::slab::{slab_alloc, slab_dealloc}, println};
+use crate::{HHDM_REQUEST, align_up, arch::{Arch, Processor}, memory::slab::{slab_alloc, slab_dealloc}, println, util::Once};
 
 
 bitflags! {
@@ -41,6 +42,41 @@ pub struct Pagemap {
 }
 pub static mut kermap: Option<Pagemap> = None;
 impl Pagemap {
+    pub fn vmm_alloc_with_phys(&self, amount: usize, flags: VMMFlags, pa: Vec<u64>) -> Result<*mut (), &'static str>{
+        if flags.contains(VMMFlags::USER) {
+        panic!("todo")
+    } else {
+        let mut cur: Option<*mut VMMRegion> = self.khead;
+        let mut prev: Option<*mut VMMRegion> = None;
+        while cur.is_some() {
+            if prev.is_none() {
+                prev = cur;
+                cur = unsafe {cur.unwrap().read().next};
+                continue;
+            }
+            let w = unsafe {prev.unwrap().read()};
+            let q = unsafe {cur.unwrap().read()};
+            let calculation = q.base.saturating_sub(w.base + w.length);
+            if calculation >= (align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize + Processor::PAGE_SIZE as usize) {
+                let e = VMMRegion::new(w.base + w.length, align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize, flags);
+                unsafe {
+                    (*prev.unwrap()).next = Some(e); 
+                }
+                unsafe {
+                    (*e).next = Some(cur.unwrap());
+                }
+                let info = unsafe {e.read()};
+                self.arch_map_region(info.base, info.length, pa, flags);
+                return Ok(core::ptr::without_provenance_mut::<()>(info.base));
+            } else {
+                prev = cur;
+                cur = unsafe {cur.unwrap().read().next};
+                continue;
+            }
+        }
+        panic!("gg");
+    }
+    }
     pub fn vmm_alloc(&self, amount: usize, flags: VMMFlags) -> Result<*mut (), &'static str> {
     if flags.contains(VMMFlags::USER) {
         panic!("todo")
@@ -65,7 +101,7 @@ impl Pagemap {
                     (*e).next = Some(cur.unwrap());
                 }
                 let info = unsafe {e.read()};
-                self.arch_map_region(info.base, info.length, flags);
+                self.arch_map_region_alloc(info.base, info.length, flags);
                 return Ok(core::ptr::without_provenance_mut::<()>(info.base));
             } else {
                 prev = cur;
@@ -117,11 +153,12 @@ pub fn vmm_dealloc(&mut self, base: *mut (), user_allocated: bool) {
     }
 }
 }
-
+pub static max_hhdm_phy: Once<usize> = Once::new();
 pub fn vmm_init() {
     let shit= Processor::pt_init();
     let kernel_region = VMMRegion::new(crate::KERNELADDR_REQUEST.response().unwrap().virtual_base as usize,shit.1, VMMFlags::GLOBAL | VMMFlags::EXECUTABLE);
     let hhdm_region = VMMRegion::new(HHDM_REQUEST.response().unwrap().offset as usize, shit.0, VMMFlags::GLOBAL | VMMFlags::EXECUTABLE | VMMFlags::WRITE);
+    max_hhdm_phy.call_once(|| shit.0);
     unsafe {
         (*hhdm_region).next = Some(kernel_region);
     }

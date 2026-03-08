@@ -1,9 +1,9 @@
 use core::{ffi::{CStr, c_void}, ptr::{addr_of, addr_of_mut}};
 
-use alloc::{boxed::Box, ffi::CString};
+use alloc::{boxed::Box, ffi::CString, vec::{self, Vec}};
 use nyaux_uacpi_bindings::{UACPI_LOG_DEBUG, UACPI_LOG_ERROR, UACPI_LOG_INFO, UACPI_LOG_TRACE, UACPI_LOG_WARN, UACPI_STATUS_OK, UACPI_STATUS_UNIMPLEMENTED, uacpi_bool, uacpi_char, uacpi_cpu_flags, uacpi_firmware_request, uacpi_handle, uacpi_init_level, uacpi_initialize, uacpi_interrupt_handler, uacpi_io_addr, uacpi_log_level, uacpi_namespace_initialize, uacpi_namespace_load, uacpi_pci_address, uacpi_phys_addr, uacpi_size, uacpi_status, uacpi_status_to_string, uacpi_thread_id, uacpi_u8, uacpi_u16, uacpi_u32, uacpi_u64, uacpi_work_handler, uacpi_work_type};
 
-use crate::{HHDM_REQUEST, RSDP_REQUEST, arch::{Arch, Processor}, memory::{slab::{slab_alloc, slab_dealloc}, vmm::{VMMFlags, kermap}}, pci::{pci_init, pci_read_byte, pci_read_dword, pci_read_word, pci_write_byte, pci_write_dword, pci_write_word}, print, println, util::SpinLock};
+use crate::{HHDM_REQUEST, RSDP_REQUEST, arch::{Arch, Processor}, early_init_pagemap, memory::{slab::{slab_alloc, slab_dealloc}, vmm::{VMMFlags, kermap, max_hhdm_phy}}, pci::{pci_init, pci_read_byte, pci_read_dword, pci_read_word, pci_write_byte, pci_write_dword, pci_write_word}, print, println, util::SpinLock};
 #[unsafe(no_mangle)]
 unsafe extern "C" fn uacpi_kernel_alloc(size: uacpi_size) -> *mut core::ffi::c_void {
     if size <= 1024 {
@@ -33,12 +33,24 @@ unsafe extern "C" fn uacpi_kernel_get_rsdp(out_rsdp_address: *mut uacpi_phys_add
 #[unsafe(no_mangle)]
 
 unsafe extern "C" fn uacpi_kernel_map(addr: uacpi_phys_addr, len: uacpi_size) -> *mut ::core::ffi::c_void {
-    return core::ptr::with_exposed_provenance_mut::<core::ffi::c_void>(addr as usize+ HHDM_REQUEST.response().unwrap().offset as usize)
+    if addr < (*max_hhdm_phy.get().unwrap()) as u64 {
+        
+        return core::ptr::with_exposed_provenance_mut::<core::ffi::c_void>(addr as usize+ HHDM_REQUEST.response().unwrap().offset as usize)
+    } else {
+        let mut ve = Vec::new();
+        for i in (addr..(addr + (len as u64))).step_by(Processor::PAGE_SIZE) {
+            ve.push(i);
+        }
+        early_init_pagemap!().vmm_alloc_with_phys(len, VMMFlags::WRITE, ve).unwrap().cast()
+        //panic!("yo addr to map is 0x{:x} len: 0x{:x}", addr, len);
+    }
 }
 #[unsafe(no_mangle)]
 
 unsafe extern "C" fn uacpi_kernel_unmap(addr: *mut ::core::ffi::c_void, len: uacpi_size) {
-
+    if addr.addr() as u64 > (*max_hhdm_phy.get().unwrap()) as u64 {
+        early_init_pagemap!().vmm_dealloc(addr.cast(), false);
+    }
 }
 #[unsafe(no_mangle)]
 
@@ -383,7 +395,7 @@ unsafe extern "C" fn uacpi_kernel_schedule_work(
 unsafe extern "C" fn uacpi_kernel_wait_for_work_completion() -> uacpi_status {
     UACPI_STATUS_UNIMPLEMENTED
 }
-pub fn check_ustatus<'a>(s: u32) -> Result<(), &'static str>{
+pub fn check_ustatus(s: u32) -> Result<(), &'static str>{
     let m = unsafe {
         CStr::from_ptr(uacpi_status_to_string(s)).to_str()
     }.unwrap();
@@ -398,8 +410,8 @@ pub fn init_uacpi() {
     unsafe {
 
     check_ustatus(uacpi_initialize(0)).unwrap();
-    check_ustatus(uacpi_namespace_load()); // ignore value
-    check_ustatus(uacpi_namespace_initialize());
+    check_ustatus(uacpi_namespace_load()).unwrap(); // ignore value
+    check_ustatus(uacpi_namespace_initialize()).unwrap();
     pci_init();
     }
 }

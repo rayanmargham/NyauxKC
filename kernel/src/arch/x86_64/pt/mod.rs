@@ -1,5 +1,6 @@
 use core::ptr::addr_of;
 
+use alloc::vec::Vec;
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use limine_boot::paging::PagingMode;
@@ -318,7 +319,7 @@ impl Pagemap {
     pub fn archpt(&self) -> PTENT {
         PTENT(self.arch_page)
     }
-    pub fn arch_map_region(&self, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
+    pub fn arch_map_region_alloc(&self, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
         let yo = self.archpt();
         for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
             use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
@@ -329,6 +330,15 @@ impl Pagemap {
                 PT::from_vmmflags(flags),
             )
             .unwrap();
+        }
+    }
+    pub fn arch_map_region(&self, base: usize, length: usize, phys: Vec<u64>, flags: crate::memory::vmm::VMMFlags) {
+        let yo = self.archpt();
+        for (idx, i) in (base..(base + length)).step_by(Processor::PAGE_SIZE).enumerate() {
+            let pa = phys[idx];
+            println!("idx {}, i 0x{:x}", idx, i);
+            yo.map4kib(
+                i as u64, pa, PT::from_vmmflags(flags)).unwrap();
         }
     }
     pub fn arch_unmap_region(&self, base: usize, length: usize) {

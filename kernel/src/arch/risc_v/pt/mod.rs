@@ -3,7 +3,7 @@ use core::ptr::addr_of;
 use bitflags::bitflags;
 
 use crate::{HHDM_REQUEST, KERNELADDR_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page}, vmm::{Pagemap, VMMFlags}}, println};
-
+use alloc::vec::Vec;
 
 pub fn phys_to_virt<T>(phys: u64) -> *mut T {
     unsafe {
@@ -161,7 +161,7 @@ impl Pagemap {
     pub fn archpt(&self) -> PTENT {
         PTENT(self.arch_page.expose_provenance() as u64)
     }
-    pub fn arch_map_region(&self, base: usize, length: usize, flags: VMMFlags) {
+    pub fn arch_map_region_alloc(&self, base: usize, length: usize, flags: VMMFlags) {
         let yo = self.archpt();
         println!("yo is 0x{:x}", yo.0);
         for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
@@ -174,6 +174,16 @@ impl Pagemap {
         let yo = self.archpt();
         for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
             yo.unmap4kib(i as u64);
+        }
+    }
+
+    pub fn arch_map_region(&self, base: usize, length: usize, phys: Vec<u64>, flags: crate::memory::vmm::VMMFlags) {
+        let yo = self.archpt();
+        for (idx, i) in (base..(base + length)).step_by(Processor::PAGE_SIZE).enumerate() {
+            let pa = phys[idx];
+            println!("idx {}, i 0x{:x}", idx, i);
+            yo.map4kib(
+                i as u64, pa, PT::from_vmmflags(flags)).unwrap();
         }
     }
 }

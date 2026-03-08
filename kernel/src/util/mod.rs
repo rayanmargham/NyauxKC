@@ -1,5 +1,12 @@
 use core::{hint, sync::atomic::AtomicBool};
 
+#[macro_export]
+macro_rules! early_init_pagemap {
+    () => {
+        unsafe { (&mut *core::ptr::addr_of_mut!(crate::memory::vmm::kermap)).as_mut().unwrap() }
+    };
+}
+
 
 pub struct SpinLock(AtomicBool);
 

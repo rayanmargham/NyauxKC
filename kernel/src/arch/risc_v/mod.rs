@@ -56,17 +56,16 @@ impl Arch for Processor{
         }
     }
     fn raw_io_out(addr: u64, data: u64, byte_width: u8) {
+        let addr = addr + HHDM_REQUEST.response().unwrap().offset;
         match byte_width {
             1 => {
                 unsafe {core::ptr::with_exposed_provenance_mut::<u8>(addr as usize).write_volatile(data as u8)};
             },
             2 => {
                 unsafe {core::ptr::with_exposed_provenance_mut::<u16>(addr as usize).write_volatile(data as u16)};
-
             },
             4 => {
-            unsafe {core::ptr::with_exposed_provenance_mut::<u32>(addr as usize).write_volatile(data as u32)};
-
+                unsafe {core::ptr::with_exposed_provenance_mut::<u32>(addr as usize).write_volatile(data as u32)};
             },
             _ => {panic!("wtf")},
         }
