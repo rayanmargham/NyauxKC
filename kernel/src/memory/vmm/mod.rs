@@ -11,6 +11,7 @@ bitflags! {
         const EXECUTABLE = 1 << 1;
         const GLOBAL = 1 << 2;
         const USER = 1 << 3;
+        const NOCACHE = 1 << 4;
     }
 }
 

@@ -66,7 +66,6 @@ pub fn allocate_page() -> *mut () {
 
 pub fn deallocate_page(ptr: *mut ()) {
     unsafe {
-        println!("ptr addr: 0x{:x}", ptr.addr());
         let o = FREELIST.unwrap();
         ptr.cast::<u8>().write_bytes(0, Processor::PAGE_SIZE);
         let real = ptr as *mut PMMNode;

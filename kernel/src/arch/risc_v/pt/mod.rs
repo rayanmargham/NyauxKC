@@ -181,7 +181,6 @@ impl Pagemap {
         let yo = self.archpt();
         for (idx, i) in (base..(base + length)).step_by(Processor::PAGE_SIZE).enumerate() {
             let pa = phys[idx];
-            println!("idx {}, i 0x{:x}", idx, i);
             yo.map4kib(
                 i as u64, pa, PT::from_vmmflags(flags)).unwrap();
         }

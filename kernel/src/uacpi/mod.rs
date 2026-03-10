@@ -1,9 +1,9 @@
 use core::{ffi::{CStr, c_void}, ptr::{addr_of, addr_of_mut}};
 
 use alloc::{boxed::Box, ffi::CString, vec::{self, Vec}};
-use nyaux_uacpi_bindings::{UACPI_LOG_DEBUG, UACPI_LOG_ERROR, UACPI_LOG_INFO, UACPI_LOG_TRACE, UACPI_LOG_WARN, UACPI_STATUS_OK, UACPI_STATUS_UNIMPLEMENTED, uacpi_bool, uacpi_char, uacpi_cpu_flags, uacpi_firmware_request, uacpi_handle, uacpi_init_level, uacpi_initialize, uacpi_interrupt_handler, uacpi_io_addr, uacpi_log_level, uacpi_namespace_initialize, uacpi_namespace_load, uacpi_pci_address, uacpi_phys_addr, uacpi_size, uacpi_status, uacpi_status_to_string, uacpi_thread_id, uacpi_u8, uacpi_u16, uacpi_u32, uacpi_u64, uacpi_work_handler, uacpi_work_type};
+use nyaux_uacpi_bindings::{UACPI_LOG_DEBUG, UACPI_LOG_ERROR, UACPI_LOG_INFO, UACPI_LOG_TRACE, UACPI_LOG_WARN, UACPI_STATUS_OK, UACPI_STATUS_UNIMPLEMENTED, uacpi_bool, uacpi_char, uacpi_cpu_flags, uacpi_firmware_request, uacpi_handle, uacpi_init_level, uacpi_initialize, uacpi_interrupt_handler, uacpi_io_addr, uacpi_log_level, uacpi_namespace_initialize, uacpi_namespace_load, uacpi_pci_address, uacpi_phys_addr, uacpi_setup_early_table_access, uacpi_size, uacpi_status, uacpi_status_to_string, uacpi_thread_id, uacpi_u8, uacpi_u16, uacpi_u32, uacpi_u64, uacpi_work_handler, uacpi_work_type};
 
-use crate::{HHDM_REQUEST, RSDP_REQUEST, arch::{Arch, Processor}, early_init_pagemap, memory::{slab::{slab_alloc, slab_dealloc}, vmm::{VMMFlags, kermap, max_hhdm_phy}}, pci::{pci_init, pci_read_byte, pci_read_dword, pci_read_word, pci_write_byte, pci_write_dword, pci_write_word}, print, println, util::SpinLock};
+use crate::{HHDM_REQUEST, RSDP_REQUEST, align_down, arch::{Arch, Processor}, early_init_pagemap, memory::{slab::{slab_alloc, slab_dealloc}, vmm::{VMMFlags, kermap, max_hhdm_phy}}, pci::{pci_init, pci_read_byte, pci_read_dword, pci_read_word, pci_write_byte, pci_write_dword, pci_write_word}, print, println, util::SpinLock};
 #[unsafe(no_mangle)]
 unsafe extern "C" fn uacpi_kernel_alloc(size: uacpi_size) -> *mut core::ffi::c_void {
     if size <= 1024 {
@@ -38,6 +38,7 @@ unsafe extern "C" fn uacpi_kernel_map(addr: uacpi_phys_addr, len: uacpi_size) ->
         return core::ptr::with_exposed_provenance_mut::<core::ffi::c_void>(addr as usize+ HHDM_REQUEST.response().unwrap().offset as usize)
     } else {
         let mut ve = Vec::new();
+        let addr = align_down(addr, 4096); // as mandated by uacpi
         for i in (addr..(addr + (len as u64))).step_by(Processor::PAGE_SIZE) {
             ve.push(i);
         }
@@ -101,7 +102,7 @@ unsafe extern "C" fn uacpi_kernel_pci_read8(
         value: *mut uacpi_u8,
     ) -> uacpi_status {
         let de: &uacpi_pci_address = unsafe {&*device.cast::<uacpi_pci_address>()};
-        unsafe {value.write(pci_read_byte(de.bus, de.device, de.function, offset as u8))};
+        unsafe {value.write(pci_read_byte(de.bus, de.device, de.function, offset as u16))};
         UACPI_STATUS_OK
     }
 #[unsafe(no_mangle)]
@@ -112,7 +113,7 @@ unsafe extern "C" fn uacpi_kernel_pci_read16(
         value: *mut uacpi_u16,
     ) -> uacpi_status {
         let de: &uacpi_pci_address = unsafe {&*device.cast::<uacpi_pci_address>()};
-        unsafe {value.write(pci_read_word(de.bus, de.device, de.function, offset as u8))};
+        unsafe {value.write(pci_read_word(de.bus, de.device, de.function, offset as u16))};
         UACPI_STATUS_OK
     }
 #[unsafe(no_mangle)]
@@ -123,9 +124,8 @@ unsafe extern "C" fn uacpi_kernel_pci_read32(
         value: *mut uacpi_u32,
     ) -> uacpi_status {
         let de: &uacpi_pci_address = unsafe {&*device.cast::<uacpi_pci_address>()};
-        unsafe {value.write(pci_read_dword(de.bus, de.device, de.function, offset as u8))};
+        unsafe {value.write(pci_read_dword(de.bus, de.device, de.function, offset as u16))};
         UACPI_STATUS_OK
-
     }
 #[unsafe(no_mangle)]
 
@@ -135,9 +135,8 @@ unsafe extern "C" fn uacpi_kernel_pci_write8(
         value: uacpi_u8,
     ) -> uacpi_status {
         let de: &uacpi_pci_address = unsafe {&*device.cast::<uacpi_pci_address>()};
-        pci_write_byte(de.bus, de.device, de.function, offset as u8, value);
+        pci_write_byte(de.bus, de.device, de.function, offset as u16, value);
         UACPI_STATUS_OK
-
     }
 #[unsafe(no_mangle)]
 
@@ -147,10 +146,8 @@ unsafe extern "C" fn uacpi_kernel_pci_write16(
         value: uacpi_u16,
     ) -> uacpi_status {
         let de: &uacpi_pci_address = unsafe {&*device.cast::<uacpi_pci_address>()};
-        pci_write_word(de.bus, de.device, de.function, offset as u8, value);
+        pci_write_word(de.bus, de.device, de.function, offset as u16, value);
         UACPI_STATUS_OK
-
-
     }
 #[unsafe(no_mangle)]
 
@@ -160,7 +157,7 @@ unsafe extern "C" fn uacpi_kernel_pci_write32(
         value: uacpi_u32,
     ) -> uacpi_status {
         let de: &uacpi_pci_address = unsafe {&*device.cast::<uacpi_pci_address>()};
-        pci_write_dword(de.bus, de.device, de.function, offset as u8, value);
+        pci_write_dword(de.bus, de.device, de.function, offset as u16, value);
         UACPI_STATUS_OK
     }
 pub struct io_range {
@@ -408,10 +405,10 @@ pub fn check_ustatus(s: u32) -> Result<(), &'static str>{
 }
 pub fn init_uacpi() {
     unsafe {
-
     check_ustatus(uacpi_initialize(0)).unwrap();
+
+    pci_init();
     check_ustatus(uacpi_namespace_load()).unwrap(); // ignore value
     check_ustatus(uacpi_namespace_initialize()).unwrap();
-    pci_init();
     }
 }

@@ -63,6 +63,9 @@ impl PT {
         if fla.contains(VMMFlags::USER) {
             val |= PT::USER
         }
+        if fla.contains(VMMFlags::NOCACHE) {
+            val |= PT::PCD | PT::PWT;
+        }
         val
     }
     fn new(table: &PTENT, lvl: u8) -> PT {
@@ -336,7 +339,6 @@ impl Pagemap {
         let yo = self.archpt();
         for (idx, i) in (base..(base + length)).step_by(Processor::PAGE_SIZE).enumerate() {
             let pa = phys[idx];
-            println!("idx {}, i 0x{:x}", idx, i);
             yo.map4kib(
                 i as u64, pa, PT::from_vmmflags(flags)).unwrap();
         }

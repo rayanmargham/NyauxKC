@@ -34,6 +34,8 @@ use core::ptr::{addr_of, addr_of_mut};
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine_boot::BaseRevision;
 use limine_boot::request::{FramebufferRequest};
+#[cfg(target_arch = "x86_64")]
+use crate::arch::x86_64::is_intel;
 use crate::arch::{Arch, Processor};
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
@@ -111,6 +113,12 @@ unsafe extern "C" fn kmain() -> ! {
             status!("vmm_alloc works");
             map.vmm_dealloc(yaho.cast(), false);
             init_uacpi();
+            #[cfg(target_arch = "x86_64")]
+                   if is_intel() {
+                    use crate::arch::x86_64::intel::iommu::iommu_init;
+
+            iommu_init();
+        } 
         
     }
 

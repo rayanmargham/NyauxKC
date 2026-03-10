@@ -1,46 +1,52 @@
 use core::fmt::Debug;
 
+use alloc::vec::Vec;
 use nyaux_uacpi_bindings::{ACPI_MCFG_SIGNATURE, UACPI_STATUS_OK, acpi_mcfg, uacpi_table, uacpi_table_find_by_signature, uacpi_table_unref};
 
-use crate::{arch::{Arch, Processor}, println, util::Once};
+use crate::{arch::{Arch, Processor}, early_init_pagemap, memory::vmm::VMMFlags, println, util::Once};
 
-const PCI_CONFIG_ADDR: usize = 0xCF8;
-const PCI_DATA: usize = 0xCFC;
-
-
-pub fn pci_read_dword(bus: u8, slot: u8, func: u8, offset: u8) -> u32 {
-    let addr = ((bus as u32) << 16) | ((slot as u32) << 11) | ((func as u32) << 8) | (offset & 0xFC) as u32 | 0x80000000;
-    Processor::raw_io_out(PCI_CONFIG_ADDR as u64, addr as u64, 4);
-    return Processor::raw_io_in(PCI_DATA as u64, 4) as u32;
+pub fn pci_read_dword(bus: u8, slot: u8, func: u8, offset: u16) -> u32 {
+    let info = PCI_INF.get().unwrap();
+    let add = unsafe {
+    core::ptr::with_exposed_provenance_mut::<u32>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
+    return unsafe {add.read_volatile()};
 }
-pub fn pci_write_dword(bus: u8, slot: u8, func: u8, offset: u8, data: u32) {
-    let addr = ((bus as u32) << 16) | ((slot as u32) << 11) | ((func as u32) << 8) | (offset & 0xFC) as u32 | 0x80000000;
-    Processor::raw_io_out(PCI_CONFIG_ADDR as u64, addr as u64, 4);
-    Processor::raw_io_out(PCI_DATA as u64, data as u64, 4);
+pub fn pci_write_dword(bus: u8, slot: u8, func: u8, offset: u16, data: u32) {
+    let info = PCI_INF.get().unwrap();
+    let add = unsafe {
+    core::ptr::with_exposed_provenance_mut::<u32>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
+    unsafe {add.write_volatile(data)};
 }
-pub fn pci_read_word(bus: u8, slot: u8, func: u8, offset: u8) -> u16 {
-    ((pci_read_dword(bus, slot, func, offset) >> ((offset & 2) * 8)) & 0xFFFF) as u16
+pub fn pci_read_word(bus: u8, slot: u8, func: u8, offset: u16) -> u16 {
+    let info = PCI_INF.get().unwrap();
+    let add = unsafe {
+    core::ptr::with_exposed_provenance_mut::<u16>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
+    return unsafe {add.read_volatile()};
 }
-pub fn pci_write_word(bus: u8, slot: u8, func: u8, offset: u8, data: u16) {
-    let mut val = pci_read_dword(bus, slot, func, offset);
-    val &= !(0xFFFFu32 << ((offset & 2) * 8));
-    val |= (data as u32) << ((offset & 2) * 8);
-    pci_write_dword(bus, slot, func, offset, val);
+pub fn pci_write_word(bus: u8, slot: u8, func: u8, offset: u16, data: u16) {
+    let info = PCI_INF.get().unwrap();
+    let add = unsafe {
+    core::ptr::with_exposed_provenance_mut::<u16>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
+    unsafe {add.write_volatile(data)};
 }
-pub fn pci_read_byte(bus: u8, slot: u8, func: u8, offset: u8) -> u8 {
-    ((pci_read_dword(bus, slot, func, offset) >> ((offset & 3) * 8)) & 0xFF) as u8
+pub fn pci_read_byte(bus: u8, slot: u8, func: u8, offset: u16) -> u8 {
+    let info = PCI_INF.get().unwrap();
+    let add = unsafe {
+    core::ptr::with_exposed_provenance_mut::<u8>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
+    return unsafe {add.read_volatile()};
 }
-pub fn pci_write_byte(bus: u8, slot: u8, func: u8, offset: u8, data: u8) {
-    let mut val = pci_read_dword(bus, slot, func, offset);
-    val &= !(0xFFu32 << ((offset & 3) * 8));
-    val |= (data as u32) << ((offset & 3) * 8);
-    pci_write_dword(bus, slot, func, offset, val);
+pub fn pci_write_byte(bus: u8, slot: u8, func: u8, offset: u16, data: u8) {
+    let info = PCI_INF.get().unwrap();
+    let add = unsafe {
+    core::ptr::with_exposed_provenance_mut::<u8>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
+    unsafe {add.write_volatile(data)};
 }
 
 #[derive(Debug)]
 struct PCI_INFO {
     root_bus: u64,
-    seg: u64
+    seg: u64,
+    ecam_base_addr: u64 // ensure you cast back to a ptr with expose_providence()
 }
 
 
@@ -250,9 +256,16 @@ fn prog_if_name(class: u8, subclass: u8, prog_if: u8) -> &'static str {
 }
 
 static PCI_INF: Once<PCI_INFO> = Once::new();
+fn pci_device_print(bus: u8, slot: u8, func: u8, ve: u16) {
+    let be = pci_read_dword(bus, slot, func, 0x8) as usize;
+    let prog_if = be >> 8;
+    let subcl = be >> 16;
+    let class = be >> 24;
+    println!("PCI {} via {}", class_name(class as u8, subcl as u8), prog_if_name(class as u8, subcl as u8, prog_if as u8))
+    
+}
 pub fn pci_init() {
-    #[cfg(target_arch = "x86_64")] 
-    {
+   
         unsafe {
         let mut table: uacpi_table = core::mem::zeroed();
         let status = uacpi_table_find_by_signature(ACPI_MCFG_SIGNATURE.as_ptr().cast(), &mut table);
@@ -270,39 +283,34 @@ pub fn pci_init() {
         }
 
         let first = &*(*mcfg).entries.as_ptr();
-        PCI_INF.call_once(|| PCI_INFO { root_bus: first.start_bus as u64, seg: first.segment as u64 });
-
+        let ecam_region_size = ((first.end_bus as usize - first.start_bus as usize) + 1) << 20; // each bus is 1mb or wtv
+        let mut s = Vec::new();
+        for i in (first.address..(first.address + (ecam_region_size as u64))).step_by(Processor::PAGE_SIZE) {
+            s.push(i);
+        }
+        let virt = early_init_pagemap!().vmm_alloc_with_phys(ecam_region_size as usize, VMMFlags::WRITE | VMMFlags::NOCACHE,s ).unwrap();
+        PCI_INF.call_once(|| PCI_INFO { root_bus: first.start_bus as u64, seg: first.segment as u64, ecam_base_addr: virt.expose_provenance() as u64});
+        let sb = first.start_bus;
         uacpi_table_unref(&mut table);
-        let ifo = PCI_INF.get().unwrap();
-        for i in 0..32u8 {
-            let mut vendor = pci_read_word(ifo.root_bus as u8, i, 0, 0x00);
-            if vendor == 0xFFFF {
+        for i in 0..32 {
+            let ve = pci_read_word(sb, i, 0, 0x0);
+            if ve == 0xFFFF {
                 continue;
             }
-            let header_t = (pci_read_dword(ifo.root_bus as u8, i, 0, 0xC) >> 16) as u8;
-            if header_t & (1 << 7) != 0 {
-                for func in 0..8u8 {
-                    vendor = pci_read_word(ifo.root_bus as u8, i, func, 0x00);
-                    if vendor == 0xFFFF {
+            let he_type = (pci_read_dword(sb, i, 0, 0xC) >> 16) & 0xFF;
+            if he_type & (1 << 7) != 0 {
+                for j in 0..8 {
+                    let v = pci_read_word(sb, i, j, 0x0);
+                    if v == 0xFFFF {
                         continue;
                     }
-                    let shi = pci_read_dword(ifo.root_bus as u8, i, func, 0x8);
-                    let class = (shi >> 24)  as u8;
-                    let subclass = (shi >> 16) as u8;
-                    let pro = (shi >> 8) as u8;
-
-                println!("pci device class: {}, function: {}, prog_if: {}", class_name(class, subclass), func, prog_if_name(class, subclass, pro))
+                    pci_device_print(sb, i, j, ve);
                 }
             } else {
-                let shi = pci_read_dword(ifo.root_bus as u8, i, 0, 0x8);
-                    let class = (shi >> 24)  as u8;
-                    let subclass = (shi >> 16) as u8;
-                    let pro = (shi >> 8) as u8;
-
-                println!("pci device class: {}, function: {}, prog_if: {}", class_name(class, subclass), 0, prog_if_name(class, subclass, pro))
+                pci_device_print(sb, i, 0, ve);
             }
+
         }
-    }
     }
     
 }

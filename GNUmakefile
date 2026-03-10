@@ -20,6 +20,15 @@ all-hdd: $(IMAGE_NAME).hdd
 
 .PHONY: run
 run: run-$(KARCH)
+.PHONY: run-iommu
+run-iommu: 
+	qemu-system-$(KARCH) \
+		-device intel-iommu \
+		-cpu qemu64,vendor=GenuineIntel \
+		-machine q35 \
+		-drive if=pflash,unit=0,format=raw,file=edk2-ovmf/ovmf-code-$(KARCH).fd,readonly=on \
+		-cdrom $(IMAGE_NAME).iso \
+		$(QEMUFLAGS)
 .PHONY: run-debug
 run-debug: run-debug-$(KARCH)
 .PHONY: run-debug-x86_64
