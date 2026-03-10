@@ -398,7 +398,7 @@ pub fn check_ustatus(s: u32) -> Result<(), &'static str>{
     }.unwrap();
     println!("{}", m);
     if s != 0 {
-        return Err("uacpi error");
+        return Err(format_args!("{}", m).as_str().unwrap());
     }
     assert_eq!(s, 0);
     Ok(())

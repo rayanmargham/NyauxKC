@@ -3,7 +3,7 @@ use core::fmt::Debug;
 use alloc::vec::Vec;
 use nyaux_uacpi_bindings::{ACPI_MCFG_SIGNATURE, UACPI_STATUS_OK, acpi_mcfg, uacpi_table, uacpi_table_find_by_signature, uacpi_table_unref};
 
-use crate::{arch::{Arch, Processor}, early_init_pagemap, memory::vmm::VMMFlags, println, util::Once};
+use crate::{arch::{Arch, Processor}, early_init_pagemap, memory::vmm::VMMFlags, println, uacpi::check_ustatus, util::Once};
 
 pub fn pci_read_dword(bus: u8, slot: u8, func: u8, offset: u16) -> u32 {
     let info = PCI_INF.get().unwrap();
@@ -269,10 +269,7 @@ pub fn pci_init() {
         unsafe {
         let mut table: uacpi_table = core::mem::zeroed();
         let status = uacpi_table_find_by_signature(ACPI_MCFG_SIGNATURE.as_ptr().cast(), &mut table);
-        if status != UACPI_STATUS_OK {
-            println!("pci: no MCFG table, status={}", status);
-            return;
-        }
+        check_ustatus(status).unwrap();
 
         let mcfg = table.__bindgen_anon_1.virt_addr as *const acpi_mcfg;
         let num_entries = ((*mcfg).hdr.length as usize - 44) / 16;
