@@ -1,6 +1,6 @@
 use core::fmt::Debug;
 
-use alloc::vec::Vec;
+use alloc::vec::{self, Vec};
 use nyaux_uacpi_bindings::{ACPI_MCFG_SIGNATURE, UACPI_STATUS_OK, acpi_mcfg, uacpi_table, uacpi_table_find_by_signature, uacpi_table_unref};
 
 use crate::{arch::{Arch, Processor}, early_init_pagemap, memory::vmm::VMMFlags, println, uacpi::check_ustatus, util::Once};
@@ -256,13 +256,51 @@ fn prog_if_name(class: u8, subclass: u8, prog_if: u8) -> &'static str {
 }
 
 static PCI_INF: Once<PCI_INFO> = Once::new();
-fn pci_device_print(bus: u8, slot: u8, func: u8, ve: u16) {
+fn pci_device_print(bus: u8, slot: u8, func: u8, ve: u16) -> (usize, usize, usize) {
     let be = pci_read_dword(bus, slot, func, 0x8) as usize;
-    let prog_if = be >> 8;
-    let subcl = be >> 16;
-    let class = be >> 24;
-    println!("PCI {} via {}", class_name(class as u8, subcl as u8), prog_if_name(class as u8, subcl as u8, prog_if as u8))
+    let prog_if = be >> 8 & 0xFF;
+    let subcl = be >> 16 & 0xFF;
+    let class = be >> 24 & 0xFF;
+    println!("PCI {} via {} on bus {}", class_name(class as u8, subcl as u8), prog_if_name(class as u8, subcl as u8, prog_if as u8), bus);
+    return (class, subcl, prog_if)
     
+}
+pub static pci_devices: Once<Vec<(u8, u8, u8)>> = Once::new();
+fn pci_scan(bus: u8, pci_devicess: &mut Vec<(u8, u8, u8)>) {
+    for i in 0..32 {
+            let ve = pci_read_word(bus, i, 0, 0x0);
+            if ve == 0xFFFF {
+                continue;
+            }
+            let he_type = (pci_read_dword(bus, i, 0, 0xC) >> 16) & 0xFF;
+            if he_type & (1 << 7) != 0 {
+                for j in 0..8 {
+                    let v = pci_read_word(bus, i, j, 0x0);
+                    if v == 0xFFFF {
+                        continue;
+                    }
+                pci_devicess.push((bus, i, j));
+                    let c = pci_device_print(bus, i, j, ve);
+                if c.0 == 0x6 && c.1 == 0x4 {
+                    let bus = pci_read_word(bus, i, j, 0x18) >> 8;
+                    println!("found secondary bus {}", bus);
+                    pci_scan(bus as u8, pci_devicess);
+                }
+                }
+            } else {
+                // check if bridge cause there is more buses
+                
+                let c = pci_device_print(bus, i, 0, ve);
+                pci_devicess.push((bus, i, 0));
+                if c.0 == 0x6 && c.1 == 0x4 {
+                    let bus = pci_read_word(bus, i, 0, 0x18) >> 8;
+                    println!("found secondary bus {}", bus);
+
+                    pci_scan(bus as u8, pci_devicess);
+                }
+            }
+
+        }
 }
 pub fn pci_init() {
    
@@ -289,25 +327,11 @@ pub fn pci_init() {
         PCI_INF.call_once(|| PCI_INFO { root_bus: first.start_bus as u64, seg: first.segment as u64, ecam_base_addr: virt.expose_provenance() as u64});
         let sb = first.start_bus;
         uacpi_table_unref(&mut table);
-        for i in 0..32 {
-            let ve = pci_read_word(sb, i, 0, 0x0);
-            if ve == 0xFFFF {
-                continue;
-            }
-            let he_type = (pci_read_dword(sb, i, 0, 0xC) >> 16) & 0xFF;
-            if he_type & (1 << 7) != 0 {
-                for j in 0..8 {
-                    let v = pci_read_word(sb, i, j, 0x0);
-                    if v == 0xFFFF {
-                        continue;
-                    }
-                    pci_device_print(sb, i, j, ve);
-                }
-            } else {
-                pci_device_print(sb, i, 0, ve);
-            }
+        let mut v = Vec::new();
+ 
+        pci_scan(sb, &mut v);
+        pci_devices.call_once(|| v);
 
-        }
     }
     
 }
