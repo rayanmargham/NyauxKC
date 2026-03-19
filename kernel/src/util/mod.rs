@@ -1,5 +1,4 @@
 use core::{hint, sync::atomic::AtomicBool};
-
 #[macro_export]
 macro_rules! early_init_pagemap {
     () => {

@@ -3,3 +3,4 @@ template-x86_64.iso
 ovmf/
 .vscode/
 edk2-ovmf/
+kernel/kernel

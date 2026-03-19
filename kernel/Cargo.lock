@@ -197,8 +197,8 @@ dependencies = [
 
 [[package]]
 name = "nyaux_uacpi_bindings"
-version = "0.0.2"
-source = "git+https://github.com/rayanmargham/nyaux_uacpi_bindings#5d15cf1dbbe1faf9684f5f01e74b9a3ca05d5186"
+version = "0.0.3"
+source = "git+https://github.com/rayanmargham/nyaux_uacpi_bindings#fe11fd1cd13e8057cb7d4e56dfb7ddcd9d527541"
 dependencies = [
  "bindgen",
  "cc",

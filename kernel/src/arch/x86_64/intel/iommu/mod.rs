@@ -132,7 +132,7 @@ pub fn iommu_init() {
                 root.entries[i.0 as usize] = unsafe {
                     new_context_table
                         .byte_sub(HHDM_REQUEST.response().unwrap().offset as usize)
-                        .expose_provenance()
+                        .addr()
                         | 1
                 } as u128;
                 unsafe {new_context_table.cast::<context_table>().as_mut().unwrap()}
@@ -156,7 +156,7 @@ pub fn iommu_init() {
     };
     let mut status = unsafe {
         gs.read_volatile() & 0x96FFFFFF // so basically, spec tells me to do this cause
-        // to get rid of the one shot beds
+        // to get rid of the one shot bits
     };
     status = status | (1 << 30);
     unsafe {
@@ -178,4 +178,5 @@ pub fn iommu_init() {
 
     }
     println!("all done, hardware said okay to my tables");
+    // TODO: actual page tables for the context entries
 }

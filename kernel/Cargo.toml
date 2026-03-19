@@ -13,6 +13,7 @@ flantermbindings = "0.1.4"
 limine-boot = { version = "0.6.0", git = "https://github.com/robotman2412/limine-boot-rust"}
 rustc-demangle = {version = "0.1.27", default-features = false, features = ["core"] }
 seq-macro = "0.3.6"
-nyaux_uacpi_bindings = {git = "https://github.com/rayanmargham/nyaux_uacpi_bindings", version = '0.0.2'}
+nyaux_uacpi_bindings = {git = "https://github.com/rayanmargham/nyaux_uacpi_bindings", version = '0.0.3'}
+
 [profile.release]
 debug = true
