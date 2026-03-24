@@ -67,6 +67,6 @@ macro_rules! status {
     };
     ($($arg:tt)*) => {{
 
-        $crate::print!("{}: {} \x1b[32mOK\x1b[0m\n", module_path!(), format_args!($($arg)*));
+        $crate::print!("{}: {} \x1b[0m\x1b[32mOK\x1b[0m\n", module_path!(), format_args!($($arg)*));
     }};
 }

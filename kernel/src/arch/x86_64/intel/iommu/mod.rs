@@ -9,7 +9,7 @@ use crate::{
     pci::pci_devices,
     println,
     uacpi::check_ustatus,
-    util::Once,
+    util::{Once, find_acpi_table},
 };
 #[repr(C, packed)]
 struct root_table {
@@ -62,13 +62,8 @@ static root_table_gb: Once<iommu> = Once::new();
 
 pub fn iommu_init() {
     println!("init");
-    let mut table: uacpi_table = unsafe { core::mem::zeroed() };
-    let status = unsafe { uacpi_table_find_by_signature(c"DMAR".as_ptr(), &mut table) };
-    if check_ustatus(status).is_err() {
-        println!("no intel iommu present on system");
-        return;
-    }
 
+    let table = find_acpi_table(c"DMAR".as_ptr()).unwrap();
     let dmar = unsafe { table.__bindgen_anon_1.virt_addr as *const acpi_dmar };
     let mut cur = unsafe { dmar.add(1).cast::<u8>() };
     let end = unsafe { dmar.cast::<u8>().add(dmar.read().length as usize) };

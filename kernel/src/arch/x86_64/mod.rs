@@ -1,4 +1,9 @@
-use crate::arch::{Arch, Processor};
+use core::arch::naked_asm;
+
+#[cfg(target_arch = "x86_64")]
+use alloc::boxed::Box;
+
+use crate::{arch::{Arch, Processor}, scheduler::sched_tramp2};
 #[cfg(target_arch = "x86_64")]
 use crate::{arch::x86_64::{intel::iommu::iommu_init, pt::pt_init}, memory::vmm::Pagemap};
 
@@ -41,6 +46,19 @@ pub fn is_intel() -> bool {
     let (_, ebx, ecx, edx) = cpuid(0, 0);
     // "GenuineIntel" = ebx "Genu", edx "ineI", ecx "ntel"
     ebx == 0x756e6547 && edx == 0x49656e69 && ecx == 0x6c65746e
+}
+pub fn rdmsr(msr: u32) -> usize {
+    let mut lo: usize = 0;
+    let mut hi: usize = 0;
+    unsafe {core::arch::asm!("rdmsr", in("ecx") msr, out("eax") lo, out("edx") hi)};
+    return lo | (hi << 32);
+}
+pub fn wrmsr(msr: u32, val: usize) {
+    let hi = (val >> 32);
+    let lo = val;
+    unsafe {
+        core::arch::asm!("wrmsr", in("ecx") msr, in("edx") hi, in("eax") lo);
+    }
 }
 #[cfg(target_arch = "x86_64")]
 impl Arch for Processor{
@@ -104,4 +122,40 @@ impl Arch for Processor{
             }
         }
     }
+    
+    fn calibrate_preemption_timer(calibrator: alloc::boxed::Box<dyn crate::timers::CalibrationTimer>) {
+        todo!()
+    }
+    fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: Box<dyn FnOnce() + 'static + Send>) -> usize {
+        let len = stack_ptr.len();
+        let slice = &mut stack_ptr[len - 9..];
+        slice.fill(0);
+        let real = Box::into_raw(function);
+        let meta: *const () =  unsafe {core::mem::transmute(core::ptr::metadata(real))};
+        slice[7] = meta as usize;
+        slice[6] = real.expose_provenance();
+        8 * size_of::<usize>()
+
+    }
+    fn get_cpu_local() -> *mut () {
+        unsafe {
+            let x = rdmsr(0xC0000101);
+            let ptr = core::ptr::with_exposed_provenance_mut::<()>(x);
+            return ptr;
+        }  
+    }
+    fn set_cpu_local(ptr: *mut ()) {
+        unsafe {
+            wrmsr(0xC0000101, ptr.expose_provenance());
+        }
+    }
+}
+#[unsafe(naked)]
+pub unsafe extern "C" fn sched_tramp1() {
+    naked_asm!(
+        "mov rax, rdi",
+        "pop rsi",
+        "pop rdx",
+        "jmp {}", sym sched_tramp2
+    )
 }

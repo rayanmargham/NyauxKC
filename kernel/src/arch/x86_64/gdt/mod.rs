@@ -30,7 +30,7 @@ impl GDTdesc {
                     | ((dc as u8) << 2)
                     | ((e as u8) << 3)
                     | ((s as u8) << 4)
-                    | (dpl << 6)
+                    | (dpl << 5)
                     | 1
             },
             limit_low: 0xFFFF,

@@ -30,6 +30,10 @@ impl SpinLock {
 use core::sync::atomic::{AtomicU8, Ordering};
 use core::cell::UnsafeCell;
 
+use nyaux_uacpi_bindings::{uacpi_char, uacpi_table, uacpi_table_find_by_signature};
+
+use crate::uacpi::check_ustatus;
+
 const UNINIT: u8 = 0;
 const RUNNING: u8 = 1;
 const DONE: u8 = 2;
@@ -66,5 +70,15 @@ impl<T> Once<T> {
             None
         }
     }
+
+}
+pub fn find_acpi_table(tabl: *const uacpi_char) -> Result<uacpi_table, &'static str> {
+    let mut table: uacpi_table = unsafe {core::mem::zeroed()};
+    let status = unsafe { uacpi_table_find_by_signature(tabl, &mut table) };
+    let hm = check_ustatus(status);
+    if hm.is_err() {
+        return Err(hm.err().unwrap());
+    }
+    return Ok(table);
 
 }

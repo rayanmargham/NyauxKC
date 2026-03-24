@@ -126,6 +126,10 @@ unsafe extern "C" fn inter_stub~N() {
         .else
         push 0
         .endif
+        test byte ptr [rsp + 16], 0x3
+        jz 2f
+        swapgs
+        2:
         push {i}
         push rax
         push rbx
@@ -182,7 +186,11 @@ unsafe extern "C" fn inter_return() {
         pop rcx
         pop rbx
         pop rax
-        add rsp, 0x16
+        add rsp, 16
+        test byte ptr [rsp + 8], 0x3
+        jz 3f
+        swapgs
+        3:
         iretq"
     );
 }
