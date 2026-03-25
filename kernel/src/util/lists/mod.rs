@@ -20,16 +20,16 @@ macro_rules! dlist_debug_assert {
 #[macro_export]
 macro_rules! impl_has_list_node {
     ($Type: ty, $field: tt) => {
-        impl crate::util::list::HasListNode<$Type> for $Type {
-            unsafe fn from_node(node: *mut crate::util::list::InvasiveListNode) -> *mut $Type {
+        impl crate::util::lists::HasListNode<$Type> for $Type {
+            unsafe fn from_node(node: *mut crate::util::lists::InvasiveListNode) -> *mut $Type {
                 unsafe { node.byte_sub(core::mem::offset_of!($Type, $field)) as *mut $Type }
             }
 
-            fn list_node(&self) -> &crate::util::list::InvasiveListNode {
+            fn list_node(&self) -> &crate::util::lists::InvasiveListNode {
                 &self.$field
             }
 
-            fn list_node_mut(&mut self) -> &mut crate::util::list::InvasiveListNode {
+            fn list_node_mut(&mut self) -> &mut crate::util::lists::InvasiveListNode {
                 &mut self.$field
             }
         }

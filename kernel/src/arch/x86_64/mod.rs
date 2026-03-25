@@ -134,9 +134,11 @@ impl Arch for Processor{
         slice.fill(0);
         let real = Box::into_raw(function);
         let meta: *const () =  unsafe {core::mem::transmute(core::ptr::metadata(real))};
-        slice[7] = meta as usize;
-        slice[6] = real.expose_provenance();
-        8 * size_of::<usize>()
+
+        slice[8] = meta as usize;
+        slice[7] = real.expose_provenance();
+        slice[6] = sched_tramp1 as *const fn() as usize;
+        9 * size_of::<usize>()
 
     }
     fn init_cpu_local(ptr: *mut cpu_local) {
@@ -149,32 +151,44 @@ impl Arch for Processor{
 #[unsafe(naked)]
 pub unsafe extern "C" fn sched_tramp1() {
     naked_asm!(
-        "mov rax, rdi",
+        "mov rax, rdi", // ask emma about this later
         "pop rsi",
         "pop rdx",
         "jmp {}", sym sched_tramp2
     )
 }
-
+#[unsafe(naked)]
+pub unsafe extern "C" fn context_switch<T>(
+    passthrough: *mut (),
+    old_stack: *mut *mut (),
+    new_stack: *const *mut ()
+) -> *const T{
+    naked_asm!("
+    push rbx
+    push rbp
+    push r12
+    push r13
+    push r14
+    push r15
+    mov [rsi], rsp
+    mov rsp, [rdx]
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+    ret");
+}
 #[macro_export]
 macro_rules! get_cpu_local {
-    ($field:ident, $type:ty) => {{
-        let offset = core::mem::offset_of!(cpu_local, $field);
+    () => {{
+        use crate::arch::cpu_local;
         unsafe {
-            let x: $type;
-            core::arch::asm!("mov {}, gs:[{}]", out(reg) x, in(reg) offset);
+            let x: *mut cpu_local;
+            core::arch::asm!("mov {}, gs:[0]", out(reg) x);
             x
         }
     }};
 }
 
-#[macro_export]
-macro_rules! set_cpu_local {
-    ($field:ident, $type:ty, $value:expr) => {{
-        let offset = core::mem::offset_of!(cpu_local, $field);
-        unsafe {
-            let x: $type = $value;
-            core::arch::asm!("mov gs:[{}], {}", in(reg) offset, in(reg) x);
-        }
-    }};
-}

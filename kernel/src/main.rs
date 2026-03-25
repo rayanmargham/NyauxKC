@@ -43,6 +43,7 @@ use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
 use crate::memory::vmm::{self, VMMFlags, kermap};
+use crate::scheduler::sched_test;
 use crate::timers::calibrate_timer_init;
 use crate::uacpi::init_uacpi;
 use flantermbindings::flanterm::flanterm_fb_init;
@@ -156,6 +157,7 @@ unsafe extern "C" fn kmain() -> ! {
             iommu_init();
         }
         calibrate_timer_init();
+        sched_test();
 
     }
 

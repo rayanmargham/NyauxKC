@@ -1,9 +1,11 @@
-use alloc::boxed::Box;
+use core::ptr::null_mut;
+
+use alloc::{boxed::Box, sync::Arc};
 use limine_boot::paging::PagingMode;
 #[cfg(any(target_arch = "x86_64", target_arch = "riscv64"))]
 use limine_boot::request::PagingModeRequest;
 
-use crate::{memory::vmm::{Pagemap, VMMFlags}, timers::CalibrationTimer};
+use crate::{memory::vmm::{Pagemap, VMMFlags}, scheduler::thread, timers::CalibrationTimer, util::{SpinLock, lists::ArcInvasiveList}};
 
 
 #[cfg(target_arch = "x86_64")]
@@ -29,6 +31,26 @@ pub trait Arch {
 }
 pub struct Processor{}
 
+#[cfg(target_arch = "x86_64")]
+pub use x86_64::context_switch;
+#[cfg(target_arch = "riscv64")]
+pub use risc_v::context_switch;
+
 pub struct cpu_local {
-    test: usize
+    pub sel: *mut cpu_local,
+    pub run_queue: ArcInvasiveList<thread>,
+    pub run_lock: SpinLock,
+    pub cur_thread: Option<Arc<thread>>,
+}
+
+impl cpu_local {
+    pub fn new() -> *mut cpu_local {
+        let mut h = Box::new(cpu_local {sel: null_mut(), run_queue: ArcInvasiveList::new(), cur_thread: None, run_lock: SpinLock::new()});
+        let l = Box::into_raw(h);
+        unsafe {
+            (*l).sel = l;
+            Processor::init_cpu_local(l);
+        }
+        l   
+    }
 }
