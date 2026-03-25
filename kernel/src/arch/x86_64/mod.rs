@@ -1,11 +1,13 @@
 use core::arch::naked_asm;
+#[cfg(target_arch = "x86_64")]
+use core::mem::offset_of;
 
 #[cfg(target_arch = "x86_64")]
 use alloc::boxed::Box;
 
 use crate::{arch::{Arch, Processor}, scheduler::sched_tramp2};
 #[cfg(target_arch = "x86_64")]
-use crate::{arch::x86_64::{intel::iommu::iommu_init, pt::pt_init}, memory::vmm::Pagemap};
+use crate::{arch::{cpu_local, x86_64::{intel::iommu::iommu_init, pt::pt_init}}, memory::vmm::Pagemap};
 
 
 
@@ -14,7 +16,7 @@ pub mod idt;
 pub mod serial;
 pub mod pt;
 pub mod intel;
-
+const GS_BASE: u32 = 0xC0000101;
 pub fn outb(port: u16, data: u8) {
     unsafe {
     core::arch::asm!(
@@ -137,18 +139,12 @@ impl Arch for Processor{
         8 * size_of::<usize>()
 
     }
-    fn get_cpu_local() -> *mut () {
+    fn init_cpu_local(ptr: *mut cpu_local) {
         unsafe {
-            let x = rdmsr(0xC0000101);
-            let ptr = core::ptr::with_exposed_provenance_mut::<()>(x);
-            return ptr;
-        }  
-    }
-    fn set_cpu_local(ptr: *mut ()) {
-        unsafe {
-            wrmsr(0xC0000101, ptr.expose_provenance());
+            wrmsr(GS_BASE, ptr.expose_provenance());
         }
     }
+
 }
 #[unsafe(naked)]
 pub unsafe extern "C" fn sched_tramp1() {
@@ -158,4 +154,27 @@ pub unsafe extern "C" fn sched_tramp1() {
         "pop rdx",
         "jmp {}", sym sched_tramp2
     )
+}
+
+#[macro_export]
+macro_rules! get_cpu_local {
+    ($field:ident, $type:ty) => {{
+        let offset = core::mem::offset_of!(cpu_local, $field);
+        unsafe {
+            let x: $type;
+            core::arch::asm!("mov {}, gs:[{}]", out(reg) x, in(reg) offset);
+            x
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! set_cpu_local {
+    ($field:ident, $type:ty, $value:expr) => {{
+        let offset = core::mem::offset_of!(cpu_local, $field);
+        unsafe {
+            let x: $type = $value;
+            core::arch::asm!("mov gs:[{}], {}", in(reg) offset, in(reg) x);
+        }
+    }};
 }

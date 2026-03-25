@@ -25,7 +25,10 @@ pub trait Arch {
     fn raw_io_out(addr: u64, data: u64, byte_width: u8);
     fn calibrate_preemption_timer(calibrator: Box<dyn CalibrationTimer>);
     fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: Box<dyn FnOnce() + 'static + Send>) -> usize; // returns how much stack in bytes its used
-    fn get_cpu_local() -> *mut ();
-    fn set_cpu_local(ptr: *mut ()); 
+    fn init_cpu_local(ptr: *mut cpu_local);
 }
 pub struct Processor{}
+
+pub struct cpu_local {
+    test: usize
+}
