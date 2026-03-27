@@ -16,6 +16,25 @@ pub mod idt;
 pub mod serial;
 pub mod pt;
 pub mod intel;
+pub mod hpet;
+
+pub trait CalibrationTimer {
+    fn get_ms(&self) -> usize;
+    fn get_ns(&self) -> usize;
+    fn poll_for_ms(&self, ms: usize);
+}
+
+use crate::{status, util::Once};
+
+pub static cali_timer: Once<Box<dyn CalibrationTimer + Send + Sync>> = Once::new();
+pub fn calibrate_timer_init() {
+    let hpe = hpet::hpet_init();
+    if hpe.is_err() {
+        panic!("no hpet no dice sorry");
+    }
+    cali_timer.call_once(|| Box::new(hpe.unwrap()));
+    status!("setup calibration timer");
+}
 const GS_BASE: u32 = 0xC0000101;
 pub fn outb(port: u16, data: u8) {
     unsafe {
@@ -125,8 +144,8 @@ impl Arch for Processor{
         }
     }
     
-    fn calibrate_preemption_timer(calibrator: alloc::boxed::Box<dyn crate::timers::CalibrationTimer>) {
-        todo!()
+    fn init_timer() {
+        calibrate_timer_init();
     }
     fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: Box<dyn FnOnce() + 'static + Send>) -> usize {
         let len = stack_ptr.len();

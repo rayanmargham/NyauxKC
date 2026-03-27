@@ -9,7 +9,6 @@ pub mod pci;
 pub mod scheduler;
 pub mod uacpi;
 pub mod util;
-pub mod timers;
 extern crate alloc;
 
 // GCC runtime helper not provided by compiler_builtins on RISC-V without Zbb.
@@ -44,7 +43,6 @@ use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
 use crate::memory::vmm::{self, VMMFlags, kermap};
 use crate::scheduler::sched_test;
-use crate::timers::calibrate_timer_init;
 use crate::uacpi::init_uacpi;
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine_boot::BaseRevision;
@@ -156,7 +154,7 @@ unsafe extern "C" fn kmain() -> ! {
 
             iommu_init();
         }
-        calibrate_timer_init();
+        Processor::init_timer();
         sched_test();
 
     }

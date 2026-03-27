@@ -37,7 +37,6 @@ pub struct CPUContext {
     pub t6: u64,
 }
 pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
-    println!("HELLLOOO");
     if let Some(ctx) = unsafe {frame.as_ref()} {
         // figure out if we a exception or what
         let mut scause: u64 = 0;
@@ -60,6 +59,13 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
                 _ => {}
             }
             hcf();
+        }
+        let interupt = scause & !(1 << 63);
+        match interupt {
+            5 => {
+                println!("hello from risc v timer");
+            },
+            _ => {}
         }
     }
 }

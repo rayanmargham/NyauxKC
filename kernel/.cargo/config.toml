@@ -18,3 +18,4 @@ rustflags = ["-C", "linker-flavor=ld.lld"]
 CC_riscv64gc_unknown_none_elf = "riscv64-unknown-elf-gcc"
 AR_riscv64gc_unknown_none_elf = "riscv64-unknown-elf-ar"
 CFLAGS_riscv64gc_unknown_none_elf = "-march=rv64gc -mabi=lp64d"
+BINDGEN_EXTRA_CLANG_ARGS_riscv64gc_unknown_none_elf = "--target=riscv64-unknown-elf -march=rv64gc -mabi=lp64d"

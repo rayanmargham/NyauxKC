@@ -5,7 +5,7 @@ use limine_boot::paging::PagingMode;
 #[cfg(any(target_arch = "x86_64", target_arch = "riscv64"))]
 use limine_boot::request::PagingModeRequest;
 
-use crate::{memory::vmm::{Pagemap, VMMFlags}, scheduler::thread, timers::CalibrationTimer, util::{SpinLock, lists::ArcInvasiveList}};
+use crate::{memory::vmm::{Pagemap, VMMFlags}, scheduler::thread, util::{SpinLock, lists::ArcInvasiveList}};
 
 
 #[cfg(target_arch = "x86_64")]
@@ -25,7 +25,7 @@ pub trait Arch {
     fn pt_init() -> (usize, usize);
     fn raw_io_in(addr: u64, byte_width: u8) -> u64;
     fn raw_io_out(addr: u64, data: u64, byte_width: u8);
-    fn calibrate_preemption_timer(calibrator: Box<dyn CalibrationTimer>);
+    fn init_timer();
     fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: Box<dyn FnOnce() + 'static + Send>) -> usize; // returns how much stack in bytes its used
     fn init_cpu_local(ptr: *mut cpu_local);
 }

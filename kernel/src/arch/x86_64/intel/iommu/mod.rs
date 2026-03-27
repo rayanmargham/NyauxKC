@@ -39,15 +39,8 @@ struct acpi_drhd {
 
 #[repr(C, packed)]
 struct acpi_dmar {
-    signature: [u8; 4],
-    length: u32,
-    revision: u8,
-    checksum: u8,
-    oem_id: [u8; 6],
-    oem_table_id: [u8; 8],
-    oem_revision: u32,
-    creator_id: u32,
-    creator_revision: u32,
+
+    hdr: nyaux_uacpi_bindings::acpi_sdt_hdr,
     host_address_width: u8,
     flags: u8,
     reserved: [u8; 10],
@@ -66,7 +59,7 @@ pub fn iommu_init() {
     let table = find_acpi_table(c"DMAR".as_ptr()).unwrap();
     let dmar = unsafe { table.__bindgen_anon_1.virt_addr as *const acpi_dmar };
     let mut cur = unsafe { dmar.add(1).cast::<u8>() };
-    let end = unsafe { dmar.cast::<u8>().add(dmar.read().length as usize) };
+    let end = unsafe { dmar.cast::<u8>().add(dmar.read().hdr.length as usize) };
     let mut iommu_addr = 0;
     while cur != end {
         let hd = cur.cast::<acpi_drhd>();
