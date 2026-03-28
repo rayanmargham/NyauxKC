@@ -7,7 +7,7 @@ use alloc::boxed::Box;
 
 use crate::{arch::{Arch, Processor}, scheduler::sched_tramp2};
 #[cfg(target_arch = "x86_64")]
-use crate::{arch::{cpu_local, x86_64::{intel::iommu::iommu_init, pt::pt_init}}, memory::vmm::Pagemap};
+use crate::{arch::{cpu_local, x86_64::{intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init}}, memory::vmm::Pagemap};
 
 
 
@@ -17,6 +17,7 @@ pub mod serial;
 pub mod pt;
 pub mod intel;
 pub mod hpet;
+pub mod lapic;
 
 pub trait CalibrationTimer {
     fn get_ms(&self) -> usize;
@@ -47,6 +48,7 @@ pub fn outb(port: u16, data: u8) {
 // clanker functions cpuid and is_intel produced by clanker because
 // i need to do the iommu right now and i cannot be fucked to
 // worry about this right now, looks correct to me anyway
+/// returns (eax, ebx, ecx, edx)
 pub fn cpuid(leaf: u32, subleaf: u32) -> (u32, u32, u32, u32) {
     let (eax, ebx, ecx, edx): (u32, u32, u32, u32);
     unsafe {
@@ -146,6 +148,7 @@ impl Arch for Processor{
     
     fn init_timer() {
         calibrate_timer_init();
+        lapic_init(cali_timer.get().unwrap().as_ref());
     }
     fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: Box<dyn FnOnce() + 'static + Send>) -> usize {
         let len = stack_ptr.len();
@@ -164,6 +167,9 @@ impl Arch for Processor{
         unsafe {
             wrmsr(GS_BASE, ptr.expose_provenance());
         }
+    }
+    fn set_timer_ms(ms: usize) {
+        todo!()
     }
 
 }

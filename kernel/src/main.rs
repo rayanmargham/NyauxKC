@@ -37,7 +37,7 @@ use core::ptr::{addr_of, addr_of_mut};
 
 #[cfg(target_arch = "x86_64")]
 use crate::arch::x86_64::is_intel;
-use crate::arch::{Arch, Processor};
+use crate::arch::{Arch, Processor, cpu_local};
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
@@ -64,7 +64,7 @@ const fn align_down(value: u64, alignment: u64) -> u64 {
 #[used]
 // The .requests section allows limine to find the requests faster and more safely.
 #[unsafe(link_section = ".requests")]
-static BASE_REVISION: BaseRevision = BaseRevision::with_revision(4);
+static BASE_REVISION: BaseRevision = BaseRevision::with_revision(5);
 
 #[used]
 #[unsafe(link_section = ".requests")]
@@ -154,6 +154,7 @@ unsafe extern "C" fn kmain() -> ! {
 
             iommu_init();
         }
+        cpu_local::new();
         Processor::init_timer();
         sched_test();
 

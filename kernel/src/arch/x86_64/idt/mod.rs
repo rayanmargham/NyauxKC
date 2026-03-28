@@ -160,7 +160,12 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
     let err = unsafe { frame.as_ref().unwrap().error};
     match int {
         0xe => {
-          panic!("page fault my dude, {:#?}", unsafe {frame.as_ref().unwrap()});
+          let cr2: usize;
+          unsafe { core::arch::asm!("mov {}, cr2", out(reg) cr2) };
+          panic!("page fault my dude, cr2: {:#x}, {:#?}", cr2, unsafe {frame.as_ref().unwrap()});
+        },
+        0xff => {
+            println!("got spurious interrupt");
         },
         _ => {
             panic!("unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}", int, err, unsafe {frame.as_ref()}.unwrap().rip);

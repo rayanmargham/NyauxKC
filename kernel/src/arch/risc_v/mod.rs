@@ -155,7 +155,9 @@ impl Arch for Processor{
         slice[1] = tp;
         17 * size_of::<usize>()
     }
-    
+    fn set_timer_ms(ms: usize) {
+        todo!();
+    }
 }
 #[unsafe(naked)]
 pub unsafe extern "C" fn sched_tramp1() {

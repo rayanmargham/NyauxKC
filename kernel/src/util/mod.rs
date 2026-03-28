@@ -32,6 +32,7 @@ use core::cell::UnsafeCell;
 
 use nyaux_uacpi_bindings::{uacpi_char, uacpi_table, uacpi_table_find_by_signature};
 
+use crate::HHDM_REQUEST;
 use crate::uacpi::check_ustatus;
 
 const UNINIT: u8 = 0;
@@ -81,4 +82,7 @@ pub fn find_acpi_table(tabl: *const uacpi_char) -> Result<uacpi_table, &'static 
     }
     return Ok(table);
 
+}
+pub fn to_hhdm<T>(ptr: *mut T) -> *mut T {
+    unsafe {ptr.byte_add(HHDM_REQUEST.response().unwrap().offset as usize)}
 }

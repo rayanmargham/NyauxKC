@@ -17,3 +17,6 @@ nyaux_uacpi_bindings = {git = "https://github.com/rayanmargham/nyaux_uacpi_bindi
 
 [profile.release]
 debug = true
+
+[features]
+dlist_debug = []
