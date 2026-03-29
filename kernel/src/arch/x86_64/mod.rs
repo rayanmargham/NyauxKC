@@ -168,8 +168,31 @@ impl Arch for Processor{
             wrmsr(GS_BASE, ptr.expose_provenance());
         }
     }
+    /// it will set the timer ms then renable the timer
     fn set_timer_ms(ms: usize) {
-        todo!()
+        use crate::get_cpu_local;
+        let local = unsafe {get_cpu_local!().as_mut().unwrap()};
+        let l = local.lapic.as_mut().unwrap();
+        l.set_timer(ms);
+
+    }
+    fn mask_timer() {
+        use crate::get_cpu_local;
+        let local = unsafe {get_cpu_local!().as_mut().unwrap()};
+        let l = local.lapic.as_mut().unwrap();
+        l.disable_timer();
+    }
+    fn acknowledge_interrupt() {
+        use crate::get_cpu_local;
+        let local = unsafe {get_cpu_local!().as_mut().unwrap()};
+        let l = local.lapic.as_mut().unwrap();
+        l.send_eoi();
+    }
+    fn enable_interrupts() {
+        unsafe { core::arch::asm!("sti"); }
+    }
+    fn disable_interrupts() {
+        unsafe { core::arch::asm!("cli"); }
     }
 
 }
@@ -214,6 +237,14 @@ macro_rules! get_cpu_local {
             core::arch::asm!("mov {}, gs:[0]", out(reg) x);
             x
         }
+    }};
+}
+#[macro_export]
+macro_rules! can_prempt {
+    () => {{
+        let x: u8;
+        unsafe {core::arch::asm!("mov {}, gs:[{off}]", out(reg_byte) x, off = const core::mem::offset_of!(crate::arch::cpu_local, preempt))};
+        x != 0
     }};
 }
 

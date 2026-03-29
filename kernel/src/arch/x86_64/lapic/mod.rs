@@ -1,3 +1,5 @@
+// ipis, xapic by water bottle
+// x2apic by me
 use core::hint::spin_loop;
 
 use alloc::vec;
@@ -161,10 +163,30 @@ impl lapic {
         cali.poll_for_ms(10);
         let cur = self.read(IA32_LAPIC_TIMER_CUR_COUNT);
         self.ticks_per_ms = ((0xFFFFFFFF - cur) / 10) as usize;
+        self.write(IA32_LAPIC_TIMER_INIT_COUNT, 0);
         println!(
             "calibrated lapic timer, ticks per 1ms {}",
             self.ticks_per_ms
         );
+    }
+    pub fn disable_timer(&mut self) {
+        let mut lvt = self.read(IA32_LAPIC_LVT_TIMER);
+        lvt |= IA32_LAPIC_MASK_MASKED;
+
+        self.write(IA32_LAPIC_LVT_TIMER, lvt);
+    }
+    pub fn enable_timer(&mut self) {
+        let mut lvt = self.read(IA32_LAPIC_LVT_TIMER);
+        lvt &= !IA32_LAPIC_MASK_MASKED;
+
+        self.write(IA32_LAPIC_LVT_TIMER, lvt); 
+    }
+    pub fn set_timer(&mut self, ms: usize) {
+
+        self.disable_timer();
+        self.write(IA32_LAPIC_TIMER_INIT_COUNT, (self.ticks_per_ms * ms) as u32);
+        self.enable_timer();
+        // your on your own kiddo
     }
 
     fn configure_lapic_type(&mut self) -> Result<(lapic_type), &'static str> {
@@ -191,12 +213,11 @@ impl lapic {
         }
     }
 
-    fn send_eoi(&mut self) {
+    pub fn send_eoi(&mut self) {
         self.write(IA32_LAPIC_EOI, 0);
     }
 
-    fn send_icr(&mut self, apic_id: u32, icr: u64) {
-        let mut icr = 0u64;
+    fn send_icr(&mut self, apic_id: u32, mut icr: u64) {
 
         if self.lapic_type == lapic_type::xapic {
             // for xapic, the destination field is bits 63-56

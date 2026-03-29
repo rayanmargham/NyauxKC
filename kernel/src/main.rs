@@ -42,7 +42,7 @@ use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
 use crate::memory::vmm::{self, VMMFlags, kermap};
-use crate::scheduler::sched_test;
+use crate::scheduler::sched_init;
 use crate::uacpi::init_uacpi;
 use flantermbindings::flanterm::flanterm_fb_init;
 use limine_boot::BaseRevision;
@@ -156,10 +156,14 @@ unsafe extern "C" fn kmain() -> ! {
         }
         cpu_local::new();
         Processor::init_timer();
-        sched_test();
+        sched_init();
 
     }
 
+    hcf();
+}
+fn kentry() {
+    println!("hello from kernel thread scheduled by scheduler");
     hcf();
 }
 #[cfg(not(test))]

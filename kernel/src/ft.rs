@@ -4,8 +4,12 @@
 use core::fmt::Write;
 use flantermbindings::*;
 pub use flanterm::{flanterm_context, flanterm_write};
+use crate::util::{Once, SpinLock};
 
+#[derive(Clone, Copy)]
 pub struct Ball(*mut flanterm_context);
+unsafe impl Send for Ball {}
+unsafe impl Sync for Ball {}
 
 impl Write for Ball {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
@@ -30,21 +34,22 @@ impl Write for Ball {
     }
 }
 
-pub static mut TERMINAL: Option<Ball> = None;
+pub static TERMINAL: Once<(Ball, SpinLock)> = Once::new();
 
 pub unsafe fn init_terminal(ctx: *mut flanterm_context) {
-    TERMINAL = Some(Ball(ctx));
+    TERMINAL.call_once(||(Ball(ctx), SpinLock::new()));
 }
 
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
+        $crate::ft::TERMINAL.get().unwrap().1.lock();
         unsafe {
-            if let Some(ref mut term) = $crate::ft::TERMINAL {
-                let _ = write!(term, $($arg)*);
-            }
+            let mut t = $crate::ft::TERMINAL.get().unwrap().0;
+                let _ = write!(t, $($arg)*);
         }
+        $crate::ft::TERMINAL.get().unwrap().1.unlock();
     }};
 }
 

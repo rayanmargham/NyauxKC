@@ -1,4 +1,4 @@
-use crate::{hcf, println};
+use crate::{can_prempt, get_cpu_local, hcf, println, scheduler::sched_yield};
 
 #[repr(C)]
 pub struct CPUContext {
@@ -63,7 +63,9 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
         let interupt = scause & !(1 << 63);
         match interupt {
             5 => {
-                println!("hello from risc v timer");
+                if can_prempt!() {
+                    sched_yield();
+                } 
             },
             _ => {}
         }

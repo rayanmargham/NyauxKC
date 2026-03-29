@@ -3,7 +3,7 @@ use core::{arch::naked_asm, fmt::Debug, mem::offset_of, ptr::addr_of};
 use bytemuck::{Pod, Zeroable};
 use seq_macro::seq;
 
-use crate::{arch::x86_64::gdt::GdtTable, println};
+use crate::{arch::{x86_64::gdt::GdtTable, Arch, Processor}, can_prempt, println, scheduler::sched_yield};
 const INTERRUPT_GATE: u8 = 0xE;
 // a lot of code here looks similar to menix, it is true that i took "inspiration" :trollface:, i make sure i understood what im writing
 // so i think its fine to have my code REALLY similar to menix. at least these stubs and the singular interrupt handler concept
@@ -167,6 +167,12 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
         0xff => {
             println!("got spurious interrupt");
         },
+        0x21 => {
+            Processor::acknowledge_interrupt();
+            if (can_prempt!()) {
+                sched_yield();
+            }
+        }
         _ => {
             panic!("unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}", int, err, unsafe {frame.as_ref()}.unwrap().rip);
         }

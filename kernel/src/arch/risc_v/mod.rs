@@ -156,7 +156,31 @@ impl Arch for Processor{
         17 * size_of::<usize>()
     }
     fn set_timer_ms(ms: usize) {
-        todo!();
+        let freq = timr_freq.get().unwrap();
+        let tick_per_ms = *freq as usize / 1000;
+        let time: usize;
+        unsafe {
+            core::arch::asm!("csrr {}, time", out(reg) time);
+        }
+        sbi_call(0x54494D45, 0, [time + (tick_per_ms * ms), 0, 0, 0,0,0]);
+    }
+    fn mask_timer() {
+        // do the stupid thing
+        sbi_call(0x54494D45, 0, [usize::MAX, 0, 0, 0, 0, 0]);
+
+    }
+    fn acknowledge_interrupt() {
+        // todo
+    }
+    fn enable_interrupts() {
+        unsafe {
+            core::arch::asm!("csrsi sstatus, 2");
+        }
+    }
+    fn disable_interrupts() {
+        unsafe {
+            core::arch::asm!("csrsi sstatus, 2");
+        }
     }
 }
 #[unsafe(naked)]
@@ -220,5 +244,17 @@ macro_rules! get_cpu_local {
             let x = core::ptr::with_exposed_provenance_mut::<cpu_local>(addr);
             x
         }
+    }};
+}
+#[macro_export]
+macro_rules! can_prempt {
+    () => {{
+        let x: u8;
+        unsafe { core::arch::asm!(
+            "lb {}, {}(tp)", 
+            out(reg) x, 
+            const core::mem::offset_of!(crate::arch::cpu_local, preempt)
+        )};
+        x != 0
     }};
 }
