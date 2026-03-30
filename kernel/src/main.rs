@@ -164,6 +164,7 @@ unsafe extern "C" fn kmain() -> ! {
 }
 fn kentry() {
     println!("hello from kernel thread scheduled by scheduler");
+    println!("wassup twin");
     hcf();
 }
 #[cfg(not(test))]

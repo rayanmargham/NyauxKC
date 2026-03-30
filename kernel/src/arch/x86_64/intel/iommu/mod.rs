@@ -55,8 +55,8 @@ static root_table_gb: Once<iommu> = Once::new();
 
 pub fn iommu_init() {
     println!("init");
-
-    let table = find_acpi_table(c"DMAR".as_ptr()).unwrap();
+    
+    if let Ok(table) = find_acpi_table(c"DMAR".as_ptr()) {
     let dmar = unsafe { table.__bindgen_anon_1.virt_addr as *const acpi_dmar };
     let mut cur = unsafe { dmar.add(1).cast::<u8>() };
     let end = unsafe { dmar.cast::<u8>().add(dmar.read().hdr.length as usize) };
@@ -165,6 +165,6 @@ pub fn iommu_init() {
     } == 0) {
 
     }
-    println!("all done, hardware said okay to my tables");
+    println!("all done, hardware said okay to my tables"); }
     // TODO: actual page tables for the context entries
 }
