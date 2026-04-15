@@ -5,6 +5,8 @@ use limine_boot::paging::PagingMode;
 #[cfg(any(target_arch = "x86_64", target_arch = "riscv64"))]
 use limine_boot::request::PagingModeRequest;
 
+#[cfg(target_arch = "x86_64")]
+use crate::arch::x86_64::{gdt::GdtTable, tss::tss};
 use crate::{
     memory::vmm::{Pagemap, VMMFlags},
     scheduler::thread,
@@ -47,6 +49,7 @@ pub trait Arch {
     fn acknowledge_interrupt();
     fn enable_interrupts();
     fn disable_interrupts();
+    fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str>;
 }
 pub struct Processor {}
 
@@ -65,11 +68,15 @@ pub struct cpu_local {
     pub idle_thread: Option<Arc<thread>>,
     #[cfg(target_arch = "x86_64")]
     pub lapic: Option<x86_64::lapic::lapic>,
+    #[cfg(target_arch = "x86_64")]
+    pub gdt: Option<GdtTable>, // bsp wont have one
+    #[cfg(target_arch = "x86_64")]
+    pub tss_ptr: *mut tss,
 }
 
 impl cpu_local {
-    pub fn new() -> *mut cpu_local {
-        let mut h = Box::new(cpu_local {
+    pub fn new(bsp: bool) -> *mut cpu_local {
+        let h = Box::new(cpu_local {
             preempt: true,
             sel: null_mut(),
             run_queue: ArcInvasiveList::new(),
@@ -78,11 +85,27 @@ impl cpu_local {
             run_lock: SpinLock::new(),
             #[cfg(target_arch = "x86_64")]
             lapic: None,
+            #[cfg(target_arch = "x86_64")]
+            gdt: None,
+            #[cfg(target_arch = "x86_64")]
+            tss_ptr: null_mut(),
         });
 
         let l = Box::into_raw(h);
         unsafe {
             (*l).sel = l;
+
+            #[cfg(target_arch = "x86_64")]
+            {
+                use crate::arch::x86_64::gdt::{BSP_TSS, GDTtss};
+                (*l).tss_ptr = if bsp { BSP_TSS.get() } else { Box::into_raw(Box::new(tss::new())) };
+                if !bsp {
+                    let mut g = GdtTable::new();
+                    g.tss = GDTtss::new((*l).tss_ptr);
+                    (*l).gdt = Some(g);
+                }
+            }
+
             Processor::init_cpu_local(l);
         }
         l

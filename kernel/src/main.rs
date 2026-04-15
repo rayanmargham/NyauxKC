@@ -154,7 +154,7 @@ unsafe extern "C" fn kmain() -> ! {
 
             iommu_init();
         }
-        cpu_local::new();
+        cpu_local::new(true);
         Processor::init_timer();
         sched_init();
 

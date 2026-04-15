@@ -182,6 +182,9 @@ impl Arch for Processor{
             core::arch::asm!("csrsi sstatus, 2");
         }
     }
+    fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str> {
+        todo!()
+    }
 }
 #[unsafe(naked)]
 pub unsafe extern "C" fn sched_tramp1() {

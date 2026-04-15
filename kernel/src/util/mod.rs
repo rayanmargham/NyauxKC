@@ -38,6 +38,24 @@ use crate::uacpi::check_ustatus;
 const UNINIT: u8 = 0;
 const RUNNING: u8 = 1;
 const DONE: u8 = 2;
+// SYNCCELL IS CLANKER CODE BUT I KNOW WHAT ITS DOING
+#[repr(transparent)]
+pub struct SyncCell<T>(pub UnsafeCell<T>);
+unsafe impl<T> Sync for SyncCell<T> {}
+
+impl<T> SyncCell<T> {
+    pub const fn new(val: T) -> Self {
+        Self(UnsafeCell::new(val))
+    }
+    pub fn get(&self) -> *mut T {
+        self.0.get()
+    }
+    pub fn get_mut_unchecked(&self) -> &mut T {
+        unsafe {
+            self.0.get().as_mut().unwrap()
+        }
+    }
+}
 
 pub struct Once<T> {
     state: AtomicU8,

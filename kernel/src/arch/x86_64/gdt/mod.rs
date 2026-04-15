@@ -1,8 +1,11 @@
 use bytemuck::{Pod, Zeroable};
+use core::cell::UnsafeCell;
 use core::mem::{offset_of, size_of};
 use core::ptr::addr_of;
 
+use crate::arch::x86_64::tss::tss;
 use crate::println;
+use crate::util::SyncCell;
 
 #[repr(C)]
 #[derive(Pod, Copy, Clone, Zeroable)]
@@ -46,15 +49,63 @@ impl GDTdesc {
             base_hi: 0x0,
         }
     }
+
+}
+#[repr(C, packed)]
+pub struct GDTtss {
+    seg_lim: u16,
+    base_addr_low: u16,
+    base_addr_low_hi: u8,
+    access_byte: u8,
+    flags_and_lim: u8,
+    base_addr_hi_low: u8,
+    base_addr_hi_hi: u32,
+    reserved: u32
+}
+impl GDTtss {
+    const fn zeroed() -> GDTtss {
+        GDTtss {
+            seg_lim: 0,
+            base_addr_low: 0,
+            base_addr_low_hi: 0,
+            access_byte: 0,
+            flags_and_lim: 0,
+            base_addr_hi_low: 0,
+            base_addr_hi_hi: 0,
+            reserved: 0,
+        }
+    }
+    pub fn new(tss: *mut tss) -> GDTtss {
+        let limit = size_of::<tss>() - 1;
+        let addr = tss as usize;
+        GDTtss {
+            seg_lim: (limit & 0xFFFF) as u16,
+            base_addr_low: (addr & 0xFFFF) as u16,
+            base_addr_low_hi: ((addr >> 16) & 0xFF) as u8,
+            base_addr_hi_low: ((addr >> 24) & 0xFF) as u8,
+            base_addr_hi_hi: ((addr >> 32) & 0xFFFFFFFF) as u32,
+            access_byte: {
+                let typ = 0x9;
+                (1 as u8) << 7 |
+                typ
+            },
+            flags_and_lim: {
+                ((limit >> 16) & 0xF) as u8
+            },
+            reserved: 0
+        }
+    }
 }
 #[repr(C, align(16))]
 pub struct GdtTable {
     null: GDTdesc,
     pub kernelcode: GDTdesc,
     pub kerneldata: GDTdesc,
+    pub tss: GDTtss
 }
-
-static GDT_TABLE: GdtTable = GdtTable {
+impl GdtTable {
+    pub const fn new() -> GdtTable {
+        GdtTable {
     null: GDTdesc {
         limit_low: 0x0,
         base_hi: 0x0,
@@ -65,12 +116,18 @@ static GDT_TABLE: GdtTable = GdtTable {
     },
     kernelcode: GDTdesc::new(true, true, false, true, true, 0),
     kerneldata: GDTdesc::new(true, true, false, false, true, 0),
-};
+    tss: GDTtss::zeroed()
+}
+    }
+}
+pub static BSP_TSS: SyncCell<tss> = SyncCell::new(tss::new());
+static BSP_GDT_TABLE: SyncCell<GdtTable> = SyncCell::new(GdtTable::new());
 
-pub fn gdt_init() {
+pub fn bsp_gdt_init() {
+    BSP_GDT_TABLE.get_mut_unchecked().tss = GDTtss::new(BSP_TSS.get());
     let gdtrr: gdtr = gdtr {
         size: (size_of::<GdtTable>() - 1) as u16,
-        offset: addr_of!(GDT_TABLE) as u64,
+        offset: addr_of!(BSP_GDT_TABLE) as u64,
     };
     unsafe {
         core::arch::asm!(
@@ -88,6 +145,7 @@ pub fn gdt_init() {
             mov es, ax
             mov fs, ax
             mov gs, ax
-            mov ss, ax", kernelcode = const offset_of!(GdtTable, kernelcode), kerneldata = const offset_of!(GdtTable, kerneldata))
+            mov ss, ax", kernelcode = const offset_of!(GdtTable, kernelcode), kerneldata = const offset_of!(GdtTable, kerneldata), out("rax") _)
     }
+    tss::ltss(offset_of!(GdtTable, tss) as u16);
 }

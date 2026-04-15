@@ -17,6 +17,7 @@ pub mod serial;
 pub mod pt;
 pub mod intel;
 pub mod hpet;
+pub mod tss;
 pub mod lapic;
 
 pub trait CalibrationTimer {
@@ -89,7 +90,7 @@ impl Arch for Processor{
     fn arch_init() {
         use crate::{memory::{pmm, vmm}, println};
         println!("x86_64 init");
-        gdt::gdt_init();
+        gdt::bsp_gdt_init();
         idt::idt_init();
 
     }
@@ -193,6 +194,9 @@ impl Arch for Processor{
     }
     fn disable_interrupts() {
         unsafe { core::arch::asm!("cli"); }
+    }
+    fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str> {
+        todo!()
     }
 
 }
