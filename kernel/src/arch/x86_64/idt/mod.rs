@@ -222,6 +222,9 @@ pub fn idt_init() {
         
     assert_eq!(IDT.entries[0].seg_sel, ((offset_of!(GdtTable, kernelcode)) as u16));
     };
+    idt_load();
+}
+pub fn idt_load() {
     let idtr: IDTR = IDTR {
         size: (size_of::<IDT>() as u16) - 1,
         offset: &raw const IDT as u64,

@@ -8,6 +8,7 @@ pub mod memory;
 pub mod pci;
 pub mod scheduler;
 pub mod uacpi;
+pub mod bootstrap;
 pub mod util;
 extern crate alloc;
 
@@ -38,6 +39,7 @@ use core::ptr::{addr_of, addr_of_mut};
 #[cfg(target_arch = "x86_64")]
 use crate::arch::x86_64::is_intel;
 use crate::arch::{Arch, Processor, cpu_local};
+use crate::bootstrap::bootstrap_cpus;
 use crate::ft::init_terminal;
 use crate::memory::pmm::{self, allocate_page, deallocate_page};
 use crate::memory::slab::{slab_alloc, slab_dealloc};
@@ -111,7 +113,7 @@ unsafe extern "C" fn kmain() -> ! {
         }
 
         pmm::init();
-        Processor::arch_init();
+        Processor::arch_bsp_init();
         vmm::vmm_init();
         println!("Nyaux on the Nya Kernel!");
         println!("testing slab allocation");
@@ -156,6 +158,8 @@ unsafe extern "C" fn kmain() -> ! {
         }
         cpu_local::new(true);
         Processor::init_timer();
+        bootstrap_cpus();
+        
         sched_init();
 
     }

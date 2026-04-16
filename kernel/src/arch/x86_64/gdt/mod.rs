@@ -144,7 +144,30 @@ pub fn bsp_gdt_init() {
             mov ds, ax
             mov es, ax
             mov fs, ax
-            mov gs, ax
+            mov ss, ax", kernelcode = const offset_of!(GdtTable, kernelcode), kerneldata = const offset_of!(GdtTable, kerneldata), out("rax") _)
+    }
+    tss::ltss(offset_of!(GdtTable, tss) as u16);
+}
+pub fn ap_gdt_init(table: &GdtTable) {
+    let gdtrr: gdtr = gdtr {
+        size: (size_of::<GdtTable>() - 1) as u16,
+        offset: table as *const GdtTable as u64,
+    };
+    unsafe {
+        core::arch::asm!(
+            "lgdt [{}]",
+            in(reg) &gdtrr,
+        );
+        core::arch::asm!("
+            push {kernelcode}
+            lea rax, 2f
+            push rax
+            retfq
+            2:
+            mov ax, {kerneldata}
+            mov ds, ax
+            mov es, ax
+            mov fs, ax
             mov ss, ax", kernelcode = const offset_of!(GdtTable, kernelcode), kerneldata = const offset_of!(GdtTable, kerneldata), out("rax") _)
     }
     tss::ltss(offset_of!(GdtTable, tss) as u16);

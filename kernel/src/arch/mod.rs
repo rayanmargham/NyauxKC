@@ -1,7 +1,7 @@
 use core::ptr::null_mut;
 
 use alloc::{boxed::Box, sync::Arc};
-use limine_boot::paging::PagingMode;
+use limine_boot::{mp::MpRespData, paging::PagingMode, request::Response};
 #[cfg(any(target_arch = "x86_64", target_arch = "riscv64"))]
 use limine_boot::request::PagingModeRequest;
 
@@ -33,7 +33,8 @@ static PAGING_MODE_REQUEST: PagingModeRequest = PagingModeRequest::new(
 );
 pub trait Arch {
     const PAGE_SIZE: usize;
-    fn arch_init();
+    fn arch_bsp_init();
+    fn arch_bootstrap(res: &Response<MpRespData>);
     fn get_root_table() -> *mut u64;
     fn pt_init() -> (usize, usize);
     fn raw_io_in(addr: u64, byte_width: u8) -> u64;

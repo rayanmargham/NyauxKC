@@ -1,13 +1,14 @@
-use core::arch::naked_asm;
+use core::{arch::naked_asm};
 #[cfg(target_arch = "x86_64")]
 use core::mem::offset_of;
 
 #[cfg(target_arch = "x86_64")]
 use alloc::boxed::Box;
+use limine_boot::mp::MpInfo;
 
-use crate::{arch::{Arch, Processor}, scheduler::sched_tramp2};
+use crate::{arch::{Arch, Processor, x86_64::{gdt::ap_gdt_init, idt::idt_load}}, scheduler::sched_tramp2};
 #[cfg(target_arch = "x86_64")]
-use crate::{arch::{cpu_local, x86_64::{intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init}}, memory::vmm::Pagemap};
+use crate::{arch::{cpu_local, x86_64::{intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init}}, memory::vmm::Pagemap, println};
 
 
 
@@ -87,7 +88,7 @@ pub fn wrmsr(msr: u32, val: usize) {
 #[cfg(target_arch = "x86_64")]
 impl Arch for Processor{
     const PAGE_SIZE: usize = 4096;
-    fn arch_init() {
+    fn arch_bsp_init() {
         use crate::{memory::{pmm, vmm}, println};
         println!("x86_64 init");
         gdt::bsp_gdt_init();
@@ -196,9 +197,43 @@ impl Arch for Processor{
         unsafe { core::arch::asm!("cli"); }
     }
     fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str> {
-        todo!()
+        use crate::get_cpu_local;
+        let l = get_cpu_local!();
+        let add = stack_ptr.addr();
+        let t = unsafe {
+            (*l).tss_ptr
+        };
+        unsafe {
+            (*t).ist1_hi = ((add >> 32) & 0xFFFFFFFF) as u32;
+            (*t).ist1_lo = (add & 0xFFFFFFFF) as u32;
+        }
+        Ok(())
+    }
+    fn arch_bootstrap(res: &limine_boot::request::Response<limine_boot::mp::MpRespData>) {
+        for i in res.cpus() {
+            if i.lapic_id == res.bsp_lapic_id {
+                continue;
+            }
+            println!("booting cpu {}", i.processor_id);
+            i.bootstrap(ap_init, 0);
+        }
     }
 
+}
+unsafe extern "C" fn ap_init(info: &MpInfo) -> ! {
+    let g = cpu_local::new(false);
+    
+    let gtab = unsafe {
+        (*g).gdt.as_ref().unwrap()
+    };
+    ap_gdt_init(gtab);
+    idt_load();
+
+    status!("cpu {}", info.processor_id);
+    loop {
+    core::hint::spin_loop();
+    }
+    unreachable!()
 }
 #[unsafe(naked)]
 pub unsafe extern "C" fn sched_tramp1() {

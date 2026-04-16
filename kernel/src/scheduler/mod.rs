@@ -7,6 +7,7 @@ use crate::util::Once;
 use crate::{arch::{Arch, Processor}, early_init_pagemap, get_cpu_local, impl_has_list_node, memory::vmm::{Pagemap, VMMFlags}, util::{SpinLock, lists::{ArcInvasiveList, InvasiveListNode}}};
 pub struct thread {
     stack_ptr: *mut (),
+    itr_ptr: *mut (),
     timeslice_in_ms: usize,
     next: InvasiveListNode
 }
@@ -16,12 +17,14 @@ static schedlock: Once<SpinLock> = Once::new();
 impl thread {
     fn new(func: impl FnOnce() + 'static + Send, timeslice: usize) -> Result<thread, ()> {
         let stack = early_init_pagemap!().vmm_alloc(STACK_SIZE, VMMFlags::WRITE | VMMFlags::EXECUTABLE).unwrap();
+        let it_stack = early_init_pagemap!().vmm_alloc(STACK_SIZE, VMMFlags::WRITE | VMMFlags::EXECUTABLE).unwrap();
         let stack_used = Processor::prepare_new_thread_stack(unsafe {core::ptr::slice_from_raw_parts_mut::<usize>(stack.cast::<usize>(), STACK_SIZE / size_of::<usize>()).as_mut().unwrap()}, Box::new(func));
         let stack_pt = unsafe {stack.byte_add(STACK_SIZE - stack_used)};
         Ok(thread {
             stack_ptr: stack_pt,
             timeslice_in_ms: timeslice,
-            next: InvasiveListNode::new()
+            next: InvasiveListNode::new(),
+            itr_ptr: unsafe {it_stack.byte_add(STACK_SIZE)},
         })
     }
 }
@@ -66,6 +69,7 @@ pub fn sched_yield() {
     cpu.cur_thread = Some(next);
     let new_stack_ptr = &raw const cpu.cur_thread.as_ref().unwrap().stack_ptr;
     let lock_ptr = schedlock.get().unwrap() as *const SpinLock as *mut ();
+    // Processor::set_interrupt_stack(cpu.cur_thread.as_ref().unwrap().itr_ptr);
     unsafe {context_switch::<*mut ()>(lock_ptr, old_stack_ptr, new_stack_ptr)};
     let ble = unsafe {
         (lock_ptr as *const SpinLock).as_ref().unwrap()
