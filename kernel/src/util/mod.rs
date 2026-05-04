@@ -1,3 +1,4 @@
+use core::ops::{Deref, DerefMut};
 use core::{hint, sync::atomic::AtomicBool};
 pub mod lists;
 #[macro_export]
@@ -9,7 +10,41 @@ macro_rules! early_init_pagemap {
 
 
 pub struct SpinLock(AtomicBool);
+pub struct SpinLockB<T>(SpinLock, UnsafeCell<T>);
+pub struct SpinLockBGuard<'a,T>{
+    l: &'a SpinLock,
+    d: &'a mut T
+}
+impl<T> SpinLockB<T> {
+    pub const fn new(f: T) -> Self {
+     
+        Self(SpinLock::new(), UnsafeCell::new(f))
+    }
+    pub fn lock<'a>(&'a self) -> SpinLockBGuard<'a, T>{
+        self.0.lock();
+        SpinLockBGuard {
+            l: &self.0,
+            d: unsafe {self.1.as_mut_unchecked()}
+        }
+    }
+}
+impl<T> Deref for SpinLockBGuard<'_, T> {
+    type Target = T;
 
+    fn deref(&self) -> &Self::Target {
+        self.d
+    }
+}
+impl<T> DerefMut for SpinLockBGuard<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.d
+    }
+}
+impl<T> Drop for SpinLockBGuard<'_, T> {
+    fn drop(&mut self) {
+        self.l.unlock();
+    }
+}
 impl SpinLock {
     pub const fn new() -> Self {
         Self(AtomicBool::new(false))

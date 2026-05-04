@@ -1,5 +1,5 @@
 #![no_std]
-#![feature(debug_closure_helpers, ptr_metadata)]
+#![feature(debug_closure_helpers, ptr_metadata, unsafe_cell_access)]
 #![allow(nonstandard_style, unused_variables, unused)]
 #![no_main]
 pub mod arch;
@@ -10,6 +10,7 @@ pub mod scheduler;
 pub mod uacpi;
 pub mod bootstrap;
 pub mod util;
+pub mod vfs;
 extern crate alloc;
 
 // GCC runtime helper not provided by compiler_builtins on RISC-V without Zbb.
