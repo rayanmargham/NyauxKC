@@ -33,7 +33,6 @@ impl slab_header {
         let slab_heade: *mut slab_header = page.cast();
         let mut obj: *mut slab_obj = unsafe { (page as *mut slab_header).add(1).cast() };
 
-       
         for i in 1..obj_am {
             let new_obj: *mut slab_obj =
                 unsafe { (page as *mut slab_header).add(1).byte_add(i * size).cast() };
@@ -42,8 +41,15 @@ impl slab_header {
                 obj = new_obj;
             }
         }
-     
-        unsafe {slab_heade.write(slab_header { obj_am, obj_size: size, obj, other_slabs: core::ptr::null_mut() })};
+
+        unsafe {
+            slab_heade.write(slab_header {
+                obj_am,
+                obj_size: size,
+                obj,
+                other_slabs: core::ptr::null_mut(),
+            })
+        };
         return slab_heade;
     }
     fn alloc(&mut self) -> Result<*mut (), ()> {
@@ -57,7 +63,7 @@ impl slab_header {
 
                         bro.cast::<u8>().write_bytes(0, cur_slab.obj_size);
                     };
-                    cur_slab.obj_am-= 1;
+                    cur_slab.obj_am -= 1;
                     return Ok(bro.cast());
                 } else {
                     unsafe {
@@ -77,13 +83,11 @@ impl slab_header {
                     let a = cur_slab;
                     cur_slab = slab_header::init(sz).as_mut().unwrap();
                     a.other_slabs = cur_slab
-
                 }
             };
         }
         Err(())
     }
-
 }
 impl slabcache {
     fn init(size: usize) -> Result<slabcache, ()> {
@@ -98,12 +102,11 @@ impl slabcache {
     }
     fn alloc(&mut self) -> Result<*mut (), ()> {
         if self.slabs != core::ptr::null_mut() {
-            return unsafe {(*self.slabs).alloc()};
+            return unsafe { (*self.slabs).alloc() };
         } else {
             panic!("slab cache not inited yet");
         }
     }
-
 }
 static mut slab_caches: [slabcache; 7] = [slabcache {
     size: 0,
@@ -111,7 +114,6 @@ static mut slab_caches: [slabcache; 7] = [slabcache {
 }; 7];
 // @brief PMM must be initted before this function is ran or your not sigma alpha sigma alpha sigma alpha
 pub fn init_slab() {
-    println!("initing slab");
     unsafe {
         slab_caches[0] = slabcache::init(16).unwrap();
         slab_caches[1] = slabcache::init(32).unwrap();
@@ -121,13 +123,12 @@ pub fn init_slab() {
         slab_caches[5] = slabcache::init(512).unwrap();
         slab_caches[6] = slabcache::init(1024).unwrap();
     }
-    println!("slab caches inited");
 }
 
 pub fn slab_alloc(size: usize) -> Result<*mut (), ()> {
     assert!(size <= size.next_power_of_two());
     for i in 0..7 {
-        let mut s = unsafe {slab_caches[i]};
+        let mut s = unsafe { slab_caches[i] };
         if s.size < size {
             continue;
         }
@@ -137,26 +138,26 @@ pub fn slab_alloc(size: usize) -> Result<*mut (), ()> {
 }
 pub fn slab_dealloc(addr: *mut ()) {
     if addr == core::ptr::null_mut() {
-            return;
+        return;
+    }
+    let hehe = addr.map_addr(|a| a & !0xFFF).cast() as *mut slab_header;
+    let sizeofobj = unsafe { hehe.read().obj_size };
+    unsafe { addr.cast::<u8>().write_bytes(0, sizeofobj) };
+    let old = unsafe { hehe.read().obj };
+    if old == core::ptr::null_mut() {
+        unsafe {
+            let mut e = hehe.read();
+            e.obj = addr.cast();
+            e.obj_am += 1;
+            hehe.write(e);
         }
-       let hehe = addr.map_addr(|a| a & !0xFFF).cast() as *mut slab_header;
-        let sizeofobj = unsafe { hehe.read().obj_size };
-        unsafe { addr.cast::<u8>().write_bytes(0, sizeofobj) };
-        let old = unsafe { hehe.read().obj };
-        if old == core::ptr::null_mut() {
-            unsafe {
-                let mut e = hehe.read();
-                e.obj = addr.cast();
-                e.obj_am += 1;
-                hehe.write(e);
-            }
-        } else {
-            unsafe {
-                (*(addr.cast() as *mut slab_obj)).next = old;
-                let mut e = hehe.read();
-                e.obj = addr.cast();
-                e.obj_am += 1;
-                hehe.write(e);
-            }
+    } else {
+        unsafe {
+            (*(addr.cast() as *mut slab_obj)).next = old;
+            let mut e = hehe.read();
+            e.obj = addr.cast();
+            e.obj_am += 1;
+            hehe.write(e);
         }
+    }
 }

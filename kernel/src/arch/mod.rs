@@ -1,9 +1,9 @@
 use core::ptr::null_mut;
 
 use alloc::{boxed::Box, sync::Arc};
-use limine_boot::{mp::MpRespData, paging::PagingMode, request::Response};
 #[cfg(any(target_arch = "x86_64", target_arch = "riscv64"))]
-use limine_boot::request::PagingModeRequest;
+use limine::request::PagingModeRequest;
+use limine::{mp::MpRespData, paging::PagingMode, request::Response};
 
 #[cfg(target_arch = "x86_64")]
 use crate::arch::x86_64::{gdt::GdtTable, tss::tss};
@@ -99,7 +99,11 @@ impl cpu_local {
             #[cfg(target_arch = "x86_64")]
             {
                 use crate::arch::x86_64::gdt::{BSP_TSS, GDTtss};
-                (*l).tss_ptr = if bsp { BSP_TSS.get() } else { Box::into_raw(Box::new(tss::new())) };
+                (*l).tss_ptr = if bsp {
+                    BSP_TSS.get()
+                } else {
+                    Box::into_raw(Box::new(tss::new()))
+                };
                 if !bsp {
                     let mut g = GdtTable::new();
                     g.tss = GDTtss::new((*l).tss_ptr);

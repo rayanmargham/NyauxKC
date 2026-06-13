@@ -37,7 +37,7 @@ pub struct CPUContext {
     pub t6: u64,
 }
 pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
-    if let Some(ctx) = unsafe {frame.as_ref()} {
+    if let Some(ctx) = unsafe { frame.as_ref() } {
         // figure out if we a exception or what
         let mut scause: u64 = 0;
         unsafe {
@@ -45,7 +45,7 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
         }
         if scause & (1 << 63) == 0 {
             let exception_code = scause & !(1 << 63);
-            let exception_val= {
+            let exception_val = {
                 let mut hey: u64 = 0;
                 unsafe {
                     core::arch::asm!("csrr {}, stval", out(reg) hey);
@@ -54,7 +54,10 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
             };
             match exception_code {
                 13 => {
-                    println!("page fault in riscv!!! RIP 0x{:x} faulting address 0x{:x}", ctx.pc, exception_val);
+                    println!(
+                        "page fault in riscv!!! RIP 0x{:x} faulting address 0x{:x}",
+                        ctx.pc, exception_val
+                    );
                 }
                 _ => {}
             }
@@ -65,8 +68,8 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
             5 => {
                 if can_prempt!() {
                     sched_yield();
-                } 
-            },
+                }
+            }
             _ => {}
         }
     }
@@ -76,7 +79,7 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
 pub unsafe extern "C" fn context_sxr() {
     // intially wrote the code, clanker fixed the bugs with the risc v inline asm
     // so basically the inline asm is now clanker code. but i understand what its doing
-        core::arch::naked_asm!("
+    core::arch::naked_asm!("
             .align 4
             addi sp, sp, -264
 
@@ -162,9 +165,8 @@ pub unsafe extern "C" fn context_sxr() {
             addi sp, sp, 264
             sret
         ", sym interrupt_handler);
-    
 }
 
 pub fn setup_interrupts() {
-    unsafe {core::arch::asm!("csrw stvec, {}", in(reg) context_sxr)};
+    unsafe { core::arch::asm!("csrw stvec, {}", in(reg) context_sxr) };
 }

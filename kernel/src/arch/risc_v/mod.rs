@@ -3,19 +3,19 @@
 use core::arch::naked_asm;
 use core::ptr::null_mut;
 
-use alloc::boxed::Box;
-
-use crate::arch::Processor;
+use crate::HHDM_REQUEST;
 use crate::arch::Arch;
+use crate::arch::Processor;
 use crate::arch::risc_v::interrupts::setup_interrupts;
 use crate::arch::risc_v::pt::PTENT;
 use crate::arch::risc_v::pt::phys_to_virt;
 use crate::println;
-use crate::HHDM_REQUEST;
 use crate::scheduler::sched_tramp2;
 use crate::status;
 use crate::util::Once;
 use crate::util::find_acpi_table;
+use alloc::boxed::Box;
+use limine::request::{MpRespData, Response};
 
 pub mod interrupts;
 pub mod pt;
@@ -23,14 +23,19 @@ pub mod pt;
 #[repr(C)]
 pub struct sbi_ret {
     error: isize,
-    sbi_val: isize // if no negative cast to usize
+    sbi_val: isize, // if no negative cast to usize
 }
-pub fn sbi_call(sbi_extension_id: usize, sbi_function_id: usize, args: [usize; 6]) -> sbi_ret{
+pub fn sbi_call(sbi_extension_id: usize, sbi_function_id: usize, args: [usize; 6]) -> sbi_ret {
     let mut err: isize = 0;
     let mut val: isize = 0;
-    unsafe {core::arch::asm!("
-    ecall", in("a7") sbi_extension_id, in("a6") sbi_function_id, inout("a0") args[0] as isize => err, inout("a1") args[1] as isize => val, in("a2") args[2], in("a3") args[3], in("a4") args[4], in("a5") args[5])};
-    return sbi_ret {error: err, sbi_val: val};
+    unsafe {
+        core::arch::asm!("
+    ecall", in("a7") sbi_extension_id, in("a6") sbi_function_id, inout("a0") args[0] as isize => err, inout("a1") args[1] as isize => val, in("a2") args[2], in("a3") args[3], in("a4") args[4], in("a5") args[5])
+    };
+    return sbi_ret {
+        error: err,
+        sbi_val: val,
+    };
 }
 #[repr(C, packed)]
 pub struct acpi_rhct {
@@ -38,12 +43,12 @@ pub struct acpi_rhct {
     flags: u32,
     tbf: u64,
     num_rhct: u32,
-    offset_rhct: u32
+    offset_rhct: u32,
 }
 static timr_freq: Once<u64> = Once::new();
-impl Arch for Processor{
+impl Arch for Processor {
     const PAGE_SIZE: usize = 4096;
-    fn arch_init(){
+    fn arch_bsp_init() {
         use crate::memory::pmm;
 
         println!("RISCV64 init");
@@ -54,9 +59,8 @@ impl Arch for Processor{
             setup_interrupts();
         }
         pmm::init();
-
     }
-    
+
     fn get_root_table() -> *mut u64 {
         let phys = unsafe {
             let x: usize;
@@ -65,7 +69,7 @@ impl Arch for Processor{
         };
         core::ptr::with_exposed_provenance_mut(phys)
     }
-    
+
     fn pt_init() -> (usize, usize) {
         pt::pt_init()
     }
@@ -73,76 +77,96 @@ impl Arch for Processor{
         let addr = addr + HHDM_REQUEST.response().unwrap().offset;
         match byte_width {
             1 => {
-                return unsafe {core::ptr::with_exposed_provenance_mut::<u8>(addr as usize).read_volatile()} as u64;
-            },
+                return unsafe {
+                    core::ptr::with_exposed_provenance_mut::<u8>(addr as usize).read_volatile()
+                } as u64;
+            }
             2 => {
-                return unsafe {core::ptr::with_exposed_provenance_mut::<u16>(addr as usize).read_volatile()} as u64;
-
-            },
+                return unsafe {
+                    core::ptr::with_exposed_provenance_mut::<u16>(addr as usize).read_volatile()
+                } as u64;
+            }
             4 => {
-            return unsafe {core::ptr::with_exposed_provenance_mut::<u32>(addr as usize).read_volatile()} as u64;
-
-            },
-            _ => {panic!("wtf")},
+                return unsafe {
+                    core::ptr::with_exposed_provenance_mut::<u32>(addr as usize).read_volatile()
+                } as u64;
+            }
+            _ => {
+                panic!("wtf")
+            }
         }
     }
     fn raw_io_out(addr: u64, data: u64, byte_width: u8) {
         let addr = addr + HHDM_REQUEST.response().unwrap().offset;
         match byte_width {
             1 => {
-                unsafe {core::ptr::with_exposed_provenance_mut::<u8>(addr as usize).write_volatile(data as u8)};
-            },
+                unsafe {
+                    core::ptr::with_exposed_provenance_mut::<u8>(addr as usize)
+                        .write_volatile(data as u8)
+                };
+            }
             2 => {
-                unsafe {core::ptr::with_exposed_provenance_mut::<u16>(addr as usize).write_volatile(data as u16)};
-            },
+                unsafe {
+                    core::ptr::with_exposed_provenance_mut::<u16>(addr as usize)
+                        .write_volatile(data as u16)
+                };
+            }
             4 => {
-                unsafe {core::ptr::with_exposed_provenance_mut::<u32>(addr as usize).write_volatile(data as u32)};
-            },
-            _ => {panic!("wtf")},
+                unsafe {
+                    core::ptr::with_exposed_provenance_mut::<u32>(addr as usize)
+                        .write_volatile(data as u32)
+                };
+            }
+            _ => {
+                panic!("wtf")
+            }
         }
     }
     fn init_timer() {
-       let tab= find_acpi_table(c"RHCT".as_ptr().cast()).unwrap();
-       let rhct_tab = unsafe {tab.__bindgen_anon_1.virt_addr as *mut acpi_rhct};
-       let rhct = unsafe {rhct_tab.as_ref().unwrap()};
-       let tbf = rhct.tbf;
-       println!("RHCT timer freq 0x{:x}", tbf);
-       timr_freq.call_once(||tbf);
-       let mut sie = unsafe {
-        let x: usize;
-        core::arch::asm!("csrr {}, sie", out(reg) x);
-        x
-       };
-       sie |= (1 << 5);
-       unsafe {
-        core::arch::asm!("csrw sie, {}", in(reg) sie);
-       }
-       let mut sstatus = unsafe {
-        let x: usize;
-        core::arch::asm!("csrr {}, sstatus", out(reg) x);
-        x
-       };
-       sstatus |= (1 << 1);
-       // this is SO stupid even linux does this, risc v people should just
-       // die (in minecraft im joking)
-       sbi_call(0x54494D45, 0, [usize::MAX, 0, 0, 0, 0, 0]);
+        let tab = find_acpi_table(c"RHCT".as_ptr().cast()).unwrap();
+        let rhct_tab = unsafe { tab.__bindgen_anon_1.virt_addr as *mut acpi_rhct };
+        let rhct = unsafe { rhct_tab.as_ref().unwrap() };
+        let tbf = rhct.tbf;
+        println!("RHCT timer freq 0x{:x}", tbf);
+        timr_freq.call_once(|| tbf);
+        let mut sie = unsafe {
+            let x: usize;
+            core::arch::asm!("csrr {}, sie", out(reg) x);
+            x
+        };
+        sie |= (1 << 5);
+        unsafe {
+            core::arch::asm!("csrw sie, {}", in(reg) sie);
+        }
+        let mut sstatus = unsafe {
+            let x: usize;
+            core::arch::asm!("csrr {}, sstatus", out(reg) x);
+            x
+        };
+        sstatus |= (1 << 1);
+        // this is SO stupid even linux does this, risc v people should just
+        // die (in minecraft im joking)
+        sbi_call(0x54494D45, 0, [usize::MAX, 0, 0, 0, 0, 0]);
 
-       unsafe {
-        core::arch::asm!("csrw sstatus, {}", in(reg) sstatus);
-       }
-       status!("timer");
+        unsafe {
+            core::arch::asm!("csrw sstatus, {}", in(reg) sstatus);
+        }
+        status!("timer");
     }
     fn init_cpu_local(ptr: *mut super::cpu_local) {
         unsafe {
             core::arch::asm!("mv tp, {}", in(reg) ptr.expose_provenance());
         }
     }
-    fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: alloc::boxed::Box<dyn FnOnce() + 'static + Send>) -> usize {
+    fn prepare_new_thread_stack(
+        stack_ptr: &mut [usize],
+        function: alloc::boxed::Box<dyn FnOnce() + 'static + Send>,
+    ) -> usize {
         let len = stack_ptr.len();
         let slice = &mut stack_ptr[len - 17..];
         slice.fill(0);
         let real = Box::into_raw(function);
-        let meta: *const () =  unsafe {core::mem::transmute(core::ptr::metadata(real))};
+        let meta: *const () = unsafe { core::mem::transmute(core::ptr::metadata(real)) };
 
         slice[16] = meta as usize;
         slice[15] = real.expose_provenance();
@@ -162,15 +186,14 @@ impl Arch for Processor{
         unsafe {
             core::arch::asm!("csrr {}, time", out(reg) time);
         }
-        sbi_call(0x54494D45, 0, [time + (tick_per_ms * ms), 0, 0, 0,0,0]);
+        sbi_call(0x54494D45, 0, [time + (tick_per_ms * ms), 0, 0, 0, 0, 0]);
     }
     fn mask_timer() {
         // do the stupid thing
         sbi_call(0x54494D45, 0, [usize::MAX, 0, 0, 0, 0, 0]);
-
     }
     fn acknowledge_interrupt() {
-        // todo
+        todo!();
     }
     fn enable_interrupts() {
         unsafe {
@@ -185,6 +208,7 @@ impl Arch for Processor{
     fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str> {
         todo!()
     }
+    fn arch_bootstrap(res: &Response<MpRespData>) {}
 }
 #[unsafe(naked)]
 pub unsafe extern "C" fn sched_tramp1() {
@@ -199,9 +223,10 @@ pub unsafe extern "C" fn sched_tramp1() {
 pub unsafe extern "C" fn context_switch<T>(
     passthrough: *mut (),
     old_stack: *mut *mut (),
-    new_stack: *const *mut ()
+    new_stack: *const *mut (),
 ) -> *const T {
-    core::arch::naked_asm!("
+    core::arch::naked_asm!(
+        "
     addi sp, sp, -120
     sd ra, 0(sp)
     sd tp, 8(sp)
@@ -235,7 +260,8 @@ pub unsafe extern "C" fn context_switch<T>(
     ld ra, 0(sp)
     addi sp, sp, 120
     ret
-    ");
+    "
+    );
 }
 #[macro_export]
 macro_rules! get_cpu_local {
@@ -254,8 +280,8 @@ macro_rules! can_prempt {
     () => {{
         let x: u8;
         unsafe { core::arch::asm!(
-            "lb {}, {}(tp)", 
-            out(reg) x, 
+            "lb {}, {}(tp)",
+            out(reg) x,
             const core::mem::offset_of!(crate::arch::cpu_local, preempt)
         )};
         x != 0

@@ -1,10 +1,9 @@
 // flanterm shit
 
-
-use core::fmt::Write;
-use flantermbindings::*;
-pub use flanterm::{flanterm_context, flanterm_write};
 use crate::util::{Once, SpinLock};
+use core::fmt::Write;
+pub use flanterm::{flanterm_context, flanterm_write};
+use flantermbindings::*;
 
 #[derive(Clone, Copy)]
 pub struct Ball(*mut flanterm_context);
@@ -37,24 +36,25 @@ impl Write for Ball {
 pub static TERMINAL: Once<(Ball, SpinLock)> = Once::new();
 
 pub unsafe fn init_terminal(ctx: *mut flanterm_context) {
-    TERMINAL.call_once(||(Ball(ctx), SpinLock::new()));
+    TERMINAL.call_once(|| (Ball(ctx), SpinLock::new()));
 }
 
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
         use core::fmt::Write;
-        $crate::ft::TERMINAL.get().unwrap().1.lock();
+        if let Some(w) = $crate::ft::TERMINAL.get() {
+
+        
+        w.1.lock();
         unsafe {
-            let mut t = $crate::ft::TERMINAL.get().unwrap().0;
+            let mut t = w.0;
                 let _ = write!(t, $($arg)*);
         }
-        $crate::ft::TERMINAL.get().unwrap().1.unlock();
+        w.1.unlock();
+    }
     }};
 }
-
-
-
 
 #[macro_export]
 macro_rules! println {
@@ -68,7 +68,7 @@ macro_rules! println {
 #[macro_export]
 macro_rules! status {
     () => {
-        
+
     };
     ($($arg:tt)*) => {{
 

@@ -1,7 +1,10 @@
 // Copyright Â© 2026, __robot@PLT
 // SPDX-License-Identifier: MIT
 
-use core::{marker::PhantomData, ptr::{self, null_mut}};
+use core::{
+    marker::PhantomData,
+    ptr::{self, null_mut},
+};
 
 use alloc::{boxed::Box, sync::Arc};
 
@@ -84,7 +87,7 @@ pub struct InvasiveListIter<'a, T: HasListNode<T>> {
 }
 pub struct InvasiveListIterMut<'a, T: HasListNode<T>> {
     cur: *mut InvasiveListNode,
-    marker: PhantomData<&'a mut InvasiveList<T>>
+    marker: PhantomData<&'a mut InvasiveList<T>>,
 }
 
 impl<'a, T: HasListNode<T>> Iterator for InvasiveListIter<'a, T> {
@@ -335,7 +338,10 @@ impl<T: HasListNode<T>> InvasiveList<T> {
         }
     }
     pub fn iter_mut<'a>(&'a mut self) -> InvasiveListIterMut<'a, T> {
-        InvasiveListIterMut { cur: self.first, marker: PhantomData }
+        InvasiveListIterMut {
+            cur: self.first,
+            marker: PhantomData,
+        }
     }
 }
 
@@ -428,7 +434,7 @@ impl<T: HasListNode<T>> ArcInvasiveList<T> {
     }
     pub fn remove(&mut self, thing: &T) {
         assert!(self.contains(thing));
-        unsafe {self.inner.remove(thing as *const T as *mut T)};
+        unsafe { self.inner.remove(thing as *const T as *mut T) };
     }
 }
 
@@ -521,7 +527,7 @@ impl<T: HasListNode<T>> BoxInvasiveList<T> {
     }
     pub fn remove(&mut self, thing: &T) {
         assert!(self.contains(thing));
-        unsafe {self.inner.remove(thing as *const T as *mut T)};
+        unsafe { self.inner.remove(thing as *const T as *mut T) };
     }
 }
 

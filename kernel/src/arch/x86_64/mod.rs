@@ -1,25 +1,36 @@
-use core::{arch::naked_asm};
+use core::arch::naked_asm;
 #[cfg(target_arch = "x86_64")]
 use core::mem::offset_of;
 
 #[cfg(target_arch = "x86_64")]
 use alloc::boxed::Box;
-use limine_boot::mp::MpInfo;
+use limine::mp::MpInfo;
 
-use crate::{arch::{Arch, Processor, x86_64::{gdt::ap_gdt_init, idt::idt_load}}, scheduler::sched_tramp2};
+use crate::{
+    arch::{
+        Arch, Processor,
+        x86_64::{gdt::ap_gdt_init, idt::idt_load},
+    },
+    scheduler::sched_tramp2,
+};
 #[cfg(target_arch = "x86_64")]
-use crate::{arch::{cpu_local, x86_64::{intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init}}, memory::vmm::Pagemap, println};
-
-
+use crate::{
+    arch::{
+        cpu_local,
+        x86_64::{intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init},
+    },
+    memory::vmm::Pagemap,
+    println,
+};
 
 pub mod gdt;
-pub mod idt;
-pub mod serial;
-pub mod pt;
-pub mod intel;
 pub mod hpet;
-pub mod tss;
+pub mod idt;
+pub mod intel;
 pub mod lapic;
+pub mod pt;
+pub mod serial;
+pub mod tss;
 
 pub trait CalibrationTimer {
     fn get_ms(&self) -> usize;
@@ -41,12 +52,13 @@ pub fn calibrate_timer_init() {
 const GS_BASE: u32 = 0xC0000101;
 pub fn outb(port: u16, data: u8) {
     unsafe {
-    core::arch::asm!(
-        "out dx, al",
-        in("dx") port,
-        in("al") data,
-     ); }
+        core::arch::asm!(
+           "out dx, al",
+           in("dx") port,
+           in("al") data,
+        );
     }
+}
 // clanker functions cpuid and is_intel produced by clanker because
 // i need to do the iommu right now and i cannot be fucked to
 // worry about this right now, looks correct to me anyway
@@ -75,7 +87,7 @@ pub fn is_intel() -> bool {
 pub fn rdmsr(msr: u32) -> usize {
     let mut lo: usize = 0;
     let mut hi: usize = 0;
-    unsafe {core::arch::asm!("rdmsr", in("ecx") msr, out("eax") lo, out("edx") hi)};
+    unsafe { core::arch::asm!("rdmsr", in("ecx") msr, out("eax") lo, out("edx") hi) };
     return lo | (hi << 32);
 }
 pub fn wrmsr(msr: u32, val: usize) {
@@ -86,14 +98,15 @@ pub fn wrmsr(msr: u32, val: usize) {
     }
 }
 #[cfg(target_arch = "x86_64")]
-impl Arch for Processor{
+impl Arch for Processor {
     const PAGE_SIZE: usize = 4096;
     fn arch_bsp_init() {
-        use crate::{memory::{pmm, vmm}, println};
-        println!("x86_64 init");
+        use crate::{
+            memory::{pmm, vmm},
+            println,
+        };
         gdt::bsp_gdt_init();
         idt::idt_init();
-
     }
     fn get_root_table() -> *mut u64 {
         use crate::arch::x86_64::pt::read_cr3;
@@ -107,63 +120,57 @@ impl Arch for Processor{
         match byte_width {
             1 => {
                 let h: u8;
-                unsafe {
-                core::arch::asm!("in al, dx", out("al") h, in("dx") addr as u16)};
+                unsafe { core::arch::asm!("in al, dx", out("al") h, in("dx") addr as u16) };
                 return h as u64;
-            },
+            }
             2 => {
                 let h: u16;
-                unsafe {
-                core::arch::asm!("in ax, dx", out("ax") h, in("dx") addr as u16)};
+                unsafe { core::arch::asm!("in ax, dx", out("ax") h, in("dx") addr as u16) };
                 return h as u64;
-
-            },
+            }
             4 => {
                 let h: u32;
-                unsafe {
-                core::arch::asm!("in eax, dx", out("eax") h, in("dx") addr as u16)};
+                unsafe { core::arch::asm!("in eax, dx", out("eax") h, in("dx") addr as u16) };
                 return h as u64;
-
-            },
-            _ => {panic!("invalid")}
+            }
+            _ => {
+                panic!("invalid")
+            }
         }
     }
     fn raw_io_out(addr: u64, data: u64, byte_width: u8) {
         match byte_width {
             1 => {
-                unsafe {
-                core::arch::asm!("out dx, al", in("dx") addr, in("al") data as u8)};
-            },
-            2 => {
-                 unsafe {
-                core::arch::asm!("out dx, ax", in("dx") addr, in("ax") data as u16)};
-            },
-            4 => {
-                unsafe {
-                core::arch::asm!("out dx, eax", in("dx") addr, in("eax") data as u32)};
-            },
-            _ => {
-
+                unsafe { core::arch::asm!("out dx, al", in("dx") addr, in("al") data as u8) };
             }
+            2 => {
+                unsafe { core::arch::asm!("out dx, ax", in("dx") addr, in("ax") data as u16) };
+            }
+            4 => {
+                unsafe { core::arch::asm!("out dx, eax", in("dx") addr, in("eax") data as u32) };
+            }
+            _ => {}
         }
     }
-    
+
     fn init_timer() {
         calibrate_timer_init();
         lapic_init(cali_timer.get().unwrap().as_ref());
     }
-    fn prepare_new_thread_stack(stack_ptr: &mut [usize], function: Box<dyn FnOnce() + 'static + Send>) -> usize {
+    fn prepare_new_thread_stack(
+        stack_ptr: &mut [usize],
+        function: Box<dyn FnOnce() + 'static + Send>,
+    ) -> usize {
         let len = stack_ptr.len();
         let slice = &mut stack_ptr[len - 9..];
         slice.fill(0);
         let real = Box::into_raw(function);
-        let meta: *const () =  unsafe {core::mem::transmute(core::ptr::metadata(real))};
+        let meta: *const () = unsafe { core::mem::transmute(core::ptr::metadata(real)) };
 
         slice[8] = meta as usize;
         slice[7] = real.expose_provenance();
         slice[6] = sched_tramp1 as *const fn() as usize;
         9 * size_of::<usize>()
-
     }
     fn init_cpu_local(ptr: *mut cpu_local) {
         unsafe {
@@ -173,43 +180,43 @@ impl Arch for Processor{
     /// it will set the timer ms then renable the timer
     fn set_timer_ms(ms: usize) {
         use crate::get_cpu_local;
-        let local = unsafe {get_cpu_local!().as_mut().unwrap()};
+        let local = unsafe { get_cpu_local!().as_mut().unwrap() };
         let l = local.lapic.as_mut().unwrap();
         l.set_timer(ms);
-
     }
     fn mask_timer() {
         use crate::get_cpu_local;
-        let local = unsafe {get_cpu_local!().as_mut().unwrap()};
+        let local = unsafe { get_cpu_local!().as_mut().unwrap() };
         let l = local.lapic.as_mut().unwrap();
         l.disable_timer();
     }
     fn acknowledge_interrupt() {
         use crate::get_cpu_local;
-        let local = unsafe {get_cpu_local!().as_mut().unwrap()};
+        let local = unsafe { get_cpu_local!().as_mut().unwrap() };
         let l = local.lapic.as_mut().unwrap();
         l.send_eoi();
     }
     fn enable_interrupts() {
-        unsafe { core::arch::asm!("sti"); }
+        unsafe {
+            core::arch::asm!("sti");
+        }
     }
     fn disable_interrupts() {
-        unsafe { core::arch::asm!("cli"); }
+        unsafe {
+            core::arch::asm!("cli");
+        }
     }
     fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str> {
         use crate::get_cpu_local;
         let l = get_cpu_local!();
         let add = stack_ptr.addr();
-        let t = unsafe {
-            (*l).tss_ptr
-        };
+        let t = unsafe { (*l).tss_ptr };
         unsafe {
-            (*t).ist1_hi = ((add >> 32) & 0xFFFFFFFF) as u32;
-            (*t).ist1_lo = (add & 0xFFFFFFFF) as u32;
+            (*t).ist1 = add as u64;
         }
         Ok(())
     }
-    fn arch_bootstrap(res: &limine_boot::request::Response<limine_boot::mp::MpRespData>) {
+    fn arch_bootstrap(res: &limine::request::Response<limine::mp::MpRespData>) {
         for i in res.cpus() {
             if i.lapic_id == res.bsp_lapic_id {
                 continue;
@@ -218,20 +225,17 @@ impl Arch for Processor{
             i.bootstrap(ap_init, 0);
         }
     }
-
 }
-unsafe extern "C" fn ap_init(info: &MpInfo) -> ! {
+pub unsafe extern "C" fn ap_init(info: &MpInfo) -> ! {
     let g = cpu_local::new(false);
-    
-    let gtab = unsafe {
-        (*g).gdt.as_ref().unwrap()
-    };
+
+    let gtab = unsafe { (*g).gdt.as_ref().unwrap() };
     ap_gdt_init(gtab);
     idt_load();
 
     status!("cpu {}", info.processor_id);
     loop {
-    core::hint::spin_loop();
+        core::hint::spin_loop();
     }
     unreachable!()
 }
@@ -248,9 +252,10 @@ pub unsafe extern "C" fn sched_tramp1() {
 pub unsafe extern "C" fn context_switch<T>(
     passthrough: *mut (),
     old_stack: *mut *mut (),
-    new_stack: *const *mut ()
-) -> *const T{
-    naked_asm!("
+    new_stack: *const *mut (),
+) -> *const T {
+    naked_asm!(
+        "
     push rbx
     push rbp
     push r12
@@ -265,7 +270,8 @@ pub unsafe extern "C" fn context_switch<T>(
     pop r12
     pop rbp
     pop rbx
-    ret");
+    ret"
+    );
 }
 #[macro_export]
 macro_rules! get_cpu_local {
@@ -286,4 +292,3 @@ macro_rules! can_prempt {
         x != 0
     }};
 }
-

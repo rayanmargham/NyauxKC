@@ -49,7 +49,6 @@ impl GDTdesc {
             base_hi: 0x0,
         }
     }
-
 }
 #[repr(C, packed)]
 pub struct GDTtss {
@@ -60,7 +59,7 @@ pub struct GDTtss {
     flags_and_lim: u8,
     base_addr_hi_low: u8,
     base_addr_hi_hi: u32,
-    reserved: u32
+    reserved: u32,
 }
 impl GDTtss {
     const fn zeroed() -> GDTtss {
@@ -86,13 +85,10 @@ impl GDTtss {
             base_addr_hi_hi: ((addr >> 32) & 0xFFFFFFFF) as u32,
             access_byte: {
                 let typ = 0x9;
-                (1 as u8) << 7 |
-                typ
+                (1 as u8) << 7 | typ
             },
-            flags_and_lim: {
-                ((limit >> 16) & 0xF) as u8
-            },
-            reserved: 0
+            flags_and_lim: { ((limit >> 16) & 0xF) as u8 },
+            reserved: 0,
         }
     }
 }
@@ -101,23 +97,28 @@ pub struct GdtTable {
     null: GDTdesc,
     pub kernelcode: GDTdesc,
     pub kerneldata: GDTdesc,
-    pub tss: GDTtss
+    pub userdata: GDTdesc,
+    pub usercode: GDTdesc,
+    pub tss: GDTtss,
 }
 impl GdtTable {
     pub const fn new() -> GdtTable {
         GdtTable {
-    null: GDTdesc {
-        limit_low: 0x0,
-        base_hi: 0x0,
-        base_low: 0x0,
-        base_mid: 0x0,
-        access_byte: 0x0,
-        flags_and_limhi: 0x0,
-    },
-    kernelcode: GDTdesc::new(true, true, false, true, true, 0),
-    kerneldata: GDTdesc::new(true, true, false, false, true, 0),
-    tss: GDTtss::zeroed()
-}
+            null: GDTdesc {
+                limit_low: 0x0,
+                base_hi: 0x0,
+                base_low: 0x0,
+                base_mid: 0x0,
+                access_byte: 0x0,
+                flags_and_limhi: 0x0,
+            },
+            kernelcode: GDTdesc::new(true, true, false, true, true, 0),
+            kerneldata: GDTdesc::new(true, true, false, false, true, 0),
+
+            userdata: GDTdesc::new(true, true, false, false, true, 3),
+            usercode: GDTdesc::new(true, true, false, true, true, 3),
+            tss: GDTtss::zeroed(),
+        }
     }
 }
 pub static BSP_TSS: SyncCell<tss> = SyncCell::new(tss::new());

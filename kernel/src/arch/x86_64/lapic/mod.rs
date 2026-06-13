@@ -1,4 +1,4 @@
-// ipis, xapic by water bottle
+// ipis, xapic by luna
 // x2apic by me
 use core::hint::spin_loop;
 
@@ -179,10 +179,9 @@ impl lapic {
         let mut lvt = self.read(IA32_LAPIC_LVT_TIMER);
         lvt &= !IA32_LAPIC_MASK_MASKED;
 
-        self.write(IA32_LAPIC_LVT_TIMER, lvt); 
+        self.write(IA32_LAPIC_LVT_TIMER, lvt);
     }
     pub fn set_timer(&mut self, ms: usize) {
-
         self.disable_timer();
         self.write(IA32_LAPIC_TIMER_INIT_COUNT, (self.ticks_per_ms * ms) as u32);
         self.enable_timer();
@@ -218,7 +217,6 @@ impl lapic {
     }
 
     fn send_icr(&mut self, apic_id: u32, mut icr: u64) {
-
         if self.lapic_type == lapic_type::xapic {
             // for xapic, the destination field is bits 63-56
             icr |= (apic_id as u64) << 56;

@@ -1,2 +1,4 @@
 /target
-kernel
+bin-*/
+limine-protocol/
+Cargo.lock

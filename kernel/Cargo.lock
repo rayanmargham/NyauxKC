@@ -150,9 +150,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "limine-boot"
-version = "0.6.0"
-source = "git+https://github.com/robotman2412/limine-boot-rust#2e219f1eb6f9be92ed8939d6f92c7b8f98962259"
+name = "limine"
+version = "0.6.5"
+source = "git+https://github.com/robotman2412/limine-boot-rust#24bb17bb19d0e1d8e14b3a8d624c4af69cde6adf"
 
 [[package]]
 name = "log"
@@ -189,7 +189,7 @@ dependencies = [
  "bitflags",
  "bytemuck",
  "flantermbindings",
- "limine-boot",
+ "limine",
  "nyaux_uacpi_bindings",
  "rustc-demangle",
  "seq-macro",

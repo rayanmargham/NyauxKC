@@ -3,7 +3,11 @@ use core::{arch::naked_asm, fmt::Debug, mem::offset_of, ptr::addr_of};
 use bytemuck::{Pod, Zeroable};
 use seq_macro::seq;
 
-use crate::{arch::{x86_64::gdt::GdtTable, Arch, Processor}, can_prempt, println, scheduler::sched_yield};
+use crate::{
+    arch::{Arch, Processor, x86_64::gdt::GdtTable},
+    can_prempt, println,
+    scheduler::sched_yield,
+};
 const INTERRUPT_GATE: u8 = 0xE;
 // a lot of code here looks similar to menix, it is true that i took "inspiration" :trollface:, i make sure i understood what im writing
 // so i think its fine to have my code REALLY similar to menix. at least these stubs and the singular interrupt handler concept
@@ -157,16 +161,18 @@ unsafe extern "C" fn inter_stub~N() {
 }}}
 unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
     let int = unsafe { frame.as_ref().unwrap().int };
-    let err = unsafe { frame.as_ref().unwrap().error};
+    let err = unsafe { frame.as_ref().unwrap().error };
     match int {
         0xe => {
-          let cr2: usize;
-          unsafe { core::arch::asm!("mov {}, cr2", out(reg) cr2) };
-          panic!("page fault my dude, cr2: {:#x}, {:#?}", cr2, unsafe {frame.as_ref().unwrap()});
-        },
+            let cr2: usize;
+            unsafe { core::arch::asm!("mov {}, cr2", out(reg) cr2) };
+            panic!("page fault my dude, cr2: {:#x}, {:#?}", cr2, unsafe {
+                frame.as_ref().unwrap()
+            });
+        }
         0xff => {
             println!("got spurious interrupt");
-        },
+        }
         0x21 => {
             Processor::acknowledge_interrupt();
             if (can_prempt!()) {
@@ -174,7 +180,12 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
             }
         }
         _ => {
-            panic!("unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}", int, err, unsafe {frame.as_ref()}.unwrap().rip);
+            panic!(
+                "unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}",
+                int,
+                err,
+                unsafe { frame.as_ref() }.unwrap().rip
+            );
         }
     }
 }
@@ -219,8 +230,11 @@ pub fn idt_init() {
     unsafe {
         seq!(N in 0..256 {
             IDT.entries[N] = GateDesc::new((inter_stub~N as *const ()) as u64, (offset_of!(GdtTable, kernelcode)) as u16,0,INTERRUPT_GATE, 0);});
-        
-    assert_eq!(IDT.entries[0].seg_sel, ((offset_of!(GdtTable, kernelcode)) as u16));
+
+        assert_eq!(
+            IDT.entries[0].seg_sel,
+            ((offset_of!(GdtTable, kernelcode)) as u16)
+        );
     };
     idt_load();
 }
@@ -232,7 +246,7 @@ pub fn idt_load() {
     let blah = idtr.size;
     let goo = idtr.offset;
     println!("size: {}, offset: {:x}", blah, goo);
-   
+
     unsafe {
         core::arch::asm!("
     lidt [{}]", in(reg) &idtr);

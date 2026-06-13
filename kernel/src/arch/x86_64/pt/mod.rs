@@ -3,19 +3,21 @@ use core::ptr::addr_of;
 use alloc::vec::Vec;
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
-use limine_boot::paging::PagingMode;
-use limine_boot::request::ExecutableAddressRequest;
+use limine::paging::PagingMode;
+use limine::request::ExecutableAddressRequest;
 
 use crate::{
-    HHDM_REQUEST, KERNELADDR_REQUEST, KS, align_up, arch::{Arch, PAGING_MODE_REQUEST, Processor}, memory::{
+    HHDM_REQUEST, KERNELADDR_REQUEST, KS, align_up,
+    arch::{Arch, PAGING_MODE_REQUEST, Processor},
+    memory::{
         pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page},
         vmm::{Pagemap, VMMFlags, kermap},
-    }, print, println, status
+    },
+    print, println, status,
 };
 const fn extract_phys_from_pte(pte: u64) -> u64 {
     pte & 0x000F_FFFF_FFFF_F000 // abomination, but nyaux code does it, i must do it too. i misunderstood some things
 }
-
 
 bitflags! {
 
@@ -289,9 +291,10 @@ impl PTENT {
 
         if !h.is_null() {
             unsafe {
-                let page = core::ptr::with_exposed_provenance_mut::<u64>(
-                    extract_phys_from_pte(h.read()) as usize,
+                let page = core::ptr::with_exposed_provenance_mut::<u64>(extract_phys_from_pte(
+                    h.read(),
                 )
+                    as usize)
                 .byte_add(HHDM_REQUEST.response().unwrap().offset as usize);
                 deallocate_page(page.cast());
                 h.write(0);
@@ -322,7 +325,12 @@ impl Pagemap {
     pub fn archpt(&self) -> PTENT {
         PTENT(self.arch_page)
     }
-    pub fn arch_map_region_alloc(&self, base: usize, length: usize, flags: crate::memory::vmm::VMMFlags) {
+    pub fn arch_map_region_alloc(
+        &self,
+        base: usize,
+        length: usize,
+        flags: crate::memory::vmm::VMMFlags,
+    ) {
         let yo = self.archpt();
         for i in (base..(base + length)).step_by(Processor::PAGE_SIZE) {
             use crate::{arch::x86_64::pt::PT, memory::pmm::allocate_page};
@@ -335,12 +343,20 @@ impl Pagemap {
             .unwrap();
         }
     }
-    pub fn arch_map_region(&self, base: usize, length: usize, phys: Vec<u64>, flags: crate::memory::vmm::VMMFlags) {
+    pub fn arch_map_region(
+        &self,
+        base: usize,
+        length: usize,
+        phys: Vec<u64>,
+        flags: crate::memory::vmm::VMMFlags,
+    ) {
         let yo = self.archpt();
-        for (idx, i) in (base..(base + length)).step_by(Processor::PAGE_SIZE).enumerate() {
+        for (idx, i) in (base..(base + length))
+            .step_by(Processor::PAGE_SIZE)
+            .enumerate()
+        {
             let pa = phys[idx];
-            yo.map4kib(
-                i as u64, pa, PT::from_vmmflags(flags)).unwrap();
+            yo.map4kib(i as u64, pa, PT::from_vmmflags(flags)).unwrap();
         }
     }
     pub fn arch_unmap_region(&self, base: usize, length: usize) {
@@ -397,15 +413,15 @@ pub fn pt_init() -> (usize, usize) {
     if let Some(memap_res) = MEMMAP_REQUEST.response() {
         for i in memap_res.entries() {
             match i.type_ {
-                limine_boot::memmap::MEMMAP_MAPPED_RESERVED
-                | limine_boot::memmap::MEMMAP_USABLE
-                | limine_boot::memmap::MEMMAP_BOOTLOADER_RECLAIMABLE
-                | limine_boot::memmap::MEMMAP_EXECUTABLE_AND_MODULES
-                | limine_boot::memmap::MEMMAP_ACPI_NVS
-                | limine_boot::memmap::MEMMAP_ACPI_RECLAIMABLE => {
+                limine::memmap::MEMMAP_MAPPED_RESERVED
+                | limine::memmap::MEMMAP_USABLE
+                | limine::memmap::MEMMAP_BOOTLOADER_RECLAIMABLE
+                | limine::memmap::MEMMAP_EXECUTABLE_AND_MODULES
+                | limine::memmap::MEMMAP_ACPI_NVS
+                | limine::memmap::MEMMAP_ACPI_RECLAIMABLE => {
                     max_hhdm_phys = (i.base + i.length).max(max_hhdm_phys as u64) as usize;
                 }
-                limine_boot::memmap::MEMMAP_FRAMEBUFFER => {
+                limine::memmap::MEMMAP_FRAMEBUFFER => {
                     max_hhdm_phys = (i.base + i.length).max(max_hhdm_phys as u64) as usize;
                     memmap_fb_info = (i.base as usize, i.length as usize);
                 }

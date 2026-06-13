@@ -1,54 +1,165 @@
 use core::fmt::Debug;
 
 use alloc::vec::{self, Vec};
-use nyaux_uacpi_bindings::{ACPI_MCFG_SIGNATURE, UACPI_STATUS_OK, acpi_mcfg, uacpi_table, uacpi_table_find_by_signature, uacpi_table_unref};
+use nyaux_uacpi_bindings::{
+    ACPI_MCFG_SIGNATURE, UACPI_STATUS_OK, acpi_mcfg, uacpi_table, uacpi_table_find_by_signature,
+    uacpi_table_unref,
+};
 
-use crate::{arch::{Arch, Processor}, early_init_pagemap, memory::vmm::VMMFlags, println, uacpi::check_ustatus, util::Once};
-
+use crate::{
+    align_down, align_up, arch::{Arch, Processor}, early_init_pagemap, memory::vmm::VMMFlags, println, uacpi::check_ustatus, util::Once
+};
+pub const PCI_BUS_MASTER: u16 = (1 << 2);
+pub const PCI_MEM_SPACE: u16 = (1 << 1);
 pub fn pci_read_dword(bus: u8, slot: u8, func: u8, offset: u16) -> u32 {
     let info = PCI_INF.get().unwrap();
     let add = unsafe {
-    core::ptr::with_exposed_provenance_mut::<u32>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
-    return unsafe {add.read_volatile()};
+        core::ptr::with_exposed_provenance_mut::<u32>(info.ecam_base_addr as usize).byte_add(
+            ((bus as usize - info.root_bus as usize) << 20)
+                + ((slot as usize) << 15)
+                + ((func as usize) << 12)
+                + offset as usize,
+        )
+    };
+    return unsafe { add.read_volatile() };
 }
 pub fn pci_write_dword(bus: u8, slot: u8, func: u8, offset: u16, data: u32) {
     let info = PCI_INF.get().unwrap();
     let add = unsafe {
-    core::ptr::with_exposed_provenance_mut::<u32>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
-    unsafe {add.write_volatile(data)};
+        core::ptr::with_exposed_provenance_mut::<u32>(info.ecam_base_addr as usize).byte_add(
+            ((bus as usize - info.root_bus as usize) << 20)
+                + ((slot as usize) << 15)
+                + ((func as usize) << 12)
+                + offset as usize,
+        )
+    };
+    unsafe { add.write_volatile(data) };
 }
 pub fn pci_read_word(bus: u8, slot: u8, func: u8, offset: u16) -> u16 {
     let info = PCI_INF.get().unwrap();
     let add = unsafe {
-    core::ptr::with_exposed_provenance_mut::<u16>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
-    return unsafe {add.read_volatile()};
+        core::ptr::with_exposed_provenance_mut::<u16>(info.ecam_base_addr as usize).byte_add(
+            ((bus as usize - info.root_bus as usize) << 20)
+                + ((slot as usize) << 15)
+                + ((func as usize) << 12)
+                + offset as usize,
+        )
+    };
+    return unsafe { add.read_volatile() };
 }
 pub fn pci_write_word(bus: u8, slot: u8, func: u8, offset: u16, data: u16) {
     let info = PCI_INF.get().unwrap();
     let add = unsafe {
-    core::ptr::with_exposed_provenance_mut::<u16>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
-    unsafe {add.write_volatile(data)};
+        core::ptr::with_exposed_provenance_mut::<u16>(info.ecam_base_addr as usize).byte_add(
+            ((bus as usize - info.root_bus as usize) << 20)
+                + ((slot as usize) << 15)
+                + ((func as usize) << 12)
+                + offset as usize,
+        )
+    };
+    unsafe { add.write_volatile(data) };
+}
+
+
+
+pub fn pci_map_bar(location: &(u8, u8, u8), bar_num: u16, offset: u32, length: usize) -> Option<*mut ()> {
+    let s = pci_read_dword(location.2, location.1, location.0, 0x10 + (bar_num * 4)) as u64;
+    if s & 1 != 0 {
+        println!("returned {:b}", s);
+        return None;
+    }
+    if (s >> 1) & 0x2 != 0 {
+        println!("64 bit bar");
+        // bitmath stolen from osdev wiki trol
+        let f = pci_read_dword(location.2, location.1, location.0, 0x10 + ((bar_num + 1)*4)) as u64;
+
+        let base: u64 = ((s & 0xFFFFFFF0) | ((f & 0xFFFFFFFF) << 32)) + offset as u64;
+        let base_aligned = align_down(base, Processor::PAGE_SIZE as u64);
+        let end_aligned = align_up(base + length as u64, Processor::PAGE_SIZE as u64);
+        let map_len = (end_aligned - base_aligned) as usize;
+        let offset_into_mapping = (base - base_aligned) as usize;
+
+        println!("i want to map bar base 0x{:x}", base);
+
+        let mut p = Vec::new();
+        for i in (base_aligned..end_aligned).step_by(Processor::PAGE_SIZE) {
+            p.push(i);
+        }
+
+        let virt = early_init_pagemap!()
+            .vmm_alloc_with_phys(
+                map_len,
+                VMMFlags::NOCACHE | VMMFlags::WRITE | VMMFlags::GLOBAL,
+                p,
+            )
+            .unwrap();
+
+        let virt = unsafe {
+            (virt as *mut u8).add(offset_into_mapping).cast::<()>()
+        };
+
+        println!("done with {:p}", virt);
+        return Some(virt);
+
+    } else {
+        let base: u64 = (s & 0xFFFFFFF0) + offset as u64;
+        let base_aligned = align_down(base, Processor::PAGE_SIZE as u64);
+        let end_aligned = align_up(base + length as u64, Processor::PAGE_SIZE as u64);
+        let map_len = (end_aligned - base_aligned) as usize;
+        let offset_into_mapping = (base - base_aligned) as usize;
+
+        let mut p = Vec::new();
+        for i in (base_aligned..end_aligned).step_by(Processor::PAGE_SIZE) {
+            p.push(i);
+        }
+
+        let virt = early_init_pagemap!()
+            .vmm_alloc_with_phys(
+                map_len,
+                VMMFlags::NOCACHE | VMMFlags::WRITE | VMMFlags::GLOBAL,
+                p,
+            )
+            .unwrap();
+
+        let virt = unsafe {
+            (virt as *mut u8).add(offset_into_mapping).cast::<()>()
+        };
+
+        println!("done with {:p}", virt);
+        return Some(virt);
+    }
 }
 pub fn pci_read_byte(bus: u8, slot: u8, func: u8, offset: u16) -> u8 {
     let info = PCI_INF.get().unwrap();
     let add = unsafe {
-    core::ptr::with_exposed_provenance_mut::<u8>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
-    return unsafe {add.read_volatile()};
+        core::ptr::with_exposed_provenance_mut::<u8>(info.ecam_base_addr as usize).byte_add(
+            ((bus as usize - info.root_bus as usize) << 20)
+                + ((slot as usize) << 15)
+                + ((func as usize) << 12)
+                + offset as usize,
+        )
+    };
+    return unsafe { add.read_volatile() };
 }
 pub fn pci_write_byte(bus: u8, slot: u8, func: u8, offset: u16, data: u8) {
     let info = PCI_INF.get().unwrap();
     let add = unsafe {
-    core::ptr::with_exposed_provenance_mut::<u8>(info.ecam_base_addr as usize).byte_add(((bus as usize - info.root_bus as usize) << 20) + ((slot as usize) << 15) + ((func as usize) << 12) + offset as usize)};
-    unsafe {add.write_volatile(data)};
+        core::ptr::with_exposed_provenance_mut::<u8>(info.ecam_base_addr as usize).byte_add(
+            ((bus as usize - info.root_bus as usize) << 20)
+                + ((slot as usize) << 15)
+                + ((func as usize) << 12)
+                + offset as usize,
+        )
+    };
+    unsafe { add.write_volatile(data) };
 }
 
 #[derive(Debug)]
 struct PCI_INFO {
     root_bus: u64,
     seg: u64,
-    ecam_base_addr: u64 // ensure you cast back to a ptr with expose_providence()
+    ecam_base_addr: u64, // ensure you cast back to a ptr with expose_providence()
 }
-
 
 // vendor_name and class_name and prog_if_name are clanker made but they seem right
 // plus dont expect me to manually write it myself
@@ -261,50 +372,54 @@ fn pci_device_print(bus: u8, slot: u8, func: u8, ve: u16) -> (usize, usize, usiz
     let prog_if = be >> 8 & 0xFF;
     let subcl = be >> 16 & 0xFF;
     let class = be >> 24 & 0xFF;
-    println!("PCI {} via {} on bus {}", class_name(class as u8, subcl as u8), prog_if_name(class as u8, subcl as u8, prog_if as u8), bus);
-    return (class, subcl, prog_if)
-    
+    println!(
+        "PCI {} via {} on bus {}",
+        class_name(class as u8, subcl as u8),
+        prog_if_name(class as u8, subcl as u8, prog_if as u8),
+        bus
+    );
+    return (class, subcl, prog_if);
 }
 pub static pci_devices: Once<Vec<(u8, u8, u8)>> = Once::new();
 fn pci_scan(bus: u8, pci_devicess: &mut Vec<(u8, u8, u8)>) {
     for i in 0..32 {
-            let ve = pci_read_word(bus, i, 0, 0x0);
-            if ve == 0xFFFF {
-                continue;
-            }
-            let he_type = (pci_read_dword(bus, i, 0, 0xC) >> 16) & 0xFF;
-            if he_type & (1 << 7) != 0 {
-                for j in 0..8 {
-                    let v = pci_read_word(bus, i, j, 0x0);
-                    if v == 0xFFFF {
-                        continue;
-                    }
+        let ve = pci_read_word(bus, i, 0, 0x0);
+        if ve == 0xFFFF {
+            continue;
+        }
+        let he_type = (pci_read_dword(bus, i, 0, 0xC) >> 16) & 0xFF;
+        if he_type & (1 << 7) != 0 {
+            for j in 0..8 {
+                let v = pci_read_word(bus, i, j, 0x0);
+                if v == 0xFFFF {
+                    continue;
+                }
                 pci_devicess.push((bus, i, j));
-                    let c = pci_device_print(bus, i, j, ve);
+                let c = pci_device_print(bus, i, j, ve);
                 if c.0 == 0x6 && c.1 == 0x4 {
                     let bus = pci_read_word(bus, i, j, 0x18) >> 8;
                     println!("found secondary bus {}", bus);
                     pci_scan(bus as u8, pci_devicess);
                 }
-                }
-            } else {
-                // check if bridge cause there is more buses
-                
-                let c = pci_device_print(bus, i, 0, ve);
-                pci_devicess.push((bus, i, 0));
-                if c.0 == 0x6 && c.1 == 0x4 {
-                    let bus = pci_read_word(bus, i, 0, 0x18) >> 8;
-                    println!("found secondary bus {}", bus);
-
-                    pci_scan(bus as u8, pci_devicess);
-                }
             }
+        } else {
+            // check if bridge cause there is more buses
 
+            let c = pci_device_print(bus, i, 0, ve);
+            pci_devicess.push((bus, i, 0));
+            if c.0 == 0x6 && c.1 == 0x4 {
+                let bus = pci_read_word(bus, i, 0, 0x18) >> 8;
+                println!("found secondary bus {}", bus);
+
+                pci_scan(bus as u8, pci_devicess);
+            }
         }
+    }
 }
+
+
 pub fn pci_init() {
-   
-        unsafe {
+    unsafe {
         let mut table: uacpi_table = core::mem::zeroed();
         let status = uacpi_table_find_by_signature(ACPI_MCFG_SIGNATURE.as_ptr().cast(), &mut table);
         check_ustatus(status).unwrap();
@@ -320,18 +435,28 @@ pub fn pci_init() {
         let first = &*(*mcfg).entries.as_ptr();
         let ecam_region_size = ((first.end_bus as usize - first.start_bus as usize) + 1) << 20; // each bus is 1mb or wtv
         let mut s = Vec::new();
-        for i in (first.address..(first.address + (ecam_region_size as u64))).step_by(Processor::PAGE_SIZE) {
+        for i in (first.address..(first.address + (ecam_region_size as u64)))
+            .step_by(Processor::PAGE_SIZE)
+        {
             s.push(i);
         }
-        let virt = early_init_pagemap!().vmm_alloc_with_phys(ecam_region_size as usize, VMMFlags::WRITE | VMMFlags::NOCACHE,s ).unwrap();
-        PCI_INF.call_once(|| PCI_INFO { root_bus: first.start_bus as u64, seg: first.segment as u64, ecam_base_addr: virt.expose_provenance() as u64});
+        let virt = early_init_pagemap!()
+            .vmm_alloc_with_phys(
+                ecam_region_size as usize,
+                VMMFlags::WRITE | VMMFlags::NOCACHE,
+                s,
+            )
+            .unwrap();
+        PCI_INF.call_once(|| PCI_INFO {
+            root_bus: first.start_bus as u64,
+            seg: first.segment as u64,
+            ecam_base_addr: virt.expose_provenance() as u64,
+        });
         let sb = first.start_bus;
         uacpi_table_unref(&mut table);
         let mut v = Vec::new();
- 
+
         pci_scan(sb, &mut v);
         pci_devices.call_once(|| v);
-
     }
-    
 }

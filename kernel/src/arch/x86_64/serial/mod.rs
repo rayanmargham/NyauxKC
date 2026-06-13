@@ -11,7 +11,7 @@ pub fn serial_init() {
     outb(0x3F8 + 4, 0x0B); // IRQs enabled, RTS/DSR set
     outb(0x3F8 + 4, 0x1E); // Set in loopback mode, test the serial chip
     outb(0x3F8 + 0, 0xAE); // Test serial chip (send byte 0xAE and check if serial
-                           // returns same byte)
+    // returns same byte)
     outb(0x3F8 + 4, 0x0F);
 }
 pub fn serial_putc(chara: char) {
