@@ -77,13 +77,15 @@ pub extern "C" fn interrupt_handler(frame: *mut CPUContext) {
 // Save eXecute Return
 #[unsafe(naked)]
 pub unsafe extern "C" fn context_sxr() {
+    // TODO: sp can be random user stack bullshit, reload the kernel stack in future when doing userspace or your fucking
+    // cooked rayan
     // intially wrote the code, clanker fixed the bugs with the risc v inline asm
     // so basically the inline asm is now clanker code. but i understand what its doing
     core::arch::naked_asm!("
             .align 4
             addi sp, sp, -264
 
-            // Save all registers to stack frame (matching CPUContext layout)
+            // yk the drill
             sd t0,    0(sp)
             addi t0, sp, 264
             sd t0,   24(sp)

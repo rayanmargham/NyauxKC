@@ -365,6 +365,10 @@ impl Pagemap {
             pml.unmap(i as u64);
         }
     }
+    pub fn arch_map4kib(&self, va: usize, pa: usize, flags: crate::memory::vmm::VMMFlags) {
+        let yo = self.archpt();
+        yo.map4kib(va as u64, pa as u64, PT::from_vmmflags(flags)).unwrap();
+    }
 }
 pub fn pt_init() -> (usize, usize) {
     let kernel_size = align_up(addr_of!(KS) as u64, Processor::PAGE_SIZE as u64) as usize;

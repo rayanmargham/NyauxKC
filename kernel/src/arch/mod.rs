@@ -52,6 +52,7 @@ pub trait Arch {
     fn disable_interrupts();
     fn set_interrupt_stack(stack_ptr: *mut ()) -> Result<(), &'static str>;
 }
+
 pub struct Processor {}
 
 #[cfg(target_arch = "riscv64")]

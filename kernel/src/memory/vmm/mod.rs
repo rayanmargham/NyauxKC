@@ -50,6 +50,34 @@ pub struct Pagemap {
 }
 pub static mut kermap: Option<Pagemap> = None;
 impl Pagemap {
+    fn calculate_region_location(
+        &self,
+        amount: usize,
+    ) -> Result<(usize, *mut VMMRegion, *mut VMMRegion), &'static str> {
+        let mut cur: Option<*mut VMMRegion> = self.khead;
+        let mut prev: Option<*mut VMMRegion> = None;
+        while cur.is_some() {
+            if prev.is_none() {
+                prev = cur;
+                cur = unsafe { cur.unwrap().read().next };
+                continue;
+            }
+            let w = unsafe { prev.unwrap().read() };
+            let q = unsafe { cur.unwrap().read() };
+            let calculation = q.base.saturating_sub(w.base + w.length);
+            if calculation
+                >= (align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize
+                    + Processor::PAGE_SIZE as usize)
+            {
+                return Ok((w.base + w.length, prev.unwrap(), cur.unwrap()));
+            } else {
+                prev = cur;
+                cur = unsafe { cur.unwrap().read().next };
+                continue;
+            }
+        }
+        return Err("could not find vmm region");
+    }
     pub fn vmm_alloc_with_phys(
         &self,
         amount: usize,
@@ -59,84 +87,70 @@ impl Pagemap {
         if flags.contains(VMMFlags::USER) {
             panic!("todo")
         } else {
-            let mut cur: Option<*mut VMMRegion> = self.khead;
-            let mut prev: Option<*mut VMMRegion> = None;
-            while cur.is_some() {
-                if prev.is_none() {
-                    prev = cur;
-                    cur = unsafe { cur.unwrap().read().next };
-                    continue;
-                }
-                let w = unsafe { prev.unwrap().read() };
-                let q = unsafe { cur.unwrap().read() };
-                let calculation = q.base.saturating_sub(w.base + w.length);
-                if calculation
-                    >= (align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize
-                        + Processor::PAGE_SIZE as usize)
-                {
-                    let e = VMMRegion::new(
-                        w.base + w.length,
-                        align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize,
-                        flags,
-                    );
-                    unsafe {
-                        (*prev.unwrap()).next = Some(e);
-                    }
-                    unsafe {
-                        (*e).next = Some(cur.unwrap());
-                    }
-                    let info = unsafe { e.read() };
-                    self.arch_map_region(info.base, info.length, pa, flags);
-                    return Ok(core::ptr::without_provenance_mut::<()>(info.base));
-                } else {
-                    prev = cur;
-                    cur = unsafe { cur.unwrap().read().next };
-                    continue;
-                }
+            let cal = self.calculate_region_location(amount).unwrap();
+            let e = VMMRegion::new(
+                cal.0,
+                align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize,
+                flags,
+            );
+            unsafe {
+                (*cal.1).next = Some(e);
             }
-            panic!("gg");
+            unsafe {
+                (*e).next = Some(cal.2);
+            }
+            let info = unsafe { e.read() };
+            self.arch_map_region(info.base, info.length, pa, flags);
+            return Ok(core::ptr::without_provenance_mut::<()>(info.base));
         }
+        panic!("gg");
+    }
+    // WARNING: UNMAPPED POINTER
+    pub fn vmm_alloc_without_backing(
+        &self,
+        amount: usize,
+        flags: VMMFlags,
+    ) -> Result<*mut (), &'static str> {
+        if flags.contains(VMMFlags::USER) {
+            panic!("todo")
+        } else {
+            let cal = self.calculate_region_location(amount).unwrap();
+            let e = VMMRegion::new(
+                cal.0,
+                align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize,
+                flags,
+            );
+            unsafe {
+                (*cal.1).next = Some(e);
+            }
+            unsafe {
+                (*e).next = Some(cal.2);
+            }
+            let info = unsafe { e.read() };
+            return Ok(core::ptr::without_provenance_mut::<()>(info.base));
+
+        }
+        panic!("uhm meow");
     }
     pub fn vmm_alloc(&self, amount: usize, flags: VMMFlags) -> Result<*mut (), &'static str> {
         if flags.contains(VMMFlags::USER) {
             panic!("todo")
         } else {
-            let mut cur: Option<*mut VMMRegion> = self.khead;
-            let mut prev: Option<*mut VMMRegion> = None;
-            while cur.is_some() {
-                if prev.is_none() {
-                    prev = cur;
-                    cur = unsafe { cur.unwrap().read().next };
-                    continue;
-                }
-                let w = unsafe { prev.unwrap().read() };
-                let q = unsafe { cur.unwrap().read() };
-                let calculation = q.base.saturating_sub(w.base + w.length);
-                if calculation
-                    >= (align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize
-                        + Processor::PAGE_SIZE as usize)
-                {
-                    let e = VMMRegion::new(
-                        w.base + w.length,
-                        align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize,
-                        flags,
-                    );
-                    unsafe {
-                        (*prev.unwrap()).next = Some(e);
-                    }
-                    unsafe {
-                        (*e).next = Some(cur.unwrap());
-                    }
-                    let info = unsafe { e.read() };
-                    self.arch_map_region_alloc(info.base, info.length, flags);
-                    return Ok(core::ptr::without_provenance_mut::<()>(info.base));
-                } else {
-                    prev = cur;
-                    cur = unsafe { cur.unwrap().read().next };
-                    continue;
-                }
+            let cal = self.calculate_region_location(amount).unwrap();
+            let e = VMMRegion::new(
+                cal.0,
+                align_up(amount as u64, Processor::PAGE_SIZE as u64) as usize,
+                flags,
+            );
+            unsafe {
+                (*cal.1).next = Some(e);
             }
-            panic!("gg");
+            unsafe {
+                (*e).next = Some(cal.2);
+            }
+            let info = unsafe { e.read() };
+            self.arch_map_region_alloc(info.base, info.length, flags);
+            return Ok(core::ptr::without_provenance_mut::<()>(info.base));
         }
     }
     pub fn vmm_dealloc(&mut self, base: *mut (), user_allocated: bool) {

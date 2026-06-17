@@ -210,6 +210,10 @@ impl Pagemap {
             yo.map4kib(i as u64, pa, PT::from_vmmflags(flags)).unwrap();
         }
     }
+    pub fn arch_map4kib(&self, va: usize, pa: usize, flags: crate::memory::vmm::VMMFlags) {
+        let yo = self.archpt();
+        yo.map4kib(va as u64, pa as u64, PT::from_vmmflags(flags)).unwrap();
+    }
 }
 pub fn pt_init() -> (usize, usize) {
     let mode = PAGING_MODE_REQUEST.response().unwrap().mode;

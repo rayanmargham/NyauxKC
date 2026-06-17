@@ -1,16 +1,15 @@
-use core::slice::{from_raw_parts, from_raw_parts_mut};
+use core::{
+    num,
+    slice::{from_raw_parts, from_raw_parts_mut},
+};
 
 use alloc::vec;
 
 use crate::{
-    HHDM_REQUEST,
-    memory::pmm::allocate_page,
-    pci::{
+    HHDM_REQUEST, memory::pmm::{allocate_page, deallocate_page}, pci::{
         PCI_BUS_MASTER, PCI_MEM_SPACE, pci_devices, pci_map_bar, pci_read_byte, pci_read_dword,
         pci_read_word, pci_write_word,
-    },
-    println, status,
-    util::{Once, SpinLockB},
+    }, print, println, status, util::{Once, SpinLockB}
 };
 
 const VIRTIO_GPU_DEVICE_ID: u16 = 0x1050;
@@ -302,16 +301,18 @@ impl freelistdescpool {
             )
         };
         let mut cur = &mut t[headofthechain as usize];
+        print!("chain {:?} -> ", cur);
         while cur.flags & VIRTQ_DESC_F_NEXT != 0 {
             cur.flags = 0;
             self.num_free += 1;
-            cur = &mut t[cur.next as usize]
+            cur = &mut t[cur.next as usize];
+            print!("{:?} -> ", cur);
         }
+        print!("null\n");
         cur.next = self.head;
         cur.flags = 0;
         self.num_free += 1;
         self.head = headofthechain;
-
         Ok(())
     }
 }
@@ -351,6 +352,44 @@ macro_rules! cm_cfg_write_field {
 unsafe impl Sync for virtq {}
 unsafe impl Send for virtq {}
 static virtq: Once<SpinLockB<virtq>> = Once::new();
+fn submit_simple_command_and_await_response<T: Sized, const B: u32>() -> Result<(virtq_used_elem, *mut T, *mut virtio_gpu_ctrl_hdr), ()>{
+    let mut guh = virtq.get().unwrap().lock();
+    let head = guh.desc.allocate_chain(2).unwrap();
+    let req = allocate_page().cast::<virtio_gpu_ctrl_hdr>();
+    let resp = allocate_page().cast::<T>();
+    unsafe {
+        *req = virtio_gpu_ctrl_hdr {
+            typ: B,
+            flags: 0,
+            fence_id: 0,
+            ctx_id: 0,
+            ring_idx: 0,
+            padding: [0; 3],
+        };
+    }
+    let desc0 = guh.desc.get_desc_mutable(head).unwrap();
+    desc0.addr =
+        unsafe { req.byte_sub(HHDM_REQUEST.response().unwrap().offset as usize) }.addr() as u64;
+    desc0.len = core::mem::size_of::<virtio_gpu_ctrl_hdr>() as u32;
+    desc0.flags = VIRTQ_DESC_F_NEXT;
+    desc0.next = head + 1;
+    let desc1 = guh.desc.get_desc_mutable(head + 1).unwrap();
+    desc1.addr =
+        unsafe { resp.byte_sub(HHDM_REQUEST.response().unwrap().offset as usize) }.addr() as u64;
+    desc1.len = core::mem::size_of::<T>() as u32;
+    desc1.flags = VIRTQ_DESC_F_WRITE;
+    desc1.next = 0;
+    guh.submit_to_queue(head).unwrap();
+    guh.notify(0);
+    let used = guh.read_used_queue_blocking();
+    Ok((used, resp, req))
+}
+fn simple_command_cleanup<T: Sized>(cmd: (virtq_used_elem, *mut T, *mut virtio_gpu_ctrl_hdr)) {
+    let mut guh = virtq.get().unwrap().lock();
+    guh.desc.deallocate_chain(cmd.0.id as u16);
+    deallocate_page(cmd.1.cast());
+    deallocate_page(cmd.2.cast());
+}
 pub fn init_virtiogpu() {
     let device_list = pci_devices.get().unwrap();
     if let Some(virtio_gpu_location) = device_list.iter().find(|x| {
@@ -574,36 +613,14 @@ pub fn init_virtiogpu() {
             panic!("fuck");
         }
         println!("attempting to get display modes");
-        let mut guh = virtq.get().unwrap().lock();
-        let head = guh.desc.allocate_chain(2).unwrap();
-        let req = allocate_page().cast::<virtio_gpu_ctrl_hdr>();
-        let resp = allocate_page().cast::<virtio_gpu_resp_display_info>();
+        
+        let resp = submit_simple_command_and_await_response::<virtio_gpu_resp_display_info, VIRTIO_GPU_CMD_GET_DISPLAY_INFO>().unwrap();
+        println!("yooo");
         unsafe {
-            *req = virtio_gpu_ctrl_hdr {
-                typ: VIRTIO_GPU_CMD_GET_DISPLAY_INFO,
-                flags: 0,
-                fence_id: 0,
-                ctx_id: 0,
-                ring_idx: 0,
-                padding: [0; 3],
-            };
-            let desc0 = guh.desc.get_desc_mutable(head).unwrap();
-            desc0.addr = req.byte_sub(HHDM_REQUEST.response().unwrap().offset as usize).addr() as u64;
-            desc0.len = core::mem::size_of::<virtio_gpu_ctrl_hdr>() as u32;
-            desc0.flags = VIRTQ_DESC_F_NEXT;
-            desc0.next = head+1;
-            let desc1 = guh.desc.get_desc_mutable(head+1).unwrap();
-            desc1.addr = resp.byte_sub(HHDM_REQUEST.response().unwrap().offset as usize).addr() as u64;
-            desc1.len = core::mem::size_of::<virtio_gpu_resp_display_info>() as u32;
-            desc1.flags = VIRTQ_DESC_F_WRITE;
-            desc1.next = 0;
+            println!("gpu said {:?}", (*resp.1));
+            simple_command_cleanup(resp);
+            println!("cleaned up");
         }
-    guh.submit_to_queue(head).unwrap();
-    guh.notify(0);
-    let used = guh.read_used_queue_blocking();
-    println!("yooo");
-    unsafe {
-        println!("gpu said {:?}", (*resp));
-    }
+        
     }
 }
