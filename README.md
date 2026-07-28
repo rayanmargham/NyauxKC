@@ -6,18 +6,18 @@ NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the ke
 
 ## Goals for the Project
 
-[✓] Basic x86_64 setup and abstraction\
-[✓] PMM using freelist\
-[✓] Slab Allocation\
-[✓] Page Tables for x86_64 and RISCV64\
-[✓] VMM\
-[..] VFS\
-[..] Syscalls\
-[..] Scheduler Support for userland threads\
-[..] ELF loader\
-\
-\
-\
-[X] Port Xorg\
-..\
-[X] Port Wayland
+- [X] Basic x86_64 setup and abstraction
+- [X] PMM using freelist
+- [X] Slab Allocation
+- [X]  Page Tables for x86_64 and RISCV64
+- [X] VMM
+- [ ] VFS
+- [ ] Syscalls
+- [ ] Scheduler Support for userland threads
+- [ ] ELF loader
+
+
+
+- [ ] Port Xorg
+..
+- [ ] Port Wayland
