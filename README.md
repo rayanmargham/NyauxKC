@@ -1,5 +1,5 @@
 # NyauxKC
-
+![Nyaux Logo](nyaux_logo.svg)
 NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the kernel is written in rust. Please refer to the branch 'old-nyaux' if you are here to see what my project has done before, I am currently rewriting in rust which is what the main branch is.
 
 
@@ -11,7 +11,7 @@ NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the ke
 - [X] Slab Allocation
 - [X] Page Tables for x86_64 and RISCV64
 - [X] VMM
-- [ ] VFS
+- [X] VFS + Simple RAMFS
 - [ ] Syscalls
 - [ ] Scheduler Support for userland threads
 - [ ] ELF loader
