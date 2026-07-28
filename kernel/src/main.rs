@@ -11,6 +11,7 @@ pub mod scheduler;
 pub mod uacpi;
 pub mod util;
 pub mod virtio;
+pub mod vfs;
 //pub mod vfs;
 extern crate alloc;
 
@@ -181,7 +182,7 @@ unsafe extern "C" fn kmain() -> ! {
     bootstrap_cpus();
 
     sched_init();
-
+    
     hcf();
 }
 
@@ -189,6 +190,7 @@ fn kentry() {
     println!("hello from kernel thread scheduled by scheduler");
     println!("wassup twin");
     init_virtiogpu();
+    vfs::vfs_init();
     hcf();
 }
 #[cfg(not(test))]
