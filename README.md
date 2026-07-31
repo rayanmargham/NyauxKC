@@ -1,4 +1,7 @@
+
 # NyauxKC
+![Discord](https://img.shields.io/badge/Join%20the-discord-purple?logo=discord&link=https%3A%2F%2Fdiscord.gg%2FaAfSrQJP8U
+)
 ![Nyaux Logo](nyaux_logo.svg)
 NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the kernel is written in rust. Please refer to the branch 'old-nyaux' if you are here to see what my project has done before, I am currently rewriting in rust which is what the main branch is.
 
@@ -12,6 +15,7 @@ NyauxKC is an unix-like operating system, the Nyaux kernel is monolithic, the ke
 - [X] Page Tables for x86_64 and RISCV64
 - [X] VMM
 - [X] VFS + Simple RAMFS
+- [*] USTAR
 - [ ] Syscalls
 - [ ] Scheduler Support for userland threads
 - [ ] ELF loader

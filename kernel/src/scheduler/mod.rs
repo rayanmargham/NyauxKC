@@ -93,7 +93,7 @@ pub fn sched_yield() {
     cpu.cur_thread = Some(next);
     let new_stack_ptr = &raw const cpu.cur_thread.as_ref().unwrap().stack_ptr;
     let lock_ptr = schedlock.get().unwrap() as *const SpinLock as *mut ();
-    // Processor::set_interrupt_stack(cpu.cur_thread.as_ref().unwrap().itr_ptr);
+    Processor::set_interrupt_stack(cpu.cur_thread.as_ref().unwrap().itr_ptr);
     unsafe { context_switch::<*mut ()>(lock_ptr, old_stack_ptr, new_stack_ptr) };
     let ble = unsafe { (lock_ptr as *const SpinLock).as_ref().unwrap() };
     ble.unlock();

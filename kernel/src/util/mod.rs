@@ -362,3 +362,16 @@ EHWPOISON = 133,
 
 }
 pub type EResult<T> = Result<T, errno>;
+pub fn grab_cmdline(r: &limine::request::ExecutableCmdlineRequest) -> &str {
+    r.response().unwrap().cmdline()
+}
+#[macro_export]
+macro_rules! cmd {
+    () => {
+        {
+            use crate::util::grab_cmdline;
+            use crate::CMDLINE_REQUEST;
+            grab_cmdline(&CMDLINE_REQUEST)
+        }
+    };
+}

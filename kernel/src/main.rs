@@ -26,7 +26,7 @@ extern "C" fn __ffsdi2(v: u64) -> i32 {
         v.trailing_zeros() as i32 + 1
     }
 }
-use limine::request::{ExecutableAddressRequest, HhdmRequest, RsdpRequest};
+use limine::request::{ModulesRequest, ExecutableAddressRequest, ExecutableCmdlineRequest, HhdmRequest, RsdpRequest};
 unsafe extern "C" {
     pub static KS: u8;
 }
@@ -34,8 +34,14 @@ unsafe extern "C" {
 #[unsafe(link_section = ".requests")]
 static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
 #[used]
-#[unsafe(link_section = ".requets")]
+#[unsafe(link_section = ".requests")]
 static RSDP_REQUEST: RsdpRequest = RsdpRequest::new();
+#[used]
+#[unsafe(link_section = ".requests")]
+static CMDLINE_REQUEST: ExecutableCmdlineRequest = ExecutableCmdlineRequest::new();
+#[used]
+#[unsafe(link_section = ".requests")]
+static MODULE_REQUEST: ModulesRequest = ModulesRequest::new();
 use core::arch::asm;
 use core::ptr::{addr_of, addr_of_mut, null_mut};
 

@@ -1,5 +1,5 @@
 use crate::{
-    println, status, util::{EResult, Once, RWSpinLock, SpinLockB, errno},
+    println, status, util::{EResult, Once, RWSpinLock, SpinLockB, errno}, vfs::ustar::load_ramfs_with_ustar_tar,
 };
 use alloc::{
     boxed::Box,
@@ -8,6 +8,7 @@ use alloc::{
     vec::Vec,
 };
 pub mod ramfs;
+pub mod ustar;
 pub enum v_type {
     VREG,
     VDIR,
@@ -161,5 +162,6 @@ pub fn vfs_init() {
             Box::new(ramfs::ramfsdir::new())
         ))
     });
+    load_ramfs_with_ustar_tar();
     status!("ramfs inited!");
 }
