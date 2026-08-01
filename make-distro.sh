@@ -5,7 +5,7 @@ ROOTDIR="$PWD/distro"
 SYSROOT="$ROOTDIR/sysroot"
 PREFIX="$ROOTDIR/prefix"
 TARGET=x86_64-pc-nyaux-elf
-NPROC=8
+NPROC=$(nproc || 8)
 
 export PATH="$PREFIX/bin:$PATH"
 
@@ -100,7 +100,8 @@ build_gcc_stage1() {
             --disable-nls \
             --enable-languages=c,c++ \
             --enable-initfini-array \
-            --without-headers
+            --without-headers \
+            --disable-hosted-libstdcxx
     touch $ROOTDIR/build/$PKGNAME-configure
     gmake all-gcc -j$NPROC
     gmake all-target-libgcc -j$NPROC
