@@ -16,22 +16,24 @@ make_ramdisk() {
 }
 
 build_binutils() {
+    NAME=binutils
     VERSION=2.47
-    [ -f "$ROOTDIR/binutils-$VERSION.tar.gz" ] || wget -O $ROOTDIR/binutils-$VERSION.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-$VERSION.tar.gz
-    [ -d "$ROOTDIR/binutils-$VERSION" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/binutils-$VERSION.tar.gz
-    #git -C $ROOTDIR/binutils-$VERSION diff > $PATCHDIR/binutils-$VERSION.patch
-    [ -f $ROOTDIR/build/binutils-patched ] || git -C $ROOTDIR/binutils-$VERSION apply $PATCHDIR/binutils-$VERSION.patch
-    touch $ROOTDIR/build/binutils-patched
+    [ -f "$ROOTDIR/$PKGNAME-$PKGVER.tar.gz" ] || wget -O $ROOTDIR/binutils-$PKGVER.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-$PKGVER.tar.gz
+    [ -d "$ROOTDIR/$PKGNAME-$PKGVER" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/binutils-$PKGVER.tar.gz
+    #git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
+    [ -f $ROOTDIR/build/$PKGNAME-patched ] || git -C $ROOTDIR/$PKGNAME-$PKGVER apply $PATCHDIR/$PKGNAME-$PKGVER.patch
+    touch $ROOTDIR/build/$PKGNAME-patched
 
-    mkdir -p $ROOTDIR/build/binutils-$VERSION
-    cd $ROOTDIR/build/binutils-$VERSION \
-        && ../../binutils-$VERSION/configure \
+    mkdir -p $ROOTDIR/build/$PKGNAME-$PKGVER
+    [ -f $ROOTDIR/build/$PKGNAME-configure ] || cd $ROOTDIR/build/$PKGNAME-$PKGVER \
+        && ../../$PKGNAME-$PKGVER/configure \
             --target=$TARGET \
             --prefix="$PREFIX" \
             --with-sysroot="$SYSROOT" \
             --disable-nls \
             --disable-werror \
             --enable-default-execstack=no
+    touch $ROOTDIR/build/$PKGNAME-configure
     gmake -j$NPROC
     gmake install
 }
@@ -40,15 +42,15 @@ build_gcc() {
     which -- $TARGET-as || echo $TARGET-as is not in the PATH
 
     VERSION=16.1.0
-    [ -f "$ROOTDIR/gcc-$VERSION.tar.gz" ] || wget -O $ROOTDIR/gcc-$VERSION.tar.gz https://mirror.koddos.net/gcc/releases/gcc-$VERSION/gcc-$VERSION.tar.gz
-    [ -d "$ROOTDIR/gcc-$VERSION" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/gcc-$VERSION.tar.gz
-    #git -C $ROOTDIR/gcc-$VERSION diff > $PATCHDIR/gcc-$VERSION.patch
-    [ -f $ROOTDIR/build/gcc-patched ] || git -C $ROOTDIR/gcc-$VERSION apply $PATCHDIR/gcc-$VERSION.patch
-    touch $ROOTDIR/build/gcc-patched
+    [ -f "$ROOTDIR/gcc-$PKGVER.tar.gz" ] || wget -O $ROOTDIR/gcc-$PKGVER.tar.gz https://mirror.koddos.net/gcc/releases/gcc-$PKGVER/gcc-$PKGVER.tar.gz
+    [ -d "$ROOTDIR/$PKGNAME-$PKGVER" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/$PKGNAME-$PKGVER.tar.gz
+    #git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
+    [ -f $ROOTDIR/build/$PKGNAME-patched ] || git -C $ROOTDIR/$PKGNAME-$PKGVER apply $PATCHDIR/$PKGNAME-$PKGVER.patch
+    touch $ROOTDIR/build/$PKGNAME-patched
 
-    mkdir -p $ROOTDIR/build/gcc-$VERSION
-    cd $ROOTDIR/build/gcc-$VERSION \
-        && ../../gcc-$VERSION/configure \
+    mkdir -p $ROOTDIR/build/$PKGNAME-$PKGVER
+    [ -f $ROOTDIR/build/$PKGNAME-configure ] || cd $ROOTDIR/build/$PKGNAME-$PKGVER \
+        && ../../$PKGNAME-$PKGVER/configure \
             --target=$TARGET \
             --prefix="$PREFIX" \
             --with-sysroot="$SYSROOT" \
@@ -56,6 +58,7 @@ build_gcc() {
             --disable-nls \
             --enable-languages=c,c++ \
             --enable-initfini-array
+    touch $ROOTDIR/build/$PKGNAME-configure
     gmake all-gcc -j$NPROC
     gmake all-target-libgcc -j$NPROC
     gmake all-target-libstdc++-v3 -j$NPROC
@@ -71,9 +74,7 @@ build_libc() {
 
 [ -f "$ROOTDIR/.ramdisk" ] || make_ramdisk distro
 
-mkdir -p "$ROOTDIR"
-mkdir -p "$SYSROOT"
-mkdir -p "$PREFIX"
+mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
 
 build_binutils
 build_gcc
