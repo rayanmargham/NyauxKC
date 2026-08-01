@@ -33,7 +33,7 @@ endif
 all:
 	RUSTFLAGS="-C relocation-model=static" cargo build --target $(RUST_TARGET) --profile $(RUST_PROFILE)
 	mkdir -p bin-$$(echo $(RUST_TARGET) | cut -d- -f1)
-	cp target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR)/$$(cd target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR) && find -maxdepth 1 -perm -111 -type f) bin-$$(echo $(RUST_TARGET) | cut -d- -f1)/kernel
+	cp target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR)/$$(cd target/$(RUST_TARGET)/$(RUST_PROFILE_SUBDIR) && find . -maxdepth 1 -perm -111 -type f) bin-$$(echo $(RUST_TARGET) | cut -d- -f1)/kernel
 .PHONY: test
 test:
 	RUSTFLAGS="-C relocation-model=static" cargo test --target $(RUST_TARGET) --profile $(RUST_PROFILE)

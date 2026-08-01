@@ -1,6 +1,8 @@
-template-riscv64.iso
-template-x86_64.iso
 .vscode/
 limine-binary
 .deps-obtained
 edk2-ovmf-bins
+sysroot/
+*.iso
+*.bin
+distro/

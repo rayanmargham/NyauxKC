@@ -3,7 +3,7 @@ use core::ptr::addr_of;
 use bitflags::bitflags;
 
 use crate::{
-    HHDM_REQUEST, KERNELADDR_REQUEST, KS, align_up,
+    HHDM_REQUEST, KERNELADDR_REQUEST, KERNEL_END, KERNEL_START, align_up,
     arch::{Arch, PAGING_MODE_REQUEST, Processor},
     memory::{
         pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page},
@@ -241,7 +241,7 @@ pub fn pt_init() -> (usize, usize) {
     let kaddrv = KERNELADDR_REQUEST.response().unwrap().virtual_base as usize;
     let kaddrp = KERNELADDR_REQUEST.response().unwrap().physical_base as usize;
     let kernel_size = align_up(
-        addr_of!(KS) as u64 - kaddrv as u64,
+        (addr_of!(KERNEL_END) as u64 - addr_of!(KERNEL_START)) - kaddrv as u64,
         Processor::PAGE_SIZE as u64,
     ) as usize;
     println!("kernel size 0x{:x}", kernel_size);

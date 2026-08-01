@@ -28,7 +28,8 @@ extern "C" fn __ffsdi2(v: u64) -> i32 {
 }
 use limine::request::{ModulesRequest, ExecutableAddressRequest, ExecutableCmdlineRequest, HhdmRequest, RsdpRequest};
 unsafe extern "C" {
-    pub static KS: u8;
+    pub static KERNEL_START: u8;
+    pub static KERNEL_END: u8;
 }
 #[used]
 #[unsafe(link_section = ".requests")]

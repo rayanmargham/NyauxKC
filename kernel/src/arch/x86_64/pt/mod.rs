@@ -7,7 +7,7 @@ use limine::paging::PagingMode;
 use limine::request::ExecutableAddressRequest;
 
 use crate::{
-    HHDM_REQUEST, KERNELADDR_REQUEST, KS, align_up,
+    HHDM_REQUEST, KERNELADDR_REQUEST, KERNEL_END, KERNEL_START, align_up,
     arch::{Arch, PAGING_MODE_REQUEST, Processor},
     memory::{
         pmm::{MEMMAP_REQUEST, allocate_page, deallocate_page},
@@ -371,7 +371,7 @@ impl Pagemap {
     }
 }
 pub fn pt_init() -> (usize, usize) {
-    let kernel_size = align_up(addr_of!(KS) as u64, Processor::PAGE_SIZE as u64) as usize;
+    let kernel_size = align_up(addr_of!(KERNEL_END) as u64 - addr_of!(KERNEL_START) as u64, Processor::PAGE_SIZE as u64) as usize;
     println!("trying shit out, kernel size 0x{:x}", kernel_size);
     let pagingresponse = PAGING_MODE_REQUEST.response().unwrap();
 
