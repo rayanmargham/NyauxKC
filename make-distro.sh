@@ -19,7 +19,9 @@ build_binutils() {
     VERSION=2.47
     [ -f "$ROOTDIR/binutils-$VERSION.tar.gz" ] || wget -O $ROOTDIR/binutils-$VERSION.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-$VERSION.tar.gz
     [ -d "$ROOTDIR/binutils-$VERSION" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/binutils-$VERSION.tar.gz
-    git -C $ROOTDIR/binutils-$VERSION diff > $PATCHDIR/binutils-$VERSION.patch
+    #git -C $ROOTDIR/binutils-$VERSION diff > $PATCHDIR/binutils-$VERSION.patch
+    [ -f $ROOTDIR/build/binutils-patched ] || git -C $ROOTDIR/binutils-$VERSION apply $PATCHDIR/binutils-$VERSION.patch
+    touch $ROOTDIR/build/binutils-patched
 
     mkdir -p $ROOTDIR/build/binutils-$VERSION
     cd $ROOTDIR/build/binutils-$VERSION \
@@ -40,7 +42,9 @@ build_gcc() {
     VERSION=16.1.0
     [ -f "$ROOTDIR/gcc-$VERSION.tar.gz" ] || wget -O $ROOTDIR/gcc-$VERSION.tar.gz https://mirror.koddos.net/gcc/releases/gcc-$VERSION/gcc-$VERSION.tar.gz
     [ -d "$ROOTDIR/gcc-$VERSION" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/gcc-$VERSION.tar.gz
-    git -C $ROOTDIR/gcc-$VERSION diff > $PATCHDIR/gcc-$VERSION.patch
+    #git -C $ROOTDIR/gcc-$VERSION diff > $PATCHDIR/gcc-$VERSION.patch
+    [ -f $ROOTDIR/build/gcc-patched ] || git -C $ROOTDIR/gcc-$VERSION apply $PATCHDIR/gcc-$VERSION.patch
+    touch $ROOTDIR/build/gcc-patched
 
     mkdir -p $ROOTDIR/build/gcc-$VERSION
     cd $ROOTDIR/build/gcc-$VERSION \
@@ -50,7 +54,7 @@ build_gcc() {
             --with-sysroot="$SYSROOT" \
             --disable-bootstrap \
             --disable-nls \
-            --enable-languages=c \
+            --enable-languages=c,c++ \
             --enable-initfini-array
     gmake all-gcc -j$NPROC
     gmake all-target-libgcc -j$NPROC
@@ -61,9 +65,8 @@ build_gcc() {
 }
 
 build_libc() {
-    [ -d $ROOTDIR/mlibc ] || git clone --depth=1 https://github.com/managarm/mlibc distro/mlibc
-    git -C $ROOTDIR/mlibc add .
-    git -C $ROOTDIR/mlibc diff
+    [ -d $ROOTDIR/mlibc ] || git clone --depth=1 https://github.com/managarm/mlibc $ROOTDIR/mlibc
+    git -C $ROOTDIR/mlibc diff > $PATCHDIR/mlibc.patch
 }
 
 [ -f "$ROOTDIR/.ramdisk" ] || make_ramdisk distro
