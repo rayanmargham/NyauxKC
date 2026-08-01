@@ -11,7 +11,7 @@ export PATH="$PREFIX/bin:$PATH"
 
 make_ramdisk() {
     mkdir -p $1
-    mount -t tmpfs $1 $1
+    sudo mount -t tmpfs $1 $1
     touch $1/.ramdisk
 }
 
@@ -26,6 +26,8 @@ prepare_sysroot() {
         "$SYSROOT/local" \
         "$SYSROOT/sbin" \
         "$SYSROOT/share"
+
+    [ -L "$SYSROOT/include/asm" ] || ln -s "abi-bits" "$SYSROOT/include/asm"
 
     [ -L "$SYSROOT/usr/bin" ] || ln -s "../bin" "$SYSROOT/usr/bin"
     [ -L "$SYSROOT/usr/include" ] || ln -s "../include" "$SYSROOT/usr/include"
@@ -46,9 +48,7 @@ pkg-config = 'none'
 
 [built-in options]
 c_args = ['--sysroot=$SYSROOT', '-D__nyaux__']
-c_link_args = []
 cpp_args = ['--sysroot=$SYSROOT', '-D__nyaux__']
-cpp_link_args = []
 
 [host_machine]
 system = 'nyaux'
@@ -99,17 +99,21 @@ build_gcc_stage1() {
             --disable-bootstrap \
             --disable-nls \
             --enable-languages=c,c++ \
-            --enable-initfini-array \
-            --without-headers \
-            --disable-hosted-libstdcxx
+            --enable-initfini-array
     touch $ROOTDIR/build/$PKGNAME-configure
     gmake all-gcc -j$NPROC
-    gmake all-target-libgcc -j$NPROC
     gmake install-gcc
-    gmake install-target-libgcc
 }
 
 build_gcc_stage2() {
+    PKGNAME=gcc
+    PKGVER=16.1.0
+    cd $ROOTDIR/build/$PKGNAME-$PKGVER
+    gmake all-target-libgcc -j$NPROC
+    gmake install-target-libgcc
+}
+
+build_gcc_stage3() {
     PKGNAME=gcc
     PKGVER=16.1.0
     cd $ROOTDIR/build/$PKGNAME-$PKGVER
@@ -117,17 +121,36 @@ build_gcc_stage2() {
     gmake install-target-libstdc++-v3
 }
 
-build_libc() {
-    [ -d $ROOTDIR/mlibc ] || git clone --depth=1 https://github.com/managarm/mlibc $ROOTDIR/mlibc
-    git -C $ROOTDIR/mlibc diff --cached > $PATCHDIR/mlibc.patch
+build_mlibc_stage1() {
+    PKGNAME=mlibc
+    [ -d $ROOTDIR/$PKGNAME ] || git clone --depth=1 https://github.com/managarm/mlibc $ROOTDIR/mlibc
+    git -C $ROOTDIR/$PKGNAME diff --cached > $PATCHDIR/mlibc.patch
 
-    pushd "$ROOTDIR/mlibc"
+    cp -rv $ROOTDIR/$PKGNAME/options/ansi/include/* $SYSROOT/include/
+    cp -rv $ROOTDIR/$PKGNAME/options/posix/include/* $SYSROOT/include/
+    cp -rv $ROOTDIR/$PKGNAME/options/internal/include/* $SYSROOT/include/
+    cp -rv $ROOTDIR/$PKGNAME/sysdeps/nyaux/include/* $SYSROOT/include/
+    cp -rv $PATCHDIR/mlibc-config.h $SYSROOT/include/mlibc-config.h
+    mkdir -p "$SYSROOT/include/abi-bits"
+    #cp -v $ROOTDIR/$PKGNAME/abis/nyaux/*.h $SYSROOT/include/abi-bits/
+}
+
+build_mlibc_stage2() {
+    PKGNAME=mlibc
+    pushd "$ROOTDIR/$PKGNAME"
     meson setup \
         --prefix="$PREFIX" \
         --cross-file "$ROOTDIR/build/$TARGET.txt" \
-        "$ROOTDIR/build/mlibc"
-    meson compile -C "$ROOTDIR/build/mlibc"
-    meson install -C "$ROOTDIR/build/mlibc"
+        "$ROOTDIR/build/$PKGNAME" \
+        -Dposix_option=disabled \
+        -Dlinux_option=disabled \
+        -Dglibc_option=disabled \
+        -Dbsd_option=disabled \
+        -Dbuild_tests_host_libc=false \
+        -Dlibgcc_dependency=false
+
+    meson compile -C "$ROOTDIR/build/$PKGNAME"
+    meson install -C "$ROOTDIR/build/$PKGNAME"
     popd
 }
 
@@ -135,7 +158,12 @@ build_libc() {
 
 mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
 prepare_sysroot
-build_binutils
-build_gcc_stage1
-build_libc
+
+#build_binutils
+#build_gcc_stage1
+build_mlibc_stage1
+
+#build_gcc_stage2
+build_mlibc_stage2
+
 build_gcc_stage2
