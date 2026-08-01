@@ -1,5 +1,6 @@
-#!/usr/local/bin/bash -ex
-
+#!/usr/bin/env bash
+cat /etc/os-release
+pacman -Sy --noconfirm base-devel git meson make wget curl
 PATCHDIR="$PWD/patches"
 ROOTDIR="$PWD/distro"
 SYSROOT="$ROOTDIR/sysroot"
@@ -11,7 +12,7 @@ export PATH="$PREFIX/bin:$PATH"
 
 make_ramdisk() {
     mkdir -p $1
-    sudo mount -t tmpfs $1 $1
+    mount -t tmpfs $1 $1
     touch $1/.ramdisk
 }
 
@@ -77,8 +78,8 @@ build_binutils() {
             --disable-werror \
             --enable-default-execstack=no
     touch $ROOTDIR/build/$PKGNAME-configure
-    gmake -j$NPROC
-    gmake install
+    make -j$NPROC
+    make install
 }
 
 build_gcc_stage1() {
@@ -101,24 +102,24 @@ build_gcc_stage1() {
             --enable-languages=c,c++ \
             --enable-initfini-array
     touch $ROOTDIR/build/$PKGNAME-configure
-    gmake all-gcc -j$NPROC
-    gmake install-gcc
+    make all-gcc -j$NPROC
+    make install-gcc
 }
 
 build_gcc_stage2() {
     PKGNAME=gcc
     PKGVER=16.1.0
     cd $ROOTDIR/build/$PKGNAME-$PKGVER
-    gmake all-target-libgcc -j$NPROC
-    gmake install-target-libgcc
+    make all-target-libgcc -j$NPROC
+    make install-target-libgcc
 }
 
 build_gcc_stage3() {
     PKGNAME=gcc
     PKGVER=16.1.0
     cd $ROOTDIR/build/$PKGNAME-$PKGVER
-    gmake all-target-libstdc++-v3 -j$NPROC
-    gmake install-target-libstdc++-v3
+    make all-target-libstdc++-v3 -j$NPROC
+    make install-target-libstdc++-v3
 }
 
 build_mlibc_stage1() {
@@ -159,11 +160,11 @@ build_mlibc_stage2() {
 mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
 prepare_sysroot
 
-#build_binutils
-#build_gcc_stage1
+build_binutils
+build_gcc_stage1
 build_mlibc_stage1
 
-#build_gcc_stage2
+build_gcc_stage2
 build_mlibc_stage2
 
 build_gcc_stage2
