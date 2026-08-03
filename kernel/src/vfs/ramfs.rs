@@ -1,51 +1,57 @@
-use alloc::{boxed::Box, string::String, sync::{Arc, Weak}, vec::Vec};
+use alloc::{
+    boxed::Box,
+    string::String,
+    sync::{Arc, Weak},
+    vec::Vec,
+};
 
-use crate::{util::{EResult, RWSpinLock, errno}, vfs::{dentry, v_type, vfs, vfsops, vnode, vops, vv}};
+use crate::{
+    println, util::{EResult, RWSpinLock, errno}, vfs::{dentry, v_type, vfs, vfsops, vnode, vops, vv},
+};
 
 pub struct ramfs {
-// todo
+    // todo
 }
-impl vfsops for ramfs {
-
-}
+impl vfsops for ramfs {}
 pub struct ramfsdir {
     entries: Vec<dentry>,
 }
 pub struct ramfsfile {
-    buf: Vec<u8>
+    buf: Vec<u8>,
 }
 impl ramfsdir {
     pub fn new() -> Self {
-        ramfsdir { entries: Vec::new() }
+        ramfsdir {
+            entries: Vec::new(),
+        }
     }
     pub fn create_entry(&mut self, name: &str, vn: vv) {
         self.entries.push(dentry {
             name: String::from(name),
-            inner: Some(vn)
+            inner: Some(vn),
         });
     }
-    
 }
+
+// I would really do this a different a way
+// with slices...
 impl ramfsfile {
     fn new() -> Self {
         ramfsfile {
-            buf: Vec::new()
+            buf: Vec::new(), //this is a heap alloc for every file btw
+                             // will hurt when you wanna run KDE
         }
     }
 }
 impl vops for ramfsfile {
-    fn mount(&mut self, v: vv) {
-        
-    }
+    fn mount(&mut self, v: vv) {}
     fn mkdir(&mut self, vnode: Option<Weak<RWSpinLock<vfs>>>, name: &str) -> EResult<vv> {
         return Err(errno::ENOTDIR);
     }
-    fn unmount(&mut self, v: vv) {
-        
+    fn unmount(&mut self, v: vv) {}
+    fn create(&mut self, vfs: Option<Weak<RWSpinLock<vfs>>>, name: &str) -> EResult<vv> {
+        todo!()
     }
-fn create(&mut self, vfs: Option<Weak<RWSpinLock<vfs>>>, name: &str) -> EResult<vv> {
-    todo!()
-}
     fn lookup(&self, str: &str) -> Option<vv> {
         return None;
     }
@@ -72,39 +78,35 @@ fn create(&mut self, vfs: Option<Weak<RWSpinLock<vfs>>>, name: &str) -> EResult<
     }
 }
 impl vops for ramfsdir {
-    fn mount(&mut self, v: vv) {
-        
-    }
-    fn unmount(&mut self, v: vv) {
-        
-    }
+    fn mount(&mut self, v: vv) {}
+    fn unmount(&mut self, v: vv) {}
     fn mkdir(&mut self, vfs: Option<Weak<RWSpinLock<vfs>>>, name: &str) -> EResult<vv> {
         let k = Box::new(ramfsdir::new());
 
-        let h = Arc::new(
-            RWSpinLock::new(
-                vnode::new(
-                    vfs.and_then(|f|f.upgrade()).clone(),
-                    v_type::VDIR,
-                    k
-                )
-            )
-        );
+        let h = Arc::new(RWSpinLock::new(vnode::new(
+            vfs.and_then(|f| f.upgrade()).clone(),
+            v_type::VDIR,
+            k,
+        )));
         self.create_entry(name, h.clone());
+        // println!("made dir with name {}", name);
         Ok(h)
     }
     fn create(&mut self, mut vfs: Option<Weak<RWSpinLock<vfs>>>, name: &str) -> EResult<vv> {
         if self.lookup(name).is_some() {
             return Err(errno::EEXIST);
         }
-        
+
         let newguy = Box::new(ramfsfile::new());
-        let n = Arc::new(RWSpinLock::new(vnode::new(vfs.and_then(|f|f.upgrade()).clone(),  v_type::VREG, newguy)));
+        let n = Arc::new(RWSpinLock::new(vnode::new(
+            vfs.and_then(|f| f.upgrade()).clone(),
+            v_type::VREG,
+            newguy,
+        )));
         self.create_entry(name, n.clone());
         Ok(n)
-
     }
-    fn read(&self, buf: &mut [u8], offset: usize) -> isize{
+    fn read(&self, buf: &mut [u8], offset: usize) -> isize {
         // if buf.len() < size_of::<dentry>() {
         //     return 0;
         // }
@@ -114,19 +116,21 @@ impl vops for ramfsdir {
         // // with that intention
         // // .min is that so if say buffer was like 100 bytes and we only had 60 bytes in our entries buffer we pick 60 so we dont overread
         // // the - offset is that so if we have an offset of say 5 and our buffer is like 6 we dont overread because we skipped those bytes
-        
+
         // let amount_to_read = buf.len().min(a.len() - offset);
         // let entries_to_read = &a[offset..offset + amount_to_read];
         // buf.copy_from_slice(entries_to_read);
-        // // if the buffer is bigger then the array then we only read the 
+        // // if the buffer is bigger then the array then we only read the
         // return amount_to_read as isize;
         return -1;
     }
     fn write(&mut self, buf: &[u8], offset: usize) -> isize {
-        return -1 ;
+        return -1;
     }
     fn lookup(&self, str: &str) -> Option<vv> {
         self.entries
-            .iter().find(|a|a.name == str).and_then(|f|f.inner.clone())
+            .iter()
+            .find(|a| a.name == str)
+            .and_then(|f| f.inner.clone())
     }
 }

@@ -185,6 +185,7 @@ $(IMAGE_NAME).iso: limine-binary/limine kernel
 	mkdir -p iso_root/boot/limine
 	cp -v limine.conf iso_root/boot/limine/
 	cp -v wallpaper.png iso_root/boot/
+	cp -v meow.tar iso_root/boot/
 	mkdir -p iso_root/EFI/BOOT
 ifeq ($(ARCH),x86_64)
 	cp -v limine-binary/limine-bios.sys limine-binary/limine-bios-cd.bin limine-binary/limine-uefi-cd.bin iso_root/boot/limine/

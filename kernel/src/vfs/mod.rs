@@ -20,8 +20,8 @@ pub struct vfs {
     v_ops: Box<dyn vfsops>,
 }
 trait vfsops: Send + Sync {}
-type vf = Arc<RWSpinLock<vfs>>;
-type vv = Arc<RWSpinLock<vnode>>;
+pub type vf = Arc<RWSpinLock<vfs>>;
+pub type vv = Arc<RWSpinLock<vnode>>;
 pub struct vnode {
     v_type: v_type,
     v_prev_data: Option<Box<dyn vops>>, // for mounts
@@ -117,6 +117,7 @@ fn unmount(vnode: vv) -> EResult<()> {
 fn lookup(vnod: vv, path: &str) -> Option<vv> {
     // TODO
     let mut a: Arc<RWSpinLock<vnode>> = vnod;
+    println!("i got given path {}", path);
     for i in path.split_terminator('/') {
         if i.is_empty() {
             continue;
@@ -125,12 +126,14 @@ fn lookup(vnod: vv, path: &str) -> Option<vv> {
         println!("{:?} len {}", i, i.len());
         // a is always some intially so this is fine twinaling
         let h = a.lock_read().v_data.lookup(i);
+
         match h {
             Some(f) => {
                 a = f;
             }
             None => {
                 return None;
+                
             }
         }
     }

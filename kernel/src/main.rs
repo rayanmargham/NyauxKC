@@ -197,6 +197,7 @@ fn kentry() {
     println!("hello from kernel thread scheduled by scheduler");
     println!("wassup twin");
     init_virtiogpu();
+    
     vfs::vfs_init();
     hcf();
 }
