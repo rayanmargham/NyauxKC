@@ -9,7 +9,11 @@ TARGET=x86_64-pc-nyaux-elf
 NPROC=$(nproc || 8)
 
 export PATH="$PREFIX/bin:$PATH"
+install_rust() {
+    pacman -S --noconfirm rustup
+    rustup default nightly
 
+}
 make_ramdisk() {
     mkdir -p $1
     mount -t tmpfs $1 $1
@@ -158,13 +162,14 @@ build_mlibc_stage2() {
 [ -f "$ROOTDIR/.ramdisk" ] || make_ramdisk distro
 
 mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
-prepare_sysroot
+install_rust
+#prepare_sysroot
 
-build_binutils
-build_gcc_stage1
-build_mlibc_stage1
+#build_binutils
+#build_gcc_stage1
+#build_mlibc_stage1
 
-build_gcc_stage2
-build_mlibc_stage2
+#build_gcc_stage2
+#build_mlibc_stage2
 
-build_gcc_stage2
+#build_gcc_stage2
