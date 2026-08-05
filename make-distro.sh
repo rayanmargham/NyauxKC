@@ -1,6 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -ex
 cat /etc/os-release
-pacman -Sy --noconfirm base-devel git meson make wget curl
 PATCHDIR="$PWD/patches"
 ROOTDIR="$PWD/distro"
 SYSROOT="$ROOTDIR/sysroot"
@@ -9,16 +8,19 @@ TARGET=x86_64-pc-nyaux-elf
 NPROC=$(nproc || 8)
 
 export PATH="$PREFIX/bin:$PATH"
-install_rust() {
-    echo 'DisableSandboxSyscalls' >> /etc/pacman.conf
-    pacman -Sy --noconfirm base-devel rustup
-    rustup default nightly
 
-}
 make_ramdisk() {
+    # not needed as we mount podman volume as ramdisk
     mkdir -p $1
-    mount -t tmpfs $1 $1
-    touch $1/.ramdisk
+}
+
+prepare_deps() {
+    echo 'DisableSandboxSyscalls' >> /etc/pacman.conf
+    pacman -Sy --noconfirm base-devel rustup git meson make wget curl
+    rustup default nightly
+    git config --global --add safe.directory /nyaux
+    git config --global user.email "sample@example.com"
+    git config --global user.name "sample"
 }
 
 prepare_sysroot() {
@@ -162,10 +164,10 @@ build_mlibc_stage2() {
     popd
 }
 
-[ -f "$ROOTDIR/.ramdisk" ] || make_ramdisk distro
+make_ramdisk distro
 
 mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
-install_rust
+prepare_deps
 prepare_sysroot
 
 build_binutils

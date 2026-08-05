@@ -6,3 +6,4 @@ sysroot/
 *.iso
 *.bin
 distro/
+workspace/
