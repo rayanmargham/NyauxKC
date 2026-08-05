@@ -10,7 +10,7 @@ NPROC=$(nproc || 8)
 
 export PATH="$PREFIX/bin:$PATH"
 install_rust() {
-    pacman -S --noconfirm rustup
+    pacman -Sy --noconfirm base-devel rustup
     rustup default nightly
 
 }
