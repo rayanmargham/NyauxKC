@@ -49,6 +49,12 @@ impl thread {
             itr_ptr: unsafe { it_stack.byte_add(STACK_SIZE) },
         })
     }
+    fn current() -> Option<*const thread> {
+        let c = unsafe {
+            get_cpu_local!().as_ref().unwrap()
+        };
+        c.cur_thread.as_ref().and_then(|f|Some(f.as_ref() as *const thread))
+    }
 }
 pub unsafe extern "C" fn sched_tramp2(
     pass: *mut (), // contains whatever you need to unlock the runqueue

@@ -68,7 +68,8 @@ build_binutils() {
     PKGVER=2.47
     [ -f "$ROOTDIR/$PKGNAME-$PKGVER.tar.gz" ] || wget -O $ROOTDIR/binutils-$PKGVER.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-$PKGVER.tar.gz
     [ -d "$ROOTDIR/$PKGNAME-$PKGVER" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/binutils-$PKGVER.tar.gz
-    #git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
+    [ -d "$ROOTDIR/$PKGNAME-$PKGVER/.git" ] || git -C "$ROOTDIR/$PKGNAME-$PKGVER" init && git add -A && git commit -m "init"
+    git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
     [ -f $ROOTDIR/build/$PKGNAME-patched ] || git -C $ROOTDIR/$PKGNAME-$PKGVER apply $PATCHDIR/$PKGNAME-$PKGVER.patch
     touch $ROOTDIR/build/$PKGNAME-patched
 
@@ -81,6 +82,7 @@ build_binutils() {
             --disable-nls \
             --disable-werror \
             --enable-default-execstack=no
+    echo still in build?
     touch $ROOTDIR/build/$PKGNAME-configure
     make -j$NPROC
     make install
@@ -92,7 +94,7 @@ build_gcc_stage1() {
     PKGVER=16.1.0
     [ -f "$ROOTDIR/gcc-$PKGVER.tar.gz" ] || wget -O $ROOTDIR/gcc-$PKGVER.tar.gz https://mirror.koddos.net/gcc/releases/gcc-$PKGVER/gcc-$PKGVER.tar.gz
     [ -d "$ROOTDIR/$PKGNAME-$PKGVER" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/$PKGNAME-$PKGVER.tar.gz
-    #git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
+    git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
     [ -f $ROOTDIR/build/$PKGNAME-patched ] || git -C $ROOTDIR/$PKGNAME-$PKGVER apply $PATCHDIR/$PKGNAME-$PKGVER.patch
     touch $ROOTDIR/build/$PKGNAME-patched
     mkdir -p $ROOTDIR/build/$PKGNAME-$PKGVER
@@ -163,9 +165,9 @@ build_mlibc_stage2() {
 
 mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
 install_rust
-#prepare_sysroot
+prepare_sysroot
 
-#build_binutils
+build_binutils
 #build_gcc_stage1
 #build_mlibc_stage1
 
