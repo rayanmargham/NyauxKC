@@ -10,6 +10,7 @@ NPROC=$(nproc || 8)
 
 export PATH="$PREFIX/bin:$PATH"
 install_rust() {
+    echo 'DisableSandboxSyscalls' >> /etc/pacman.conf
     pacman -Sy --noconfirm base-devel rustup
     rustup default nightly
 
