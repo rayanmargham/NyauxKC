@@ -72,7 +72,6 @@ build_binutils() {
     [ -f "$ROOTDIR/$PKGNAME-$PKGVER.tar.gz" ] || wget -O $ROOTDIR/binutils-$PKGVER.tar.gz https://ftp.gnu.org/gnu/binutils/binutils-$PKGVER.tar.gz
     [ -d "$ROOTDIR/$PKGNAME-$PKGVER" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/binutils-$PKGVER.tar.gz
     [ -d "$ROOTDIR/$PKGNAME-$PKGVER/.git" ] || git -C "$ROOTDIR/$PKGNAME-$PKGVER" init && git add -A && git commit -m "init"
-    git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
     [ -f $ROOTDIR/build/$PKGNAME-patched ] || git -C $ROOTDIR/$PKGNAME-$PKGVER apply $PATCHDIR/$PKGNAME-$PKGVER.patch
     touch $ROOTDIR/build/$PKGNAME-patched
 
@@ -97,7 +96,6 @@ build_gcc_stage1() {
     PKGVER=16.1.0
     [ -f "$ROOTDIR/gcc-$PKGVER.tar.gz" ] || wget -O $ROOTDIR/gcc-$PKGVER.tar.gz https://mirror.koddos.net/gcc/releases/gcc-$PKGVER/gcc-$PKGVER.tar.gz
     [ -d "$ROOTDIR/$PKGNAME-$PKGVER" ] || tar -C $ROOTDIR -xvzf $ROOTDIR/$PKGNAME-$PKGVER.tar.gz
-    git -C $ROOTDIR/$PKGNAME-$PKGVER diff > $PATCHDIR/$PKGNAME-$PKGVER.patch
     [ -f $ROOTDIR/build/$PKGNAME-patched ] || git -C $ROOTDIR/$PKGNAME-$PKGVER apply $PATCHDIR/$PKGNAME-$PKGVER.patch
     touch $ROOTDIR/build/$PKGNAME-patched
     mkdir -p $ROOTDIR/build/$PKGNAME-$PKGVER
@@ -134,15 +132,17 @@ build_gcc_stage3() {
 build_mlibc_stage1() {
     PKGNAME=mlibc
     [ -d $ROOTDIR/$PKGNAME ] || git clone --depth=1 https://github.com/managarm/mlibc $ROOTDIR/mlibc
-    git -C $ROOTDIR/$PKGNAME diff --cached > $PATCHDIR/mlibc.patch
+    #git -C $ROOTDIR/$PKGNAME diff --cached > $PATCHDIR/mlibc.patch
 
     cp -rv $ROOTDIR/$PKGNAME/options/ansi/include/* $SYSROOT/include/
     cp -rv $ROOTDIR/$PKGNAME/options/posix/include/* $SYSROOT/include/
     cp -rv $ROOTDIR/$PKGNAME/options/internal/include/* $SYSROOT/include/
+
+    git -C $ROOTDIR/$PKGNAME apply $PATCHDIR/$PKGNAME.patch
     cp -rv $ROOTDIR/$PKGNAME/sysdeps/nyaux/include/* $SYSROOT/include/
     cp -rv $PATCHDIR/mlibc-config.h $SYSROOT/include/mlibc-config.h
     mkdir -p "$SYSROOT/include/abi-bits"
-    #cp -v $ROOTDIR/$PKGNAME/abis/nyaux/*.h $SYSROOT/include/abi-bits/
+    cp -v $ROOTDIR/$PKGNAME/abis/nyaux/*.h $SYSROOT/include/abi-bits/
 }
 
 build_mlibc_stage2() {
@@ -170,9 +170,9 @@ mkdir -p "$ROOTDIR" "$ROOTDIR/build" "$SYSROOT" "$PREFIX"
 prepare_deps
 prepare_sysroot
 
-build_binutils
-#build_gcc_stage1
-#build_mlibc_stage1
+# build_binutils
+# build_gcc_stage1
+build_mlibc_stage1
 
 #build_gcc_stage2
 #build_mlibc_stage2
