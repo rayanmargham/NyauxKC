@@ -5,6 +5,6 @@ drop_into_container() {
         echo "please install podman, follow your posix-like operating systems docs on how to install podman"
         exit 1
     fi
-    sudo podman run --rm -it --os=linux --name arch -v "$(pwd)":/nyaux:z -w /nyaux docker.io/library/archlinux:latest ./make-distro.sh
+    sudo podman run --rm -it --os=linux --name arch --security-opt seccomp=unconfined -v  "$(pwd)":/nyaux:z -w /nyaux docker.io/library/archlinux:latest ./make-distro.sh
 }
 drop_into_container
