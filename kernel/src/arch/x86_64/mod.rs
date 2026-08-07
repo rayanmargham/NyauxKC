@@ -31,7 +31,7 @@ pub mod lapic;
 pub mod pt;
 pub mod serial;
 pub mod tss;
-pub mod abi;
+// pub mod abi;
 
 pub trait CalibrationTimer {
     fn get_ms(&self) -> usize;
