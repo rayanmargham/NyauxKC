@@ -101,7 +101,7 @@ pub fn sched_init() {
     schedlock.call_once(|| SpinLock::new());
     let new_loc = get_cpu_local!();
 
-
+    Processor::set_interrupt_stack(unsafe {(*new_loc).interrupt_stack}).unwrap();
 
     let idle = thread::new(
         useless as usize,

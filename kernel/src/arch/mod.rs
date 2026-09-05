@@ -92,12 +92,12 @@ impl cpu_local {
             cur_thread: None,
             idle_thread: None,
             run_lock: SpinLock::new(),
-            interrupt_stack: {
+            interrupt_stack: unsafe {
                 use crate::scheduler::STACK_SIZE;
                 use crate::early_init_pagemap;
                 let stack = early_init_pagemap!()
             .vmm_alloc(STACK_SIZE, VMMFlags::WRITE | VMMFlags::EXECUTABLE)
-            .unwrap();
+            .unwrap().byte_add(STACK_SIZE);
         stack
             },
             #[cfg(target_arch = "x86_64")]

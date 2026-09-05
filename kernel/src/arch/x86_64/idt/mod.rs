@@ -244,7 +244,7 @@ pub fn idt_init() {
     unsafe {
         seq!(N in 0..256 {
             IDT.entries[N] = GateDesc::new((inter_stub~N as *const ()) as u64, (offset_of!(GdtTable, kernelcode)) as u16,0,INTERRUPT_GATE, 0);});
-
+            IDT.entries[0x21].ist = 1;
         assert_eq!(
             IDT.entries[0].seg_sel,
             ((offset_of!(GdtTable, kernelcode)) as u16)

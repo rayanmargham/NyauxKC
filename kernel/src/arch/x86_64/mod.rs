@@ -106,6 +106,7 @@ impl Arch for Processor {
         meow.rsp = stack_ptr.expose_provenance() as u64;
         meow.cs = offset_of!(GdtTable, kernelcode) as u64;
         meow.ss = offset_of!(GdtTable, kerneldata) as u64;
+        meow.rflags = 0x202;
         
     }
     fn context_switch<T: super::ArchContext>(old_thread: Option<Arc<thread>>, new_thread: &[usize], frame: &mut T) {

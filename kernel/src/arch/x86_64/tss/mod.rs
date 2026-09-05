@@ -1,6 +1,6 @@
 use crate::{arch::Processor, println};
 
-#[repr(C)]
+#[repr(C, packed)]
 pub struct tss {
     pub reserved: u32,
     pub rsp0: u64,
