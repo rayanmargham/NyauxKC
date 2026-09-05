@@ -156,5 +156,6 @@ pub fn iommu_init() {
         while (unsafe { gs.read_volatile() & (1 << 31) } == 0) {}
         println!("all done, hardware said okay to my tables");
     }
+    println!("no iommu detected");
     // TODO: actual page tables for the context entries
 }

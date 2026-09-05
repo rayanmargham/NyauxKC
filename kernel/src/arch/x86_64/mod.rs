@@ -3,7 +3,7 @@ use core::arch::naked_asm;
 use core::mem::offset_of;
 
 #[cfg(target_arch = "x86_64")]
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 use limine::mp::MpInfo;
 
 use crate::{
@@ -11,16 +11,12 @@ use crate::{
         Arch, Processor,
         x86_64::{gdt::ap_gdt_init, idt::idt_load},
     },
-    scheduler::sched_tramp2,
 };
 #[cfg(target_arch = "x86_64")]
 use crate::{
     arch::{
-        cpu_local,
-        x86_64::{intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init},
-    },
-    memory::vmm::Pagemap,
-    println,
+        cpu_local, x86_64::{gdt::GdtTable, idt::x86_64Context, intel::iommu::iommu_init, lapic::lapic_init, pt::pt_init},
+    }, memory::vmm::Pagemap, println, scheduler::thread,
 };
 
 pub mod gdt;
@@ -100,6 +96,47 @@ pub fn wrmsr(msr: u32, val: usize) {
 }
 #[cfg(target_arch = "x86_64")]
 impl Arch for Processor {
+    type CPUContext = x86_64Context;
+    fn Prepare_thread(slice: &mut [usize], entry: usize, stack_ptr: *mut (), user: bool) {
+        if user {
+            todo!()
+        }
+        let meow = bytemuck::try_from_bytes_mut::<x86_64Context>(bytemuck::try_cast_slice_mut(slice).unwrap()).unwrap();
+        meow.rip = entry as u64;
+        meow.rsp = stack_ptr.expose_provenance() as u64;
+        meow.cs = offset_of!(GdtTable, kernelcode) as u64;
+        meow.ss = offset_of!(GdtTable, kerneldata) as u64;
+        
+    }
+    fn context_switch<T: super::ArchContext>(old_thread: Option<Arc<thread>>, new_thread: &[usize], frame: &mut T) {
+        let fram = unsafe {
+            (frame as *mut T as *mut x86_64Context).as_mut().unwrap()
+        };
+        let fra = bytemuck::try_cast_slice_mut::<u8, usize>(bytemuck::bytes_of_mut(fram)).unwrap();
+        if let Some(old_thr) = old_thread {
+            let bypass = unsafe{(Arc::as_ptr(&old_thr) as *mut crate::scheduler::thread).as_mut().unwrap().cpucontext.as_mut_slice()};
+            bypass.copy_from_slice(fra);
+        }
+
+        fra.copy_from_slice(new_thread);
+        
+    }
+    fn is_interrupts_enabled() -> bool {
+        let mut rflags: usize = 0;
+        unsafe {
+            core::arch::asm!(
+                "pushfq
+                pop {x}",
+                x = out(reg) rflags
+            );
+        }
+        if rflags & (1 << 9) != 0 {
+            true
+        } else {
+            false
+        }
+    }
+
     const PAGE_SIZE: usize = 4096;
     fn arch_bsp_init() {
         use crate::{
@@ -158,21 +195,7 @@ impl Arch for Processor {
         calibrate_timer_init();
         lapic_init(cali_timer.get().unwrap().as_ref());
     }
-    fn prepare_new_thread_stack(
-        stack_ptr: &mut [usize],
-        function: Box<dyn FnOnce() + 'static + Send>,
-    ) -> usize {
-        let len = stack_ptr.len();
-        let slice = &mut stack_ptr[len - 9..];
-        slice.fill(0);
-        let real = Box::into_raw(function);
-        let meta: *const () = unsafe { core::mem::transmute(core::ptr::metadata(real)) };
 
-        slice[8] = meta as usize;
-        slice[7] = real.expose_provenance();
-        slice[6] = sched_tramp1 as *const fn() as usize;
-        9 * size_of::<usize>()
-    }
     fn init_cpu_local(ptr: *mut cpu_local) {
         unsafe {
             wrmsr(GS_BASE, ptr.expose_provenance());
@@ -240,40 +263,7 @@ pub unsafe extern "C" fn ap_init(info: &MpInfo) -> ! {
     }
     unreachable!()
 }
-#[unsafe(naked)]
-pub unsafe extern "C" fn sched_tramp1() {
-    naked_asm!(
-        "mov rax, rdi", // ask emma about this later
-        "pop rsi",
-        "pop rdx",
-        "jmp {}", sym sched_tramp2
-    )
-}
-#[unsafe(naked)]
-pub unsafe extern "C" fn context_switch<T>(
-    passthrough: *mut (),
-    old_stack: *mut *mut (),
-    new_stack: *const *mut (),
-) -> *const T {
-    naked_asm!(
-        "
-    push rbx
-    push rbp
-    push r12
-    push r13
-    push r14
-    push r15
-    mov [rsi], rsp
-    mov rsp, [rdx]
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rbx
-    ret"
-    );
-}
+
 #[macro_export]
 macro_rules! get_cpu_local {
     () => {{

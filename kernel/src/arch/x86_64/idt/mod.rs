@@ -4,9 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use seq_macro::seq;
 
 use crate::{
-    arch::{Arch, Processor, x86_64::gdt::GdtTable},
-    can_prempt, println,
-    scheduler::sched_yield,
+    arch::{Arch, ArchContext, Processor, x86_64::gdt::GdtTable}, can_prempt, println, scheduler::sched_yield,
 };
 const INTERRUPT_GATE: u8 = 0xE;
 // a lot of code here looks similar to menix, it is true that i took "inspiration" :trollface:, i make sure i understood what im writing
@@ -34,8 +32,9 @@ const INTERRUPT_GATE: u8 = 0xE;
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Copy, Clone)]
 #[repr(C)]
-pub struct CPUContext {
+pub struct x86_64Context {
     pub r15: u64,
     pub r14: u64,
     pub r13: u64,
@@ -59,8 +58,21 @@ pub struct CPUContext {
     pub rsp: u64,
     pub ss: u64,
 }
+impl ArchContext for x86_64Context {
+    fn instruction_ptr(&self) -> usize {
+        self.rip as usize
+    }
+    fn is_user(&self) -> bool {
+        let rpl = self.cs & 0b11;
+        if rpl == 3 {
+            true
+        } else {
+            false
+        }
+    }
+}
 // clanker wrote this impl
-impl Debug for CPUContext {
+impl Debug for x86_64Context {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("CPUContext")
             .field_with("r15", |f| write!(f, "0x{:x}", self.r15))
@@ -159,7 +171,7 @@ unsafe extern "C" fn inter_stub~N() {
         inter_return = sym inter_return
     );
 }}}
-unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
+unsafe extern "C" fn idt_handler(frame: *mut x86_64Context) {
     let int = unsafe { frame.as_ref().unwrap().int };
     let err = unsafe { frame.as_ref().unwrap().error };
     match int {
@@ -174,17 +186,19 @@ unsafe extern "C" fn idt_handler(frame: *mut CPUContext) {
             println!("got spurious interrupt");
         }
         0x21 => {
+            
             Processor::acknowledge_interrupt();
             if (can_prempt!()) {
-                sched_yield();
+                sched_yield(unsafe{frame.as_mut().unwrap()});
             }
         }
         _ => {
             panic!(
-                "unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}",
+                "unhandled exception 0x{:x}, error code 0x{:b}, rip 0x{:x}, frame: {:?}",
                 int,
                 err,
-                unsafe { frame.as_ref() }.unwrap().rip
+                unsafe { frame.as_ref() }.unwrap().rip,
+                unsafe {frame.as_ref()}.unwrap()
             );
         }
     }

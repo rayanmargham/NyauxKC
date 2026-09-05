@@ -193,7 +193,7 @@ unsafe extern "C" fn kmain() -> ! {
     hcf();
 }
 
-fn kentry() {
+extern "C" fn kentry() {
     println!("hello from kernel thread scheduled by scheduler");
     println!("wassup twin");
     init_virtiogpu();
